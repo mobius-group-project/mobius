@@ -7,6 +7,7 @@ export interface ITask {
   title: string;
   isDone: boolean;
   deadline: string;
+  description?: string;
 }
 
 interface Props {
@@ -28,6 +29,12 @@ const TaskItem: React.FC<Props> = ({ task, onToggle }) => {
         <span className={`task-title ${task.isDone ? 'is-done' : ''}`}>
           {task.title}
         </span>
+
+        {task.description && (
+         <p className="task-description">
+             {task.description}
+        </p>
+  )}
         
         <div className="task-deadline">
           <Calendar size={12} className="calendar-icon" />
