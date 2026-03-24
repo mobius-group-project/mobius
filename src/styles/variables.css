@@ -9,6 +9,10 @@
   --color-positive: #5FBF8F;
   --color-negative: #FF4747;
 
+  --priority-high: var(--color-negative);   
+  --priority-medium: var(--color-secondary); 
+  --priority-low: var(--color-positive);
+
   /* Typography */
   --font-main: 'Almarai', sans-serif;
   --h1-size: 2.5rem;
