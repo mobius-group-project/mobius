@@ -3,8 +3,8 @@ import { type ITask } from '../components/taskSystem/TaskItem';
 
 export const useTasks = () => {
   const [tasks, setTasks] = useState<ITask[]>([
-    { id: '1', title: 'Zrobić herbatę', isDone: false, deadline: '24 Mar', description: 'Opis blablablablablabalablablaabl', timeSpent: 0},
-    { id: '2', title: 'Napisać pierwszy komponent', isDone: true, deadline: '25 Mar', timeSpent: 0 },
+    { id: '1', title: 'Zrobić herbatę', isDone: false, deadline: '24 Mar', description: 'Opis blablablablablabalablablaabl', timeSpent: 0, priority: 'High'},
+    { id: '2', title: 'Napisać pierwszy komponent', isDone: true, deadline: '25 Mar', timeSpent: 0, priority: 'Medium' },
   ]);
 
   const toggleTask = (id: string) => {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Play, Pause } from 'lucide-react';
+import { Calendar, Play, Pause, Flag } from 'lucide-react';
 import './styles/TaskItem.css';
 
 export interface ITask {
@@ -9,6 +9,7 @@ export interface ITask {
   deadline: string;
   description?: string;
   timeSpent: number;
+  priority?: 'High' | 'Medium' | 'Low';
 }
 
 interface Props {
@@ -37,17 +38,19 @@ const TaskItem: React.FC<Props> = ({ task, onToggle }) => {
     return () => clearInterval(interval);
   }, [isTracking, task.isDone]);
 
+  const priorityClass = task.priority ? `priority-${task.priority.toLowerCase()}` : '';
+
   return (
-  <div className="task-item">
-    <input 
-      type="checkbox" 
-      checked={task.isDone} 
-      onChange={() => {
-          setIsTracking(false); 
-          onToggle();
-      }}
-      className="task-checkbox"
-    />
+  <div className={`task-item ${task.isDone ? 'task-completed' : ''} ${priorityClass}`}>
+      <input 
+        type="checkbox" 
+        checked={task.isDone} 
+        onChange={() => {
+            setIsTracking(false); 
+            onToggle();
+        }}
+        className="task-checkbox"
+      />
     
     <div className="task-info"> 
       <span className={`task-title ${task.isDone ? 'is-done' : ''}`}>
@@ -61,10 +64,20 @@ const TaskItem: React.FC<Props> = ({ task, onToggle }) => {
       )}
       
       <div className="task-footer">
-        <div className="task-deadline">
-          <Calendar size={12} className="calendar-icon" />
-          <span className="deadline-date">{task.deadline}</span>
-        </div>
+        <div className="task-meta-left">
+            <div className="task-deadline">
+              <Calendar size={12} className="calendar-icon" />
+              <span className="deadline-date">{task.deadline}</span>
+            </div>
+
+            {task.priority && (
+              <Flag 
+                size={14} 
+                className={`priority-icon ${task.priority.toLowerCase()}`} 
+                fill="currentColor" 
+              />
+            )}
+          </div>
 
         <div className="task-time-controls">
           <span className="task-timer-display">{formatTime(seconds)}</span>
