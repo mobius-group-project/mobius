@@ -1,0 +1,120 @@
+.focus-timer {
+  max-width: 420px;
+  margin: 40px auto 0;
+  padding: 28px 28px 24px;
+  border-radius: 20px;
+  background: #1f2028;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  box-shadow: 0 22px 55px rgba(0, 0, 0, 0.55);
+}
+
+.focus-timer__title {
+  margin-bottom: 20px;
+  text-align: center;
+  color: var(--color-primary);
+  font-size: var(--h2-size);
+}
+
+.focus-timer__presets {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.focus-timer__preset {
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--color-secondary-2);
+  background: transparent;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: var(--small-size);
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+
+.focus-timer__preset:hover {
+  border-color: var(--color-secondary);
+  transform: translateY(-1px);
+}
+
+.focus-timer__preset--active {
+  border-color: var(--color-secondary);
+  background: rgba(255, 157, 71, 0.16);
+}
+
+.focus-timer__display {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 28px;
+}
+
+.focus-timer__circle-progress {
+  width: 220px;
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  padding: 12px;
+  background:
+    conic-gradient(
+      var(--color-secondary) calc(var(--progress) * 360deg),
+      rgba(255, 255, 255, 0.06) 0
+    );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+}
+
+.focus-timer__circle-inner {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: #1b1c23;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.4rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.focus-timer__controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.focus-timer__btn {
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: transparent;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: var(--small-size);
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+
+.focus-timer__btn:hover {
+  border-color: var(--color-secondary-2);
+  background: rgba(255, 255, 255, 0.04);
+  transform: translateY(-1px);
+}
+
+.focus-timer__btn.primary {
+  border-color: var(--color-primary);
+  background: rgba(246, 254, 154, 0.14);
+  color: var(--color-primary);
+}
+
+.focus-timer__btn.secondary {
+  border-color: var(--color-secondary-2);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.focus-timer__state {
+  font-size: var(--small-size);
+  text-align: center;
+  color: rgba(255, 255, 255, 0.6);
+}
