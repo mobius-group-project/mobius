@@ -4,6 +4,8 @@ import Sidebar from './components/layout/Sidebar';
 import TaskList from './components/taskSystem/TaskList';
 import { useTasks } from './hooks/useTasks';
 import FocusTimer from './components/focus/FocusTimer';
+import ActivityTracker from './components/timer/ActivityTracker';
+
 
 const DashboardPage: React.FC = () => {
   return (
@@ -56,6 +58,15 @@ const SettingsPage: React.FC = () => {
   );
 };
 
+const TrackerPage: React.FC = () => {
+  return (
+    <div className="route-view">
+      <h1 className="route-title">Time Tracker</h1>
+      <ActivityTracker />
+    </div>
+  );
+};
+
 function App() {
 return (
     <div
@@ -79,6 +90,7 @@ return (
           <Route path="/" element={<DashboardPage />} />
           <Route path="/tasks" element={<TasksPage />} />
           <Route path="/focus" element={<FocusPage />} />
+          <Route path="/tracker" element={<TrackerPage />} />
           <Route path="/stats" element={<StatsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Routes>
