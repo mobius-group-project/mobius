@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Home, Timer, BarChart2, Settings } from 'lucide-react';
+import { Home, Timer, BarChart2, Settings, ListTodo } from 'lucide-react';
 import './styles/Sidebar.css';
 
 interface NavItem {
@@ -18,7 +18,7 @@ const NAV_ITEMS: NavItem[] = [
   {
     path: '/tasks',
     label: 'Tasks',
-    icon: <Timer size={18} />
+    icon: <ListTodo size={18} />
   },
   {
     path: '/focus',
