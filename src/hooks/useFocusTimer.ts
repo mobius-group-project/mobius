@@ -28,6 +28,14 @@ export function useFocusTimer(
   const [remainingSeconds, setRemainingSeconds] = useState(totalInitial);
   const [state, setState] = useState<TimerState>('idle');
 
+  useEffect(() => {
+    if (state === 'idle') {
+      const total = initialMinutes * 60;
+      setTotalSeconds(total);
+      setRemainingSeconds(total);
+    }
+  }, [initialMinutes, state]);
+
   const intervalRef = useRef<number | null>(null);
   const { onTick, onFinish } = options;
 

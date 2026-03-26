@@ -1,13 +1,13 @@
 //import { Focus } from 'lucide-react';
 import TaskList from './components/taskSystem/TaskList';
 import { useTasks } from './hooks/useTasks';
-//import FocusTimer from './components/focus/FocusTimer';
+import FocusTimer from './components/focus/FocusTimer';
 import React, { useState } from 'react';
 
 type View = 'tasks' | 'focus';
 
 function App() {
-//const { tasks, toggleTask, addTask } = useTasks();
+const { tasks, toggleTask, addTask } = useTasks();
 const [activeView, setActiveView] = useState<View>('tasks');
 
 
@@ -21,7 +21,7 @@ const [activeView, setActiveView] = useState<View>('tasks');
             padding: '8px 16px',
             borderRadius: '999px',
             border: activeView === 'tasks' ? '2px solid var(--color-primary)' : '1px solid #ccc',
-            background: activeView === 'tasks' ? 'var(--color-primary-soft)' : '#fff',
+            background: activeView === 'tasks' ? 'var(--color-background)' : '#16171D',
             cursor: 'pointer'
           }}
         >
@@ -33,7 +33,7 @@ const [activeView, setActiveView] = useState<View>('tasks');
             padding: '8px 16px',
             borderRadius: '999px',
             border: activeView === 'focus' ? '2px solid var(--color-primary)' : '1px solid #ccc',
-            background: activeView === 'focus' ? 'var(--color-primary-soft)' : '#fff',
+            background: activeView === 'focus' ? 'var(--color-background)' : '#16171D',
             cursor: 'pointer'
           }}
         >
@@ -42,7 +42,7 @@ const [activeView, setActiveView] = useState<View>('tasks');
 
       </div>
 
-      {/* {activeView === 'tasks' ? (
+      {activeView === 'tasks' ? (
      <TaskList 
         tasks={tasks} 
         onToggleTask={toggleTask} 
@@ -50,7 +50,7 @@ const [activeView, setActiveView] = useState<View>('tasks');
       />
       ) : (
         <FocusTimer />
-      )} */}
+      )}
     </main>
   );
 }
