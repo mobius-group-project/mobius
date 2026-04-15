@@ -26,5 +26,9 @@ const addTask = (title: string, deadline: string, description?: string, priority
   setTasks(prev => [...prev, newTask]);
 };
 
-  return { tasks, toggleTask, addTask };
+const deleteTask = (id: string) => {
+  setTasks(prev => prev.filter(task => task.id !== id));
+};
+
+return { tasks, toggleTask, addTask, deleteTask };
 };

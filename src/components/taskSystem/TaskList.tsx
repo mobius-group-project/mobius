@@ -7,10 +7,11 @@ import './styles/TaskList.css';
 interface Props {
   tasks: ITask[];
   onToggleTask: (id: string) => void;
-onAddTask: (title: string, deadline: string, description?: string, priority?: 'High' | 'Medium' | 'Low') => void;
+  onAddTask: (title: string, deadline: string, description?: string, priority?: 'High' | 'Medium' | 'Low') => void;
+  onDelete: (id: string) => void;
 }
 
-const TaskList: React.FC<Props> = ({ tasks, onToggleTask, onAddTask }) => {
+const TaskList: React.FC<Props> = ({ tasks, onToggleTask, onAddTask, onDelete }) => {
   const [isAdding, setIsAdding] = useState(false);
 
 const handleAdd = (title: string, deadline: string, description?: string, priority?: 'High' | 'Medium' | 'Low') => {
@@ -25,7 +26,8 @@ const handleAdd = (title: string, deadline: string, description?: string, priori
           <TaskItem 
             key={task.id} 
             task={task} 
-            onToggle={() => onToggleTask(task.id)} 
+            onToggle={() => onToggleTask(task.id)}
+            onDelete={onDelete}
           />
         ))
       ) : (
