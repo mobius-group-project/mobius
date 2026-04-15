@@ -13,16 +13,18 @@ export const useTasks = () => {
     );
   };
 
-  const addTask = (title: string, deadline: string) => {
-    const newTask: ITask = {
-      id: Date.now().toString(), 
-      title,
-      isDone: false,
-      deadline,
-      timeSpent: 0
-    };
-    setTasks(prev => [...prev, newTask]);
+const addTask = (title: string, deadline: string, description?: string, priority?: 'High' | 'Medium' | 'Low') => {
+  const newTask: ITask = {
+    id: Date.now().toString(), 
+    title,
+    isDone: false,
+    deadline,
+    timeSpent: 0,
+    description,
+    priority: priority
   };
+  setTasks(prev => [...prev, newTask]);
+};
 
   return { tasks, toggleTask, addTask };
 };
