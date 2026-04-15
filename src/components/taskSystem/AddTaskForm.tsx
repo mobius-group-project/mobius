@@ -1,21 +1,45 @@
 import React, { useState } from 'react';
+import { Calendar, Flag, Paperclip } from 'lucide-react';
 import './styles/AddTaskForm.css';
 
-
 interface Props {
-  onAdd: (title: string, deadline: string, description?: string) => void;
+  onAdd: (title: string, deadline: string, description?: string, priority?: 'High' | 'Medium' | 'Low') => void;
   onCancel: () => void;
 }
 
 const TaskForm: React.FC<Props> = ({ onAdd, onCancel }) => {
   const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [deadline, setDeadline] = useState('');
+  const [priority, setPriority] = useState<'High' | 'Medium' | 'Low' | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
     
-    onAdd(title, '26 Mar', ''); 
+    let formattedDeadline = 'No deadline';
+    if (deadline) {
+      const date = new Date(deadline);
+      formattedDeadline = date.toLocaleDateString('en-GB', { 
+        day: 'numeric', 
+        month: 'short' 
+      }).replace(',', '');
+    }
+    
+    onAdd(title.trim(), formattedDeadline, description.trim() || undefined, priority || undefined);
+    
     setTitle('');
+    setDescription('');
+    setDeadline('');
+    setPriority(null);
+  };
+
+  const handlePriorityClick = (value: 'High' | 'Medium' | 'Low') => {
+    if (priority === value) {
+      setPriority(null);
+    } else {
+      setPriority(value);
+    }
   };
 
   return (
@@ -27,6 +51,67 @@ const TaskForm: React.FC<Props> = ({ onAdd, onCancel }) => {
         value={title}
         onChange={(e) => setTitle(e.target.value)}
       />
+      
+      <textarea
+        className="task-input-description"
+        placeholder="Add a description (optional)"
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+        rows={3}
+      />
+      
+      <div className="task-form-row">
+        <div className="task-deadline-wrapper">
+          <Calendar size={16} className="calendar-icon-styled" />
+          <span className="selected-date-label">
+           {deadline ? deadline : "Deadline"}
+          </span>
+
+          <input
+          type="date"
+           className="task-deadline-picker"
+           value={deadline}
+          onChange={(e) => setDeadline(e.target.value)}
+              />
+          </div>
+        
+        <div className="task-priority-buttons">
+          <button
+            type="button"
+            className={`priority-flag ${priority === 'High' ? 'active' : ''}`}
+            onClick={() => handlePriorityClick('High')}
+            title="High priority"
+          >
+            <Flag size={16} fill={priority === 'High' ? 'var(--priority-high)' : 'none'} color="var(--priority-high)" />
+          </button>
+          <button
+            type="button"
+            className={`priority-flag ${priority === 'Medium' ? 'active' : ''}`}
+            onClick={() => handlePriorityClick('Medium')}
+            title="Medium priority"
+          >
+            <Flag size={16} fill={priority === 'Medium' ? 'var(--priority-medium)' : 'none'} color="var(--priority-medium)" />
+          </button>
+          <button
+            type="button"
+            className={`priority-flag ${priority === 'Low' ? 'active' : ''}`}
+            onClick={() => handlePriorityClick('Low')}
+            title="Low priority"
+          >
+            <Flag size={16} fill={priority === 'Low' ? 'var(--priority-low)' : 'none'} color="var(--priority-low)" />
+          </button>
+        </div>
+
+        <button 
+          type="button"
+          className="task-attachment-btn"
+          onClick={() => console.log('Attachments - future implementation')}
+          title="Attach files (coming soon)"
+        >
+          <Paperclip size={16} />
+        </button>
+      </div>
+      
       <div className="form-actions">
         <button type="submit" className="save-btn">Add</button>
         <button type="button" onClick={onCancel} className="cancel-btn">Cancel</button>

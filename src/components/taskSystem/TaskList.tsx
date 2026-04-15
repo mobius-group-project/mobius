@@ -7,16 +7,16 @@ import './styles/TaskList.css';
 interface Props {
   tasks: ITask[];
   onToggleTask: (id: string) => void;
-  onAddTask: (title: string, deadline: string, description?: string) => void;
+onAddTask: (title: string, deadline: string, description?: string, priority?: 'High' | 'Medium' | 'Low') => void;
 }
 
 const TaskList: React.FC<Props> = ({ tasks, onToggleTask, onAddTask }) => {
   const [isAdding, setIsAdding] = useState(false);
 
-  const handleAdd = (title: string, deadline: string, description?: string) => {
-    onAddTask(title, deadline, description);
-    setIsAdding(false); 
-  };
+const handleAdd = (title: string, deadline: string, description?: string, priority?: 'High' | 'Medium' | 'Low') => {
+  onAddTask(title, deadline, description, priority);
+  setIsAdding(false); 
+};
 
   return (
     <div className="task-list">
