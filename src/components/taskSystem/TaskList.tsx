@@ -9,9 +9,10 @@ interface Props {
   onToggleTask: (id: string) => void;
   onAddTask: (title: string, deadline: string, description?: string, priority?: 'High' | 'Medium' | 'Low') => void;
   onDelete: (id: string) => void;
+  onUpdateTask: (task: ITask) => void;
 }
 
-const TaskList: React.FC<Props> = ({ tasks, onToggleTask, onAddTask, onDelete }) => {
+const TaskList: React.FC<Props> = ({ tasks, onToggleTask, onAddTask, onDelete, onUpdateTask }) => {
   const [isAdding, setIsAdding] = useState(false);
 
 const handleAdd = (title: string, deadline: string, description?: string, priority?: 'High' | 'Medium' | 'Low') => {
@@ -28,6 +29,7 @@ const handleAdd = (title: string, deadline: string, description?: string, priori
             task={task} 
             onToggle={() => onToggleTask(task.id)}
             onDelete={onDelete}
+            onUpdateTask={onUpdateTask}
           />
         ))
       ) : (
