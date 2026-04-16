@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Calendar, Flag } from 'lucide-react';
 import type { ITask } from './TaskItem';
 import './styles/EditTaskForm.css';
@@ -14,12 +14,13 @@ const EditTaskForm: React.FC<EditTaskFormProps> = ({ task, onSave, onCancel }) =
   const [description, setDescription] = useState(task.description || '');
   const [deadline, setDeadline] = useState('');
   const [priority, setPriority] = useState<'High' | 'Medium' | 'Low' | null>(task.priority || null);
+  const dateInputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
 
-    let formattedDeadline = task.deadline;
+    let formattedDeadline = 'No deadline';
     if (deadline) {
       const date = new Date(deadline);
       formattedDeadline = date.toLocaleDateString('en-GB', {
@@ -47,28 +48,46 @@ const EditTaskForm: React.FC<EditTaskFormProps> = ({ task, onSave, onCancel }) =
     }
   };
 
+  const handleWrapperClick = () => {
+    dateInputRef.current?.showPicker();
+  };
+
+  const getCurrentDeadlineLabel = () => {
+  if (deadline) {
+    return deadline;
+  }
+  if (task.deadline && task.deadline !== 'No deadline') {
+    return task.deadline;
+  }
+  return "Deadline";
+};
+
   return (
     <form onSubmit={handleSubmit} className="edit-task-form">
       <input
         autoFocus
         className="edit-task-input-title"
-        placeholder="Task title"
+        placeholder="What needs to be done?"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
       />
 
       <textarea
         className="edit-task-input-description"
-        placeholder="Description (optional)"
+        placeholder="Add a description (optional)"
         value={description}
         onChange={(e) => setDescription(e.target.value)}
         rows={3}
       />
 
       <div className="edit-task-form-row">
-        <div className="edit-task-deadline-wrapper">
+        <div className="edit-task-deadline-wrapper" onClick={handleWrapperClick}>
           <Calendar size={16} />
+          <span className="selected-date-label">
+            {getCurrentDeadlineLabel()}
+          </span>
           <input
+            ref={dateInputRef}
             type="date"
             className="edit-task-deadline-picker"
             value={deadline}

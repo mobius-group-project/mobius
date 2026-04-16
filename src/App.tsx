@@ -17,7 +17,7 @@ const DashboardPage: React.FC = () => {
 };
 
 const TasksPage: React.FC = () => {
-  const { tasks, toggleTask, addTask, deleteTask } = useTasks(); 
+  const { tasks, toggleTask, addTask, deleteTask, updateTask } = useTasks();
 
   return (
     <div className="route-view">
@@ -27,6 +27,7 @@ const TasksPage: React.FC = () => {
         onToggleTask={toggleTask}
         onAddTask={addTask}
         onDelete={deleteTask}  
+        onUpdateTask={updateTask}
       />
     </div>
   );

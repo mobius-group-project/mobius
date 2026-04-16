@@ -128,12 +128,6 @@
   margin-top: 2px;
 }
 
-.task-time-controls {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-} 
-
 .task-timer-display {
   font-family: 'Courier New', Courier, monospace;
   font-size: 12px;
@@ -227,35 +221,64 @@
   color: var(--color-negative);
 }
 
-.task-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-  margin-top: 8px;
-}
-
 .task-time-controls {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.task-item {
+.edit-task-btn {
+  background: transparent;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  padding: 4px;
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 12px 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  transition: all 0.3s ease;
-  opacity: 1;
-  transform: translateX(0);
-}
-
-.task-item.task-deleting {
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s ease;
+  flex-shrink: 0;
   opacity: 0;
-  transform: translateX(-20px);
-  pointer-events: none;
-  transition: all 0.5s ease;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
 }
 
+.task-item:hover .edit-task-btn {
+  opacity: 1;
+  visibility: visible;
+}
+
+.edit-task-btn:hover {
+  color: var(--color-primary);
+}
+
+.comment-task-btn {
+  background: transparent;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s ease;
+  flex-shrink: 0;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+.task-item:hover .comment-task-btn {
+  opacity: 1;
+  visibility: visible;
+}
+
+.comment-task-btn:hover {
+  color: var(--color-secondary);
+}
+
+.task-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
