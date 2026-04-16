@@ -30,5 +30,11 @@ const deleteTask = (id: string) => {
   setTasks(prev => prev.filter(task => task.id !== id));
 };
 
-return { tasks, toggleTask, addTask, deleteTask };
+const updateTask = (updatedTask: ITask) => {
+  setTasks(prev => prev.map(task => 
+    task.id === updatedTask.id ? updatedTask : task
+  ));
+};
+
+return { tasks, toggleTask, addTask, deleteTask, updateTask };
 };

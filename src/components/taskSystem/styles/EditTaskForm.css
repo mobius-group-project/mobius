@@ -1,0 +1,139 @@
+.edit-task-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.edit-task-input-title {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid #444;
+  color: #fff;
+  font-size: 16px;
+  padding: 8px 0;
+  outline: none;
+  width: 100%;
+  font-family: var(--font-main);
+}
+
+.edit-task-input-title:focus {
+  border-bottom-color: var(--color-positive);
+}
+
+.edit-task-input-description {
+  background: transparent;
+  border: 1px solid #444;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 14px;
+  padding: 10px 12px;
+  outline: none;
+  width: 100%;
+  font-family: var(--font-main);
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.edit-task-input-description:focus {
+  border-color: var(--color-positive);
+}
+
+.edit-task-form-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+}
+
+.edit-task-deadline-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid #444;
+  flex: 1;
+}
+
+.edit-task-deadline-picker {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 13px;
+  outline: none;
+  font-family: var(--font-main);
+  width: 100%;
+  cursor: pointer;
+}
+
+.edit-task-deadline-picker::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  cursor: pointer;
+}
+
+.edit-task-priority-buttons {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 4px 12px;
+  border-radius: 6px;
+  border: 1px solid #444;
+  flex: 1;
+  justify-content: center;
+}
+
+.edit-priority-flag {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+
+.edit-priority-flag:hover {
+  transform: scale(1.1);
+}
+
+.edit-priority-flag.active {
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(1.05);
+}
+
+.edit-task-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.edit-save-btn {
+  background: var(--color-positive);
+  color: #000;
+  border: none;
+  padding: 6px 16px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.edit-cancel-btn {
+  background: transparent;
+  border: 1px solid #444;
+  color: #888;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 6px 16px;
+  border-radius: 6px;
+}
+
+.edit-cancel-btn:hover {
+  border-color: var(--color-negative);
+  color: var(--color-negative);
+}
