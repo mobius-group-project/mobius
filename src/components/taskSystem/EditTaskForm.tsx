@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Calendar, Flag } from 'lucide-react';
+import { Calendar, Flag, Paperclip } from 'lucide-react';
 import type { ITask } from './TaskItem';
 import './styles/EditTaskForm.css';
 
@@ -118,7 +118,15 @@ const EditTaskForm: React.FC<EditTaskFormProps> = ({ task, onSave, onCancel }) =
             <Flag size={16} fill={priority === 'Low' ? 'var(--priority-low)' : 'none'} color="var(--priority-low)" />
           </button>
         </div>
-      </div>
+          <button 
+            type="button"
+            className="edit-task-attachment-btn"
+            onClick={() => console.log('Attachments - future implementation')}
+            title="Attach files (coming soon)"
+          >
+          <Paperclip size={16} />
+          </button>
+         </div>
 
       <div className="edit-task-actions">
         <button type="submit" className="edit-save-btn">Save</button>

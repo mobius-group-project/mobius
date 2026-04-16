@@ -12,6 +12,7 @@ export interface ITask {
   description?: string;
   timeSpent: number;
   priority?: 'High' | 'Medium' | 'Low';
+  comments?: string[];
 }
 
 interface Props {
@@ -34,6 +35,8 @@ const TaskItem: React.FC<Props> = ({ task, onToggle, onDelete, onUpdateTask }) =
   const [seconds, setSeconds] = useState(task.timeSpent || 0);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [showComments, setShowComments] = useState(false);
+  const [newComment, setNewComment] = useState('');
 
   useEffect(() => {
     let interval: any;
@@ -54,10 +57,6 @@ const TaskItem: React.FC<Props> = ({ task, onToggle, onDelete, onUpdateTask }) =
 
   const handleEdit = () => {
   setIsEditing(true);
-};
-
-const handleComment = () => {
-  console.log('Comments - will be implemented later');
 };
 
   const handleConfirmDelete = () => {
@@ -87,6 +86,17 @@ const handleComment = () => {
     );
   }
 
+  const handleComment = () => {
+  setShowComments(!showComments);
+};
+
+  const handleAddComment = () => {
+  if (!newComment.trim()) return;
+  const updatedComments = [...(task.comments || []), newComment.trim()];
+  onUpdateTask({ ...task, comments: updatedComments });
+  setNewComment('');
+};
+
 return (
     <div className={`task-item ${task.isDone ? 'task-completed' : ''} ${priorityClass} ${isDeleting ? 'task-deleting' : ''}`}>
       <input 
@@ -108,8 +118,14 @@ return (
             <button className="edit-task-btn" onClick={handleEdit}>
               <Pencil size={16} />
             </button>
-            <button className="comment-task-btn" onClick={handleComment}>
+            <button 
+              className={`comment-task-btn ${task.comments && task.comments.length > 0 ? 'has-comments' : ''}`} 
+              onClick={handleComment}
+            >
               <MessageSquare size={16} />
+              {task.comments && task.comments.length > 0 && (
+                <span className="comments-badge">{task.comments.length}</span>
+              )}
             </button>
             <button className="delete-task-btn" onClick={handleDelete}>
               <Trash2 size={16} />
@@ -155,6 +171,33 @@ return (
           </div>
         </div>
       </div>
+
+      {showComments && (
+        <div className="task-comments" onClick={(e) => e.stopPropagation()}>
+          <div className="comments-header">
+            <span>Comments ({task.comments?.length || 0})</span>
+            <button className="close-comments" onClick={() => setShowComments(false)}>✕</button>
+          </div>
+          <div className="comments-list">
+            {task.comments?.map((comment, idx) => (
+              <div key={idx} className="comment-item">{comment}</div>
+            ))}
+            {(!task.comments || task.comments.length === 0) && (
+              <div className="no-comments">No comments yet</div>
+            )}
+          </div>
+          <div className="comments-input">
+            <input
+              type="text"
+              placeholder="Write a comment..."
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleAddComment()}
+            />
+            <button onClick={handleAddComment}>Send</button>
+          </div>
+        </div>
+      )}
 
       <ConfirmDialog
         isOpen={showConfirm}
