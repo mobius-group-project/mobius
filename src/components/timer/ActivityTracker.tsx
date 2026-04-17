@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useActivityTracker } from '../../hooks/useActivityTracker';
+import { formatDurationCompact, formatDurationDetailed } from '../../components/TimeFormatter';
 import './styles/ActivityTracker.css';
 
 interface ActivityTrackerProps {
@@ -19,6 +20,7 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({
     seconds,
     toasts,
     startTracking,
+    continueSession,
     stopTracking,
     resetTracking,
     getFormattedTime,
@@ -132,27 +134,37 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({
       </div>
 
       {sessions.length > 0 ? (
-        <div className="recent-sessions">
-          <h3>Ostatnie sesje</h3>
-          <div className="sessions-list">
-            {sessions.slice(0, 5).map((session) => (
-              <div key={session.id} className="session-item">
-                <div className="session-info">
-                  <span className="session-name" title={session.activityName}>
-                    {session.activityName}
-                    {session.isTask && <span className="session-tag">📋</span>}
-                  </span>
-                  <span className="session-time">
-                    {Math.floor(session.durationSeconds / 60)}m {session.durationSeconds % 60}s
-                  </span>
-                </div>
-                <div className="session-date">
-                  {session.startTime?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </div>
-              </div>
-            ))}
-          </div>
+<div className="recent-sessions">
+  <h3>Ostatnie sesje</h3>
+  <div className="sessions-list">
+    {sessions.slice(0, 5).map((session) => (
+      <div key={session.id} className="session-item">
+        <div className="session-info">
+          <span className="session-name" title={session.activityName}>
+            {session.activityName}
+            {session.isTask && <span className="session-tag">📋</span>}
+          </span>
+          <span className="session-time" title={formatDurationDetailed(session.durationSeconds)}>
+            {formatDurationCompact(session.durationSeconds)}
+          </span>
         </div>
+        <div className="session-actions">
+          <span className="session-date">
+            {session.startTime?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </span>
+          <button 
+            className="continue-session-btn"
+            onClick={() => continueSession(session)}
+            disabled={state === 'running'}
+            title={`Kontynuuj (${formatDurationDetailed(session.durationSeconds)})`}
+          >
+            ▶
+          </button>
+        </div>
+      </div>
+    ))}
+  </div>
+</div>
       ) : (
         <div className="empty-sessions">
           ✨ Brak zapisanych sesji. Rozpocznij pierwszą aktywność!

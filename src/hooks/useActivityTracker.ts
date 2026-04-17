@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { formatDurationDetailed } from '../components/TimeFormatter';
 
 export type TrackerState = 'idle' | 'running' | 'paused';
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
@@ -27,6 +28,7 @@ interface UseActivityTrackerReturn {
   seconds: number;
   toasts: ToastMessage[];
   startTracking: (activityName: string, isTask?: boolean, taskId?: string) => void;
+  continueSession: (session: ActivitySession) => void;
   stopTracking: () => void;
   resetTracking: () => void;
   getFormattedTime: () => string;
@@ -80,46 +82,92 @@ export const useActivityTracker = (): UseActivityTrackerReturn => {
       return;
     }
 
+    let existingSession: ActivitySession | undefined;
+    if (isTask && taskId) {
+      existingSession = sessions.find(s => s.taskId === taskId);
+    }
+
     const newSession: ActivitySession = {
-      id: Date.now().toString(),
+      id: existingSession ? existingSession.id : Date.now().toString(),
       activityName: activityName.trim(),
       startTime: new Date(),
       endTime: null,
-      durationSeconds: 0,
+      durationSeconds: existingSession ? existingSession.durationSeconds : 0,
       isTask,
       taskId,
-      createdAt: new Date(),
+      createdAt: existingSession ? existingSession.createdAt : new Date(),
     };
 
     setCurrentSession(newSession);
-    setSeconds(0);
+    setSeconds(existingSession ? existingSession.durationSeconds : 0);
     setState('running');
-    addToast('success', `🎯 Rozpoczęto: "${activityName}"`);
-  }, [addToast]);
+    
+    if (existingSession) {
+      addToast('success', `▶️ Kontynuacja zadania: "${activityName}" (${formatDurationDetailed(existingSession.durationSeconds)})`);
+    } else {
+      addToast('success', `🎯 Rozpoczęto: "${activityName}"`);
+    }
+  }, [sessions, addToast]);
+
+  const continueSession = useCallback((session: ActivitySession) => {
+    if (state === 'running') {
+      addToast('warning', '⏸️ Najpierw zatrzymaj bieżącą sesję');
+      return;
+    }
+
+    setCurrentSession({
+      ...session,
+      startTime: new Date(),
+    });
+    
+    setSeconds(session.durationSeconds);
+    setState('running');
+    
+    addToast('success', `▶️ Kontynuacja: "${session.activityName}" (${formatDurationDetailed(session.durationSeconds)})`);
+  }, [state, addToast]);
 
   const stopTracking = useCallback(() => {
-    if (state === 'running' && currentSession && seconds > 0) {
-      const completedSession: ActivitySession = {
-        ...currentSession,
-        endTime: new Date(),
-        durationSeconds: seconds,
-      };
-
-      setSessions(prev => [completedSession, ...prev]);
+    if (state === 'running' && currentSession) {
+      const newTimeAdded = seconds - (currentSession.durationSeconds || 0);
       
-      const formattedTime = getFormattedTime();
-      addToast('success', `✅ Zapisano: "${completedSession.activityName}" - ${formattedTime}`);
+      if (newTimeAdded > 0 || currentSession.durationSeconds === 0) {
+        const updatedSession: ActivitySession = {
+          ...currentSession,
+          endTime: new Date(),
+          durationSeconds: seconds,
+        };
+
+        setSessions(prev => {
+          const exists = prev.some(s => s.id === currentSession.id);
+          
+          if (exists) {
+            return prev.map(s => s.id === currentSession.id ? updatedSession : s);
+          } else {
+            return [updatedSession, ...prev];
+          }
+        });
+        
+        const formattedTime = formatDurationDetailed(seconds);
+        const addedTimeReadable = formatDurationDetailed(newTimeAdded);
+        
+        if (newTimeAdded > 0 && currentSession.durationSeconds > 0) {
+          addToast('success', `✅ Zaktualizowano: "${updatedSession.activityName}" (+${addedTimeReadable}, razem: ${formattedTime})`);
+        } else {
+          addToast('success', `✅ Zapisano: "${updatedSession.activityName}" - ${formattedTime}`);
+        }
+      } else {
+        addToast('info', `⏱️ Nie dodano nowego czasu do "${currentSession.activityName}"`);
+      }
       
       setCurrentSession(null);
       setSeconds(0);
       setState('idle');
-    } else if (state === 'running' && seconds === 0) {
-      addToast('warning', '⏱️ Sesja jest za krótka (0 sekund). Anulowano.');
+    } else if (state === 'running') {
       setCurrentSession(null);
       setSeconds(0);
       setState('idle');
     }
-  }, [state, currentSession, seconds, getFormattedTime, addToast]);
+  }, [state, currentSession, seconds, addToast]);
 
   const resetTracking = useCallback(() => {
     if (state === 'running' && currentSession) {
@@ -131,7 +179,7 @@ export const useActivityTracker = (): UseActivityTrackerReturn => {
     } else if (state === 'idle' && seconds === 0) {
       addToast('info', '✨ Brak aktywnej sesji do zresetowania');
     }
-  }, [state, currentSession, addToast]);
+  }, [state, currentSession, addToast, seconds]);
 
   useEffect(() => {
     if (state === 'running') {
@@ -155,6 +203,7 @@ export const useActivityTracker = (): UseActivityTrackerReturn => {
     seconds,
     toasts,
     startTracking,
+    continueSession,
     stopTracking,
     resetTracking,
     getFormattedTime,
