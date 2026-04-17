@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { BarChart2 } from 'lucide-react';
 import { useActivityTracker } from '../../hooks/useActivityTracker';
 import { formatDurationCompact, formatDurationDetailed } from '../../components/TimeFormatter';
 import './styles/ActivityTracker.css';
@@ -12,6 +14,7 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({
   preselectedTask = null, 
   onSessionComplete 
 }) => {
+  const navigate = useNavigate();
   const [activityInput, setActivityInput] = useState('');
   const {
     state,
@@ -66,13 +69,23 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({
         </div>
       ))}
 
-      <div className="tracker-header">
+     <div className="tracker-header">
         <h2>Activity Tracker</h2>
-        <div className="today-stats">
-          Dzisiaj: <strong>
-            {totalHours > 0 ? `${totalHours}h ` : ''}
-            {totalMinutes}m
-          </strong>
+        <div className="tracker-header-right">
+          <div className="today-stats">
+            Dzisiaj: <strong>
+              {totalHours > 0 ? `${totalHours}h ` : ''}
+              {totalMinutes}m
+            </strong>
+          </div>
+          <button 
+            className="stats-nav-btn"
+            onClick={() => navigate('/stats')}
+            title="Zobacz statystyki"
+          >
+            <BarChart2 size={18} />
+            <span>Statystyki</span>
+          </button>
         </div>
       </div>
 
