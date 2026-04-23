@@ -21,12 +21,20 @@ export interface ToastMessage {
   message: string;
 }
 
+export interface DuplicateConfirmation {
+  existingSession: ActivitySession;
+  newActivityName: string;
+  isTask: boolean;
+  taskId?: string;
+}
+
 interface UseActivityTrackerReturn {
   state: TrackerState;
   currentSession: ActivitySession | null;
   sessions: ActivitySession[];
   seconds: number;
   toasts: ToastMessage[];
+  duplicateConfirmation: DuplicateConfirmation | null;
   startTracking: (activityName: string, isTask?: boolean, taskId?: string) => void;
   continueSession: (session: ActivitySession) => void;
   stopTracking: () => void;
@@ -34,6 +42,8 @@ interface UseActivityTrackerReturn {
   getFormattedTime: () => string;
   getTotalTimeToday: () => number;
   removeToast: (id: number) => void;
+  confirmDuplicateCreate: () => void;
+  cancelDuplicateCreate: () => void;
 }
 
 export const useActivityTracker = (): UseActivityTrackerReturn => {
@@ -42,6 +52,7 @@ export const useActivityTracker = (): UseActivityTrackerReturn => {
   const [sessions, setSessions] = useState<ActivitySession[]>([]);
   const [seconds, setSeconds] = useState(0);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const [duplicateConfirmation, setDuplicateConfirmation] = useState<DuplicateConfirmation | null>(null);
   const intervalRef = useRef<number | null>(null);
   const toastIdRef = useRef(0);
 
@@ -72,17 +83,31 @@ export const useActivityTracker = (): UseActivityTrackerReturn => {
       .reduce((total, s) => total + s.durationSeconds, 0);
   }, [sessions]);
 
-  const startTracking = useCallback((
+  const getUniqueActivityName = useCallback((baseName: string, existingSessions: ActivitySession[]): string => {
+    const existingNames = existingSessions.map(s => s.activityName.toLowerCase());
+    
+    if (!existingNames.includes(baseName.toLowerCase())) {
+      return baseName;
+    }
+    
+    let counter = 1;
+    let newName = `${baseName}(${counter})`;
+    
+    while (existingNames.includes(newName.toLowerCase())) {
+      counter++;
+      newName = `${baseName}(${counter})`;
+    }
+    
+    return newName;
+  }, []);
+
+  const executeStartTracking = useCallback((
     activityName: string, 
     isTask: boolean = false, 
     taskId?: string
   ) => {
-    if (!activityName.trim()) {
-      addToast('warning', '✏️ Wpisz nazwę aktywności przed rozpoczęciem!');
-      return;
-    }
-
     let existingSession: ActivitySession | undefined;
+    
     if (isTask && taskId) {
       existingSession = sessions.find(s => s.taskId === taskId);
     }
@@ -101,13 +126,70 @@ export const useActivityTracker = (): UseActivityTrackerReturn => {
     setCurrentSession(newSession);
     setSeconds(existingSession ? existingSession.durationSeconds : 0);
     setState('running');
-    
-    if (existingSession) {
-      addToast('success', `▶️ Kontynuacja zadania: "${activityName}" (${formatDurationDetailed(existingSession.durationSeconds)})`);
-    } else {
-      addToast('success', `🎯 Rozpoczęto: "${activityName}"`);
+  }, [sessions]);
+
+  const startTracking = useCallback((
+    activityName: string, 
+    isTask: boolean = false, 
+    taskId?: string
+  ) => {
+    if (!activityName.trim()) {
+      addToast('warning', '✏️ Wpisz nazwę aktywności przed rozpoczęciem!');
+      return;
     }
-  }, [sessions, addToast]);
+
+    const trimmedName = activityName.trim();
+    
+    const existingSession = sessions.find(
+      s => s.activityName.toLowerCase() === trimmedName.toLowerCase()
+    );
+
+    if (existingSession) {
+      setDuplicateConfirmation({
+        existingSession,
+        newActivityName: trimmedName,
+        isTask,
+        taskId,
+      });
+      return;
+    }
+
+    executeStartTracking(trimmedName, isTask, taskId);
+  }, [sessions, addToast, executeStartTracking]);
+
+  const confirmDuplicateCreate = useCallback(() => {
+    if (!duplicateConfirmation) return;
+    
+    const { existingSession, newActivityName, isTask, taskId } = duplicateConfirmation;
+    const uniqueName = getUniqueActivityName(newActivityName, sessions);
+    
+    addToast('warning', `⚠️ Sesja "${existingSession.activityName}" już istnieje (${formatDurationDetailed(existingSession.durationSeconds)}). Tworzę nową: "${uniqueName}"`);
+    
+    executeStartTracking(uniqueName, isTask, taskId);
+    setDuplicateConfirmation(null);
+  }, [duplicateConfirmation, sessions, getUniqueActivityName, addToast, executeStartTracking, formatDurationDetailed]);
+
+  const cancelDuplicateCreate = useCallback(() => {
+    if (!duplicateConfirmation) return;
+    
+    const { existingSession } = duplicateConfirmation;
+    
+    if (state === 'running') {
+      addToast('warning', '⏸️ Najpierw zatrzymaj bieżącą sesję');
+      setDuplicateConfirmation(null);
+      return;
+    }
+
+    setCurrentSession({
+      ...existingSession,
+      startTime: new Date(),
+    });
+    
+    setSeconds(existingSession.durationSeconds);
+    setState('running');
+    
+    setDuplicateConfirmation(null);
+  }, [duplicateConfirmation, state, addToast]);
 
   const continueSession = useCallback((session: ActivitySession) => {
     if (state === 'running') {
@@ -122,8 +204,6 @@ export const useActivityTracker = (): UseActivityTrackerReturn => {
     
     setSeconds(session.durationSeconds);
     setState('running');
-    
-    addToast('success', `▶️ Kontynuacja: "${session.activityName}" (${formatDurationDetailed(session.durationSeconds)})`);
   }, [state, addToast]);
 
   const stopTracking = useCallback(() => {
@@ -146,17 +226,6 @@ export const useActivityTracker = (): UseActivityTrackerReturn => {
             return [updatedSession, ...prev];
           }
         });
-        
-        const formattedTime = formatDurationDetailed(seconds);
-        const addedTimeReadable = formatDurationDetailed(newTimeAdded);
-        
-        if (newTimeAdded > 0 && currentSession.durationSeconds > 0) {
-          addToast('success', `✅ Zaktualizowano: "${updatedSession.activityName}" (+${addedTimeReadable}, razem: ${formattedTime})`);
-        } else {
-          addToast('success', `✅ Zapisano: "${updatedSession.activityName}" - ${formattedTime}`);
-        }
-      } else {
-        addToast('info', `⏱️ Nie dodano nowego czasu do "${currentSession.activityName}"`);
       }
       
       setCurrentSession(null);
@@ -167,19 +236,15 @@ export const useActivityTracker = (): UseActivityTrackerReturn => {
       setSeconds(0);
       setState('idle');
     }
-  }, [state, currentSession, seconds, addToast]);
+  }, [state, currentSession, seconds]);
 
   const resetTracking = useCallback(() => {
     if (state === 'running' && currentSession) {
-      const activityName = currentSession.activityName;
       setCurrentSession(null);
       setSeconds(0);
       setState('idle');
-      addToast('info', `⟳ Zresetowano sesję: "${activityName}"`);
-    } else if (state === 'idle' && seconds === 0) {
-      addToast('info', '✨ Brak aktywnej sesji do zresetowania');
     }
-  }, [state, currentSession, addToast, seconds]);
+  }, [state, currentSession]);
 
   useEffect(() => {
     if (state === 'running') {
@@ -202,6 +267,7 @@ export const useActivityTracker = (): UseActivityTrackerReturn => {
     sessions,
     seconds,
     toasts,
+    duplicateConfirmation,
     startTracking,
     continueSession,
     stopTracking,
@@ -209,5 +275,7 @@ export const useActivityTracker = (): UseActivityTrackerReturn => {
     getFormattedTime,
     getTotalTimeToday,
     removeToast,
+    confirmDuplicateCreate,
+    cancelDuplicateCreate,
   };
 };
