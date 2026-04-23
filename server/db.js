@@ -78,8 +78,6 @@ function seedDatabase(database) {
     .get();
 
   if (tasksCount.count === 0) {
-    console.log("Seeding database with test data...");
-
     const insertProject = database.prepare(
       "INSERT INTO projects (name) VALUES (?)",
     );
@@ -131,9 +129,5 @@ function seedDatabase(database) {
       projectId,
       now,
     );
-
-    console.log("Database seeded with 3 test tasks");
-  } else {
-    console.log("Database already has data, skipping seed");
   }
 }
