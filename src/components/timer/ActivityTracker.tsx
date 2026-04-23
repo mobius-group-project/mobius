@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BarChart2 } from 'lucide-react';
-import { useActivityTracker } from '../../hooks/useActivityTracker';
+import { useActivityTracker, type ActivitySession } from '../../hooks/useActivityTracker';
 import { formatDurationCompact, formatDurationDetailed } from '../../components/TimeFormatter';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import './styles/ActivityTracker.css';
@@ -17,6 +17,10 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({
 }) => {
   const navigate = useNavigate();
   const [activityInput, setActivityInput] = useState('');
+  const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState('');
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  
   const {
     state,
     currentSession,
@@ -33,6 +37,8 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({
     removeToast,
     confirmDuplicateCreate,
     cancelDuplicateCreate,
+    renameSession,
+    deleteSession,
   } = useActivityTracker();
 
   const handleStart = () => {
@@ -57,12 +63,42 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({
     }
   };
 
+  const handleDoubleClick = (session: ActivitySession) => {
+    setEditingSessionId(session.id);
+    setEditingName(session.activityName);
+  };
+
+  const handleRenameSubmit = (sessionId: string) => {
+    if (editingName.trim()) {
+      renameSession(sessionId, editingName.trim());
+    }
+    setEditingSessionId(null);
+    setEditingName('');
+  };
+
+  const handleRenameKeyDown = (e: React.KeyboardEvent, sessionId: string) => {
+    if (e.key === 'Enter') {
+      handleRenameSubmit(sessionId);
+    } else if (e.key === 'Escape') {
+      setEditingSessionId(null);
+      setEditingName('');
+    }
+  };
+
+  const handleDeleteConfirm = () => {
+    if (deleteConfirmId) {
+      deleteSession(deleteConfirmId);
+      setDeleteConfirmId(null);
+    }
+  };
+
   const totalTimeToday = getTotalTimeToday();
   const totalHours = Math.floor(totalTimeToday / 3600);
   const totalMinutes = Math.floor((totalTimeToday % 3600) / 60);
 
   return (
     <div className="activity-tracker">
+      {/* Toast notifications */}
       {toasts.map((toast) => (
         <div 
           key={toast.id} 
@@ -73,13 +109,12 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({
         </div>
       ))}
 
+      {/* Duplicate session confirmation dialog */}
       {duplicateConfirmation && (
         <ConfirmDialog
           isOpen={true}
           title="Sesja już istnieje"
-          message={`Masz już sesję o nazwie "${duplicateConfirmation.existingSession.activityName}" 
-          (${formatDurationDetailed(duplicateConfirmation.existingSession.durationSeconds)}). 
-          Czy chcesz kontynuować istniejącą, czy stworzyć nową?`}
+          message={`Masz już sesję o nazwie "${duplicateConfirmation.existingSession.activityName}" (${formatDurationDetailed(duplicateConfirmation.existingSession.durationSeconds)}). Czy chcesz kontynuować istniejącą, czy stworzyć nową?`}
           onConfirm={confirmDuplicateCreate}
           onCancel={cancelDuplicateCreate}
           confirmText="Stwórz nową"
@@ -87,7 +122,8 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({
         />
       )}
 
-     <div className="tracker-header">
+      {/* Header */}
+      <div className="tracker-header">
         <h2>Activity Tracker</h2>
         <div className="tracker-header-right">
           <div className="today-stats">
@@ -107,6 +143,7 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({
         </div>
       </div>
 
+      {/* Input section */}
       <div className="tracker-input-section">
         {preselectedTask ? (
           <div className="preselected-task">
@@ -131,6 +168,7 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({
         )}
       </div>
 
+      {/* Current activity indicator */}
       {state === 'running' && currentSession && (
         <div className="current-activity">
           <div className="activity-indicator">
@@ -143,10 +181,12 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({
         </div>
       )}
 
+      {/* Timer display */}
       <div className="timer-display">
         <div className="timer-time">{getFormattedTime()}</div>
       </div>
 
+      {/* Controls */}
       <div className="tracker-controls">
         {state === 'idle' ? (
           <button className="btn btn-start" onClick={handleStart}>
@@ -164,42 +204,81 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({
         )}
       </div>
 
+      {/* Recent sessions */}
       {sessions.length > 0 ? (
-<div className="recent-sessions">
-  <h3>Ostatnie sesje</h3>
-  <div className="sessions-list">
-    {sessions.slice(0, 5).map((session) => (
-      <div key={session.id} className="session-item">
-        <div className="session-info">
-          <span className="session-name" title={session.activityName}>
-            {session.activityName}
-            {session.isTask && <span className="session-tag">📋</span>}
-          </span>
-          <span className="session-time" title={formatDurationDetailed(session.durationSeconds)}>
-            {formatDurationCompact(session.durationSeconds)}
-          </span>
+        <div className="recent-sessions">
+          <h3>Ostatnie sesje</h3>
+          <div className="sessions-list">
+            {sessions.slice(0, 5).map((session) => (
+              <div key={session.id} className="session-item">
+                <div className="session-info">
+                  {editingSessionId === session.id ? (
+                    <input
+                      type="text"
+                      className="rename-input"
+                      value={editingName}
+                      onChange={(e) => setEditingName(e.target.value)}
+                      onBlur={() => handleRenameSubmit(session.id)}
+                      onKeyDown={(e) => handleRenameKeyDown(e, session.id)}
+                      autoFocus
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  ) : (
+                    <span 
+                      className="session-name" 
+                      title={`${session.activityName} (kliknij dwukrotnie aby edytować)`}
+                      onDoubleClick={() => handleDoubleClick(session)}
+                    >
+                      {session.activityName}
+                      {session.isTask && <span className="session-tag">📋</span>}
+                    </span>
+                  )}
+                  <span className="session-time" title={formatDurationDetailed(session.durationSeconds)}>
+                    {formatDurationCompact(session.durationSeconds)}
+                  </span>
+                </div>
+                <div className="session-actions">
+                  <span className="session-date">
+                    {session.startTime?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                  <button 
+                    className="continue-session-btn"
+                    onClick={() => continueSession(session)}
+                    disabled={state === 'running'}
+                    title={`Kontynuuj (${formatDurationDetailed(session.durationSeconds)})`}
+                  >
+                    ▶
+                  </button>
+                  <button 
+                    className="delete-session-btn"
+                    onClick={() => setDeleteConfirmId(session.id)}
+                    disabled={state === 'running' && currentSession?.id === session.id}
+                    title="Usuń sesję"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
-        <div className="session-actions">
-          <span className="session-date">
-            {session.startTime?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </span>
-          <button 
-            className="continue-session-btn"
-            onClick={() => continueSession(session)}
-            disabled={state === 'running'}
-            title={`Kontynuuj (${formatDurationDetailed(session.durationSeconds)})`}
-          >
-            ▶
-          </button>
-        </div>
-      </div>
-    ))}
-  </div>
-</div>
       ) : (
         <div className="empty-sessions">
           ✨ Brak zapisanych sesji. Rozpocznij pierwszą aktywność!
         </div>
+      )}
+
+      {/* Delete confirmation dialog */}
+      {deleteConfirmId && (
+        <ConfirmDialog
+          isOpen={true}
+          title="Usuń sesję"
+          message="Czy na pewno chcesz usunąć tę sesję? Tej operacji nie można cofnąć."
+          onConfirm={handleDeleteConfirm}
+          onCancel={() => setDeleteConfirmId(null)}
+          confirmText="Usuń"
+          cancelText="Anuluj"
+        />
       )}
     </div>
   );
