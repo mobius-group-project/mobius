@@ -22,13 +22,36 @@ app.get("/api/tasks", (req, res) => {
   try {
     const db = getDatabase();
     const tasks = db
-      .prepare("SELECT * FROM tasks ORDER BY created_at DESC")
+      .prepare("SELECT * FROM tasks ORDER BY order_index ASC")
       .all();
 
     res.json(tasks);
   } catch (error) {
     console.error("Error fetching tasks:", error);
     res.status(500).json({ error: "Failed to fetch tasks" });
+  }
+});
+
+app.patch("/api/tasks/reorder", (req, res) => {
+  try {
+    const db = getDatabase();
+    const { ids } = req.body;
+
+    if (!Array.isArray(ids)) {
+      res.status(400).json({ error: "ids must be an array" });
+      return;
+    }
+
+    const update = db.prepare("UPDATE tasks SET order_index = ? WHERE id = ?");
+    const updateAll = db.transaction((orderedIds) => {
+      orderedIds.forEach((id, index) => update.run(index, id));
+    });
+    updateAll(ids);
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error reordering tasks:", error);
+    res.status(500).json({ error: "Failed to reorder tasks" });
   }
 });
 
@@ -62,6 +85,7 @@ app.post("/api/tasks", (req, res) => {
       deadline,
       description,
       priority,
+      time_spent,
       project_id,
     } = req.body;
 
@@ -71,8 +95,8 @@ app.post("/api/tasks", (req, res) => {
     }
 
     const insertTask = db.prepare(`
-      INSERT INTO tasks (id, title, isDone, isRunning, deadline, description, priority, project_id, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      INSERT INTO tasks (id, title, isDone, isRunning, deadline, description, priority, time_spent, project_id, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
     `);
 
     const taskId = id || Date.now().toString();
@@ -84,6 +108,7 @@ app.post("/api/tasks", (req, res) => {
       deadline || null,
       description || null,
       priority || "Low",
+      time_spent || 0,
       project_id || null,
     );
 
@@ -98,8 +123,15 @@ app.post("/api/tasks", (req, res) => {
 app.put("/api/tasks/:id", (req, res) => {
   try {
     const db = getDatabase();
-    const { title, isDone, isRunning, deadline, description, priority } =
-      req.body;
+    const {
+      title,
+      isDone,
+      isRunning,
+      deadline,
+      description,
+      priority,
+      time_spent,
+    } = req.body;
 
     const updateTask = db.prepare(`
       UPDATE tasks 
@@ -108,7 +140,8 @@ app.put("/api/tasks/:id", (req, res) => {
           isRunning = COALESCE(?, isRunning),
           deadline = COALESCE(?, deadline),
           description = COALESCE(?, description),
-          priority = COALESCE(?, priority)
+          priority = COALESCE(?, priority),
+          time_spent = COALESCE(?, time_spent)
       WHERE id = ?
     `);
 
@@ -119,6 +152,7 @@ app.put("/api/tasks/:id", (req, res) => {
       deadline || null,
       description || null,
       priority || null,
+      time_spent !== undefined ? time_spent : null,
       req.params.id,
     );
 

@@ -28,6 +28,8 @@ export function initializeDatabase() {
       deadline TEXT,
       description TEXT,
       priority TEXT DEFAULT 'Low' CHECK(priority IN ('High', 'Medium', 'Low')),
+      time_spent INTEGER DEFAULT 0,
+      order_index INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       project_id INTEGER,
       FOREIGN KEY (project_id) REFERENCES projects(id)

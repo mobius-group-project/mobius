@@ -45,7 +45,7 @@ const TaskForm: React.FC<Props> = ({ onAdd, onCancel }) => {
 
   const formatDate = (dateString: string) => {
     if (!dateString) return 'Date';
-    const [year, month, day] = dateString.split('-');
+    const [_year, month, day] = dateString.split('-');
     return `${day}.${month}`;
   };
 

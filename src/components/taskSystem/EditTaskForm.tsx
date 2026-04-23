@@ -35,7 +35,7 @@ const EditTaskForm: React.FC<EditTaskFormProps> = ({ task, onSave, onCancel }) =
       title: title.trim(),
       description: description.trim() || undefined,
       deadline: formattedDeadline,
-      priority: priority || undefined
+      priority: priority || task.priority || 'Low'
     };
 
     onSave(updatedTask);
@@ -59,7 +59,7 @@ const EditTaskForm: React.FC<EditTaskFormProps> = ({ task, onSave, onCancel }) =
 
   const formatDate = (dateString: string) => {
     if (!dateString) return 'Date';
-    const [year, month, day] = dateString.split('-');
+    const [_year, month, day] = dateString.split('-');
     return `${day}.${month}`;
   };
 
@@ -75,7 +75,7 @@ const EditTaskForm: React.FC<EditTaskFormProps> = ({ task, onSave, onCancel }) =
     if (task.deadline && task.deadline !== 'No deadline') {
       const parts = task.deadline.split(' ');
       if (parts[0]) {
-        const [year, month, day] = parts[0].split('-');
+        const [_year, month, day] = parts[0].split('-');
         return `${day}.${month}`;
       }
     }

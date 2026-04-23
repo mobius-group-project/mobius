@@ -1,52 +1,92 @@
-import { useState } from 'react';
-import { type ITask } from '../components/taskSystem/TaskItem';
+import { useState, useEffect, useCallback } from 'react';
+import { taskService } from '../services/taskService';
+export type { ITask } from '../services/taskService';
 
 export const useTasks = () => {
-  const [tasks, setTasks] = useState<ITask[]>([
-    { id: '1', title: 'Zrobić herbatę', isDone: false, deadline: '24 Mar', description: 'Opis blablablablablabalablablaabl', timeSpent: 0, priority: 'High'},
-    { id: '2', title: 'Napisać pierwszy komponent', isDone: true, deadline: '25 Mar', timeSpent: 0, priority: 'Medium' },
-  ]);
+  const [tasks, setTasks] = useState<import('../services/taskService').ITask[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const toggleTask = (id: string) => {
-    setTasks(prev => 
-      prev.map(t => t.id === id ? { ...t, isDone: !t.isDone } : t)
-    );
+  const fetchTasks = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await taskService.getTasks();
+      setTasks(data);
+    } catch {
+      setError('Nie można połączyć się z bazą danych. Sprawdź czy serwer działa.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchTasks();
+  }, [fetchTasks]);
+
+  const toggleTask = async (id: string) => {
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+    const optimistic = tasks.map(t => t.id === id ? { ...t, isDone: !t.isDone } : t);
+    setTasks(optimistic);
+    try {
+      await taskService.updateTask({ ...task, isDone: !task.isDone });
+    } catch {
+      setTasks(tasks);
+      setError('Nie udało się zaktualizować zadania.');
+    }
   };
 
-const addTask = (title: string, deadline: string, description?: string, priority?: 'High' | 'Medium' | 'Low') => {
-  const newTask: ITask = {
-    id: Date.now().toString(), 
-    title,
-    isDone: false,
-    deadline,
-    timeSpent: 0,
-    description,
-    priority: priority
+  const addTask = async (title: string, deadline: string, description?: string, priority?: 'High' | 'Medium' | 'Low') => {
+    try {
+      const newTask = await taskService.createTask(title, deadline, description, priority);
+      setTasks(prev => [newTask, ...prev]);
+    } catch {
+      setError('Nie udało się dodać zadania.');
+    }
   };
-  setTasks(prev => [...prev, newTask]);
-};
 
-const deleteTask = (id: string) => {
-  setTasks(prev => prev.filter(task => task.id !== id));
-};
+  const deleteTask = async (id: string) => {
+    const prev = tasks;
+    setTasks(tasks.filter(t => t.id !== id));
+    try {
+      await taskService.deleteTask(id);
+    } catch {
+      setTasks(prev);
+      setError('Nie udało się usunąć zadania.');
+    }
+  };
 
-const updateTask = (updatedTask: ITask) => {
-  setTasks(prev => prev.map(task => 
-    task.id === updatedTask.id ? updatedTask : task
-  ));
-};
+  const updateTask = async (updatedTask: import('../services/taskService').ITask) => {
+    const prev = tasks;
+    setTasks(tasks.map(t => t.id === updatedTask.id ? updatedTask : t));
+    try {
+      await taskService.updateTask(updatedTask);
+    } catch {
+      setTasks(prev);
+      setError('Nie udało się zaktualizować zadania.');
+    }
+  };
 
-const reorderTasks = (reorderedTasks: ITask[]) => {
-  setTasks(reorderedTasks);
-};
+  const reorderTasks = async (reorderedTasks: import('../services/taskService').ITask[]) => {
+    const prev = tasks;
+    setTasks(reorderedTasks);
+    try {
+      await taskService.reorderTasks(reorderedTasks.map(t => t.id));
+    } catch {
+      setTasks(prev);
+      setError('Nie udało się zapisać kolejności zadań.');
+    }
+  };
 
-return { 
-  tasks, 
-  toggleTask, 
-  addTask, 
-  deleteTask, 
-  updateTask, 
-  reorderTasks
-};
-
+  return {
+    tasks,
+    loading,
+    error,
+    toggleTask,
+    addTask,
+    deleteTask,
+    updateTask,
+    reorderTasks,
+  };
 };

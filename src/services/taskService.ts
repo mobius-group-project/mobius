@@ -8,7 +8,8 @@ export interface ITask {
   deadline: string;
   description?: string;
   priority: 'High' | 'Medium' | 'Low';
-  timeSpent?: number;
+  timeSpent: number;
+  comments?: string[];
   created_at?: string;
   project_id?: number;
 }
@@ -19,10 +20,11 @@ function mapTask(task: any, priority?: 'High' | 'Medium' | 'Low'): ITask {
     title: task.title,
     isDone: Boolean(task.isDone),
     isRunning: Boolean(task.isRunning),
-    deadline: task.deadline,
+    deadline: task.deadline ?? '',
     description: task.description,
     priority: priority ?? task.priority ?? 'Low',
-    timeSpent: 0,
+    timeSpent: task.time_spent ?? 0,
+    comments: [],
     created_at: task.created_at,
     project_id: task.project_id,
   };
@@ -34,12 +36,6 @@ export const taskService = {
     if (!response.ok) throw new Error('Failed to fetch tasks');
     const tasks = await response.json();
     return tasks.map((task: any) => mapTask(task));
-  },
-
-  async getTask(id: string): Promise<ITask> {
-    const response = await fetch(`${API_URL}/tasks/${id}`);
-    if (!response.ok) throw new Error('Failed to fetch task');
-    return mapTask(await response.json());
   },
 
   async createTask(title: string, deadline: string, description?: string, priority?: 'High' | 'Medium' | 'Low'): Promise<ITask> {
@@ -54,6 +50,7 @@ export const taskService = {
         deadline,
         description,
         priority: priority ?? 'Low',
+        time_spent: 0,
       }),
     });
     if (!response.ok) throw new Error('Failed to create task');
@@ -71,6 +68,7 @@ export const taskService = {
         deadline: task.deadline,
         description: task.description,
         priority: task.priority,
+        time_spent: task.timeSpent,
       }),
     });
     if (!response.ok) throw new Error('Failed to update task');
@@ -82,5 +80,14 @@ export const taskService = {
       method: 'DELETE',
     });
     if (!response.ok) throw new Error('Failed to delete task');
+  },
+
+  async reorderTasks(ids: string[]): Promise<void> {
+    const response = await fetch(`${API_URL}/tasks/reorder`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids }),
+    });
+    if (!response.ok) throw new Error('Failed to reorder tasks');
   },
 };

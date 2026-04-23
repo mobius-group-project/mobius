@@ -3,23 +3,14 @@ import { Calendar, Play, Pause, Flag, Trash2, Pencil, MessageSquare } from 'luci
 import './styles/TaskItem.css';
 import EditTaskForm from './EditTaskForm';
 import ConfirmDialog from '../ConfirmDialog';
-
-export interface ITask {
-  id: string;
-  title: string;
-  isDone: boolean;
-  deadline: string;
-  description?: string;
-  timeSpent: number;
-  priority?: 'High' | 'Medium' | 'Low';
-  comments?: string[];
-}
+import { type ITask } from '../../services/taskService';
+export type { ITask } from '../../services/taskService';
 
 interface Props {
   task: ITask;
   onToggle: () => void;
   onDelete: (id: string) => void;
-  onUpdateTask: (task: ITask) => void;
+  onUpdateTask: (task: ITask) => void | Promise<void>;
   dragHandleProps?: any;
 }
 

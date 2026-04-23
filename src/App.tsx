@@ -17,19 +17,28 @@ const DashboardPage: React.FC = () => {
 };
 
 const TasksPage: React.FC = () => {
-  const { tasks, toggleTask, addTask, deleteTask, updateTask, reorderTasks } = useTasks();
+  const { tasks, toggleTask, addTask, deleteTask, updateTask, reorderTasks, loading, error } = useTasks();
 
   return (
     <div className="route-view">
       <h1 className="route-title">Tasks</h1>
-      <TaskList
-        tasks={tasks}
-        onToggleTask={toggleTask}
-        onAddTask={addTask}
-        onDelete={deleteTask}  
-        onUpdateTask={updateTask}
-        onReorderTasks={reorderTasks}
-      />
+      {error && (
+        <div style={{ color: '#ff6b6b', background: '#2a1a1a', border: '1px solid #ff6b6b', borderRadius: 8, padding: '12px 16px', marginBottom: 16 }}>
+          {error}
+        </div>
+      )}
+      {loading ? (
+        <div style={{ color: 'var(--color-text-secondary)', padding: '32px 0', textAlign: 'center' }}>Ładowanie zadań...</div>
+      ) : (
+        <TaskList
+          tasks={tasks}
+          onToggleTask={toggleTask}
+          onAddTask={addTask}
+          onDelete={deleteTask}
+          onUpdateTask={updateTask}
+          onReorderTasks={reorderTasks}
+        />
+      )}
     </div>
   );
 };
