@@ -44,6 +44,8 @@ interface UseActivityTrackerReturn {
   removeToast: (id: number) => void;
   confirmDuplicateCreate: () => void;
   cancelDuplicateCreate: () => void;
+  renameSession: (sessionId: string, newName: string) => void;
+  deleteSession: (sessionId: string) => void;
 }
 
 export const useActivityTracker = (): UseActivityTrackerReturn => {
@@ -83,8 +85,10 @@ export const useActivityTracker = (): UseActivityTrackerReturn => {
       .reduce((total, s) => total + s.durationSeconds, 0);
   }, [sessions]);
 
-  const getUniqueActivityName = useCallback((baseName: string, existingSessions: ActivitySession[]): string => {
-    const existingNames = existingSessions.map(s => s.activityName.toLowerCase());
+  const getUniqueActivityName = useCallback((baseName: string, existingSessions: ActivitySession[], excludeId?: string): string => {
+    const existingNames = existingSessions
+      .filter(s => s.id !== excludeId)
+      .map(s => s.activityName.toLowerCase());
     
     if (!existingNames.includes(baseName.toLowerCase())) {
       return baseName;
@@ -100,6 +104,38 @@ export const useActivityTracker = (): UseActivityTrackerReturn => {
     
     return newName;
   }, []);
+
+  const renameSession = useCallback((sessionId: string, newName: string) => {
+    if (!newName.trim()) {
+      addToast('warning', '✏️ Nazwa nie może być pusta!');
+      return;
+    }
+
+    const trimmedName = newName.trim();
+    
+    const duplicate = sessions.find(
+      s => s.id !== sessionId && s.activityName.toLowerCase() === trimmedName.toLowerCase()
+    );
+
+    if (duplicate) {
+      addToast('warning', `⚠️ Sesja o nazwie "${trimmedName}" już istnieje!`);
+      return;
+    }
+    
+    setSessions(prev => prev.map(session => {
+      if (session.id === sessionId) {
+        return {
+          ...session,
+          activityName: trimmedName,
+        };
+      }
+      return session;
+    }));
+
+    if (currentSession?.id === sessionId) {
+      setCurrentSession(prev => prev ? { ...prev, activityName: trimmedName } : null);
+    }
+  }, [sessions, currentSession, addToast]);
 
   const executeStartTracking = useCallback((
     activityName: string, 
@@ -261,6 +297,16 @@ export const useActivityTracker = (): UseActivityTrackerReturn => {
     };
   }, [state]);
 
+  const deleteSession = useCallback((sessionId: string) => {
+    if (currentSession?.id === sessionId) {
+      setCurrentSession(null);
+      setSeconds(0);
+      setState('idle');
+    }
+    
+    setSessions(prev => prev.filter(s => s.id !== sessionId));
+  }, [currentSession]);
+
   return {
     state,
     currentSession,
@@ -277,5 +323,7 @@ export const useActivityTracker = (): UseActivityTrackerReturn => {
     removeToast,
     confirmDuplicateCreate,
     cancelDuplicateCreate,
+    renameSession,
+    deleteSession,
   };
 };
