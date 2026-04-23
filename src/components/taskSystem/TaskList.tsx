@@ -52,11 +52,7 @@ const SortableTaskItem = ({
   };
 
   return (
-    <div 
-      ref={setNodeRef} 
-      style={style} 
-      {...attributes}
-    >
+    <div ref={setNodeRef} style={style} {...attributes}>
       <TaskItem 
         task={task}
         onToggle={onToggle}

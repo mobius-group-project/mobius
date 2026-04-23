@@ -5,6 +5,7 @@
   padding: 12px 16px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   transition: background-color 0.2s ease;
+  position: relative;
 }
 
 .task-checkbox {
@@ -17,12 +18,10 @@
   cursor: pointer;
   outline: none;
   margin-top: 2px; 
-
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative; 
-
   transition: all 0.2s ease;
   flex-shrink: 0; 
 }
@@ -60,7 +59,7 @@
   height: 10px; 
   border: solid white;
   border-width: 0 2px 2px 0; 
-  transform: rotate(45deg) translate(-1px, -1px);;
+  transform: rotate(45deg) translate(-1px, -1px);
 }
 
 .task-info {
@@ -209,7 +208,6 @@
   flex-shrink: 0;
   opacity: 0;
   visibility: hidden;
-  transition: opacity 0.2s ease, visibility 0.2s ease;
 }
 
 .task-item:hover .delete-task-btn {
@@ -240,7 +238,6 @@
   flex-shrink: 0;
   opacity: 0;
   visibility: hidden;
-  transition: opacity 0.2s ease, visibility 0.2s ease;
 }
 
 .task-item:hover .edit-task-btn {
@@ -265,7 +262,6 @@
   flex-shrink: 0;
   opacity: 0;
   visibility: hidden;
-  transition: opacity 0.2s ease, visibility 0.2s ease;
 }
 
 .task-item:hover .comment-task-btn {
@@ -283,7 +279,58 @@
   align-items: center;
 }
 
-/* Comments */
+.comment-task-btn {
+  position: relative;
+}
+
+.comment-task-btn.has-comments {
+  opacity: 1 !important;
+  visibility: visible !important;
+  color: var(--color-primary);
+}
+
+.comments-badge {
+  position: absolute;
+  top: -6px;
+  right: -8px;
+  background: var(--color-primary);
+  color: #000;
+  font-size: 10px;
+  font-weight: bold;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+}
+
+/* Drag and Drop */
+.drag-handle-area {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  z-index: 1;
+}
+
+.drag-handle-area:active {
+  cursor: grabbing;
+}
+
+.task-checkbox,
+.task-actions button,
+.task-time-controls button,
+.task-description,
+.task-footer {
+  position: relative;
+  z-index: 2;
+}
+
+/* Модальное окно комментариев - ЕДИНСТВЕННЫЙ ПРАВИЛЬНЫЙ БЛОК */
 .task-comments {
   position: fixed;
   top: 50%;
@@ -299,6 +346,18 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+/* Затемнение фона */
+.task-comments::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: -1;
 }
 
 .comments-header {
@@ -427,29 +486,125 @@
   opacity: 0.85;
 }
 
-.comment-task-btn {
-  position: relative;
-}
-
-.comment-task-btn.has-comments {
-  opacity: 1 !important;
-  visibility: visible !important;
-  color: var(--color-primary);
-}
-
-.comments-badge {
-  position: absolute;
-  top: -6px;
-  right: -8px;
-  background: var(--color-primary);
-  color: #000;
-  font-size: 10px;
-  font-weight: bold;
-  min-width: 16px;
-  height: 16px;
-  border-radius: 8px;
+/* Модальное окно комментариев */
+.task-comments {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 420px;
+  max-width: 90%;
+  background: #1e1e2e;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  z-index: 10000;
   display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Затемнение фона (оверлей) */
+.task-comments::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: -1;
+}
+
+/* Заголовок окна */
+.comments-header {
+  display: flex;
+  justify-content: space-between;
   align-items: center;
-  justify-content: center;
-  padding: 0 4px;
+  padding: 16px 20px;
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  color: #4f46e5;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+/* Кнопка закрытия */
+.close-comments {
+  background: transparent;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  font-size: 20px;
+  transition: color 0.2s ease;
+  padding: 4px 8px;
+}
+
+.close-comments:hover {
+  color: #4f46e5;
+}
+
+/* Список комментариев */
+.comments-list {
+  flex: 1;
+  max-height: 350px;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Поле ввода и кнопка */
+.comments-input {
+  display: flex;
+  gap: 10px;
+  padding: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.comments-input input {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid #444;
+  border-radius: 10px;
+  padding: 12px 14px;
+  color: #fff;
+  outline: none;
+  font-size: 14px;
+  transition: border-color 0.2s ease;
+  height: 44px;
+  box-sizing: border-box;
+}
+
+.comments-input input:focus {
+  border-color: #4f46e5;
+}
+
+.comments-input button {
+  background: #4f46e5;
+  border: none;
+  border-radius: 10px;
+  padding: 0 20px;
+  color: #000;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  transition: opacity 0.2s ease;
+  height: 44px;
+  box-sizing: border-box;
+  white-space: nowrap;
+}
+
+.comments-input button:hover {
+  opacity: 0.85;
+}
+
+/* Сообщение "нет комментариев" */
+.no-comments {
+  text-align: center;
+  color: #666;
+  padding: 40px;
+  font-size: 14px;
 }

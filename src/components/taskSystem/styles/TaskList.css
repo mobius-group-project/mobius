@@ -77,3 +77,22 @@
 .drag-handle:active {
   cursor: grabbing;
 }
+
+.draggable-task-wrapper {
+  cursor: grab;
+  user-select: none;
+}
+
+.draggable-task-wrapper:active {
+  cursor: grabbing;
+}
+
+.draggable-task-wrapper button,
+.draggable-task-wrapper input[type="checkbox"] {
+  cursor: pointer;
+}
+
+.draggable-task-wrapper button:active,
+.draggable-task-wrapper input[type="checkbox"]:active {
+  cursor: pointer;
+}
