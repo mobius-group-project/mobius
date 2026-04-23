@@ -20,7 +20,7 @@
 }
 
 .task-input-title:focus {
-  border-bottom-color: var(--color-positive);
+  border-bottom-color: var(--color-primary);
 }
 
 .task-input-title::placeholder {
@@ -43,7 +43,7 @@
 }
 
 .task-input-description:focus {
-  border-color: var(--color-positive);
+  border-color: var(--color-primary);
 }
 
 .task-input-description::placeholder {
@@ -57,7 +57,8 @@
   width: 100%;
 }
 
-.task-deadline-wrapper,
+.task-date-wrapper,
+.task-time-wrapper,
 .task-priority-buttons,
 .task-attachment-btn {
   background: rgba(255, 255, 255, 0.05);
@@ -69,7 +70,8 @@
   box-sizing: border-box;
 }
 
-.task-deadline-wrapper {
+.task-date-wrapper,
+.task-time-wrapper {
   position: relative;
   flex: 1.5;
   gap: 8px;
@@ -77,21 +79,37 @@
   cursor: pointer;
 }
 
-.calendar-icon-styled {
-  color: #888;
-  pointer-events: none;
-  z-index: 1;
+.task-date-wrapper:hover,
+.task-time-wrapper:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--color-primary);
 }
 
-.selected-date-label {
+.calendar-icon-styled,
+.clock-icon-styled {
   color: #888;
+  flex-shrink: 0;
+  pointer-events: none;
+  z-index: 1;
+  transition: color 0.2s ease;
+}
+
+.task-date-wrapper .calendar-icon-styled.has-value,
+.task-time-wrapper .clock-icon-styled.has-value {
+  color: var(--color-primary);
+}
+
+.selected-date-label,
+.selected-time-label {
   font-size: 13px;
   pointer-events: none;
   white-space: nowrap;
   z-index: 1;
+  transition: color 0.2s ease;
 }
 
-.task-deadline-picker {
+.task-date-picker,
+.task-time-picker {
   position: absolute;
   top: 0;
   left: 0;
@@ -100,11 +118,12 @@
   opacity: 0;
   cursor: pointer;
   z-index: 2;
-  appearance: none;
-  -webkit-appearance: none;
+  border: none;
+  background: transparent;
 }
 
-.task-deadline-picker::-webkit-calendar-picker-indicator {
+.task-date-picker::-webkit-calendar-picker-indicator,
+.task-time-picker::-webkit-calendar-picker-indicator {
   position: absolute;
   width: 100%;
   height: 100%;
@@ -149,18 +168,19 @@
 
 .task-attachment-btn:hover {
   background: rgba(255, 255, 255, 0.1);
-  border-color: var(--color-positive);
-  color: var(--color-positive);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
 }
 
 .form-actions {
   display: flex;
   gap: 12px;
   margin-top: 8px;
+  justify-content: flex-end;
 }
 
 .save-btn {
-  background: var(--color-positive);
+  background: var(--color-primary);
   color: #000;
   border: none;
   padding: 8px 20px;
@@ -201,95 +221,14 @@
     flex-direction: column;
     align-items: stretch;
   }
-  .task-deadline-wrapper,
+  .task-date-wrapper,
+  .task-time-wrapper,
   .task-priority-buttons,
   .task-attachment-btn {
     width: 100%;
     flex: none;
   }
-}
-
-.form-actions {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-  align-items: center;
-}
-
-.task-time-wrapper {
-  position: relative;
-  flex: 1.5;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid #444;
-  border-radius: 6px;
-  padding: 0 12px;
-  height: 36px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-sizing: border-box;
-}
-
-.task-time-wrapper:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: var(--color-primary);
-}
-
-.clock-icon-styled {
-  color: #888;
-  flex-shrink: 0;
-  pointer-events: none;
-  z-index: 1;
-}
-
-.selected-time-label {
-  color: #888;
-  font-size: 13px;
-  pointer-events: none;
-  white-space: nowrap;
-  z-index: 1;
-}
-
-.task-time-picker {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-  cursor: pointer;
-  z-index: 2;
-  border: none;
-  background: transparent;
-}
-
-.task-time-picker::-webkit-calendar-picker-indicator {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  opacity: 0;
-  cursor: pointer;
-}
-
-
-.task-deadline-wrapper:has(.task-deadline-picker:valid) .selected-date-label {
-  color: var(--color-positive);
-}
-
-.task-time-wrapper:has(.task-time-picker:valid) .selected-time-label {
-  color: var(--color-positive);
-}
-
-.selected-date-label.active,
-.selected-time-label.active {
-  color: var(--color-positive);
-}
-
-.task-deadline-wrapper:has(.task-deadline-picker:valid) .calendar-icon-styled,
-.task-time-wrapper:has(.task-time-picker:valid) .clock-icon-styled {
-  color: var(--color-positive);
+  .form-actions {
+    justify-content: center;
+  }
 }

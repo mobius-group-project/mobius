@@ -75,7 +75,9 @@ const TaskForm: React.FC<Props> = ({ onAdd, onCancel }) => {
       <div className="task-form-row">
         <div className="task-date-wrapper">
           <Calendar size={16} className="calendar-icon-styled" />
-          <span className="selected-date-label">{formatDate(deadlineDate)}</span>
+          <span className="selected-date-label" style={{ color: deadlineDate ? 'var(--color-primary)' : '#888' }}>
+            {formatDate(deadlineDate)}
+          </span>
           <input
             type="date"
             className="task-date-picker"
@@ -87,7 +89,9 @@ const TaskForm: React.FC<Props> = ({ onAdd, onCancel }) => {
 
         <div className="task-time-wrapper">
           <Clock size={16} className="clock-icon-styled" />
-          <span className="selected-time-label">{formatTime(deadlineTime)}</span>
+          <span className="selected-time-label" style={{ color: deadlineTime ? 'var(--color-primary)' : '#888' }}>
+            {formatTime(deadlineTime)}
+          </span>
           <input
             type="time"
             className="task-time-picker"
