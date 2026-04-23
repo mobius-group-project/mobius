@@ -200,7 +200,6 @@ const TaskItem: React.FC<Props> = ({ task, onToggle, onDelete, onUpdateTask, dra
         />
       </div>
 
-      {/* Используем правильные классы из CSS */}
       {showComments && (
         <div className="task-comments" onClick={(e) => e.stopPropagation()}>
           <div className="comments-header">
