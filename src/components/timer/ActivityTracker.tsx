@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { BarChart2 } from 'lucide-react';
 import { useActivityTracker } from '../../hooks/useActivityTracker';
 import { formatDurationCompact, formatDurationDetailed } from '../../components/TimeFormatter';
+import ConfirmDialog from '../../components/ConfirmDialog';
 import './styles/ActivityTracker.css';
 
 interface ActivityTrackerProps {
@@ -22,6 +23,7 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({
     sessions,
     seconds,
     toasts,
+    duplicateConfirmation,
     startTracking,
     continueSession,
     stopTracking,
@@ -29,6 +31,8 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({
     getFormattedTime,
     getTotalTimeToday,
     removeToast,
+    confirmDuplicateCreate,
+    cancelDuplicateCreate,
   } = useActivityTracker();
 
   const handleStart = () => {
@@ -68,6 +72,20 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({
           {toast.message}
         </div>
       ))}
+
+      {duplicateConfirmation && (
+        <ConfirmDialog
+          isOpen={true}
+          title="Sesja już istnieje"
+          message={`Masz już sesję o nazwie "${duplicateConfirmation.existingSession.activityName}" 
+          (${formatDurationDetailed(duplicateConfirmation.existingSession.durationSeconds)}). 
+          Czy chcesz kontynuować istniejącą, czy stworzyć nową?`}
+          onConfirm={confirmDuplicateCreate}
+          onCancel={cancelDuplicateCreate}
+          confirmText="Stwórz nową"
+          cancelText="Kontynuuj istniejącą"
+        />
+      )}
 
      <div className="tracker-header">
         <h2>Activity Tracker</h2>

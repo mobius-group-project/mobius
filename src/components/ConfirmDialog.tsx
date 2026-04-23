@@ -8,9 +8,19 @@ interface ConfirmDialogProps {
   message: string;
   onConfirm: () => void;
   onCancel: () => void;
+  confirmText?: string;
+  cancelText?: string;
 }
 
-const ConfirmDialog: React.FC<ConfirmDialogProps> = ({ isOpen, title, message, onConfirm, onCancel }) => {
+const ConfirmDialog: React.FC<ConfirmDialogProps> = ({ 
+  isOpen, 
+  title, 
+  message, 
+  onConfirm, 
+  onCancel,
+  confirmText = "Potwierdź",
+  cancelText = "Anuluj"
+}) => {
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -30,8 +40,8 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({ isOpen, title, message, o
         <h3>{title}</h3>
         <p>{message}</p>
         <div className="confirm-actions">
-          <button className="confirm-cancel" onClick={onCancel}>Cancel</button>
-          <button className="confirm-delete" onClick={onConfirm}>Delete</button>
+          <button className="confirm-cancel" onClick={onCancel}>{cancelText}</button>
+          <button className="confirm-delete" onClick={onConfirm}>{confirmText}</button>
         </div>
       </div>
     </div>,
