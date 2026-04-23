@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Calendar, Flag, Paperclip } from 'lucide-react';
+import { Calendar, Flag, Paperclip, Clock } from 'lucide-react';
 import './styles/AddTaskForm.css';
 
 interface Props {
@@ -10,7 +10,8 @@ interface Props {
 const TaskForm: React.FC<Props> = ({ onAdd, onCancel }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [deadline, setDeadline] = useState('');
+  const [deadlineDate, setDeadlineDate] = useState('');
+  const [deadlineTime, setDeadlineTime] = useState('');
   const [priority, setPriority] = useState<'High' | 'Medium' | 'Low' | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -18,19 +19,17 @@ const TaskForm: React.FC<Props> = ({ onAdd, onCancel }) => {
     if (!title.trim()) return;
     
     let formattedDeadline = 'No deadline';
-    if (deadline) {
-      const date = new Date(deadline);
-      formattedDeadline = date.toLocaleDateString('en-GB', { 
-        day: 'numeric', 
-        month: 'short' 
-      }).replace(',', '');
+    if (deadlineDate) {
+      const time = deadlineTime || '23:59';
+      formattedDeadline = `${deadlineDate} ${time}`;
     }
     
     onAdd(title.trim(), formattedDeadline, description.trim() || undefined, priority || undefined);
     
     setTitle('');
     setDescription('');
-    setDeadline('');
+    setDeadlineDate('');
+    setDeadlineTime('');
     setPriority(null);
   };
 
@@ -40,6 +39,19 @@ const TaskForm: React.FC<Props> = ({ onAdd, onCancel }) => {
     } else {
       setPriority(value);
     }
+  };
+
+  const today = new Date().toISOString().split('T')[0];
+
+  const formatDate = (dateString: string) => {
+    if (!dateString) return 'Date';
+    const [year, month, day] = dateString.split('-');
+    return `${day}.${month}`;
+  };
+
+  const formatTime = (timeString: string) => {
+    if (!timeString) return 'Time';
+    return timeString;
   };
 
   return (
@@ -61,19 +73,29 @@ const TaskForm: React.FC<Props> = ({ onAdd, onCancel }) => {
       />
       
       <div className="task-form-row">
-        <div className="task-deadline-wrapper">
+        <div className="task-date-wrapper">
           <Calendar size={16} className="calendar-icon-styled" />
-          <span className="selected-date-label">
-           {deadline ? deadline : "Deadline"}
-          </span>
-
+          <span className="selected-date-label">{formatDate(deadlineDate)}</span>
           <input
-          type="date"
-           className="task-deadline-picker"
-           value={deadline}
-          onChange={(e) => setDeadline(e.target.value)}
-              />
-          </div>
+            type="date"
+            className="task-date-picker"
+            value={deadlineDate}
+            onChange={(e) => setDeadlineDate(e.target.value)}
+            min={today}
+          />
+        </div>
+
+        <div className="task-time-wrapper">
+          <Clock size={16} className="clock-icon-styled" />
+          <span className="selected-time-label">{formatTime(deadlineTime)}</span>
+          <input
+            type="time"
+            className="task-time-picker"
+            value={deadlineTime}
+            onChange={(e) => setDeadlineTime(e.target.value)}
+            step="60"
+          />
+        </div>
         
         <div className="task-priority-buttons">
           <button
