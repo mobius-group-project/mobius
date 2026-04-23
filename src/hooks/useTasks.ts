@@ -36,5 +36,17 @@ const updateTask = (updatedTask: ITask) => {
   ));
 };
 
-return { tasks, toggleTask, addTask, deleteTask, updateTask };
+const reorderTasks = (reorderedTasks: ITask[]) => {
+  setTasks(reorderedTasks);
+};
+
+return { 
+  tasks, 
+  toggleTask, 
+  addTask, 
+  deleteTask, 
+  updateTask, 
+  reorderTasks
+};
+
 };
