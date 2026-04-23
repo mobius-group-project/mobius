@@ -18,7 +18,7 @@
 }
 
 .edit-task-input-title:focus {
-  border-bottom-color: var(--color-positive);
+  border-bottom-color: var(--color-primary);
 }
 
 .edit-task-input-description {
@@ -36,60 +36,91 @@
 }
 
 .edit-task-input-description:focus {
-  border-color: var(--color-positive);
+  border-color: var(--color-primary);
 }
 
 .edit-task-form-row {
   display: flex;
   gap: 12px;
-  align-items: center;
+  align-items: stretch;
   width: 100%;
 }
 
-.edit-task-deadline-wrapper {
+.edit-task-date-wrapper,
+.edit-task-time-wrapper,
+.edit-task-priority-buttons,
+.edit-task-attachment-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid #444;
+  border-radius: 6px;
+  height: 36px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  background: rgba(255, 255, 255, 0.05);
-  padding: 6px 12px;
-  border-radius: 6px;
-  border: 1px solid #444;
-  cursor: pointer;
-  position: relative;
-  flex: 1;
-  height: 36px;
   box-sizing: border-box;
 }
 
-.edit-task-deadline-picker {
-  position: absolute;
-  opacity: 0;
-  width: 100%;
-  height: 100%;
-  left: 0;
-  top: 0;
+.edit-task-date-wrapper,
+.edit-task-time-wrapper {
+  position: relative;
+  flex: 1.5;
+  gap: 8px;
+  padding: 0 12px;
   cursor: pointer;
 }
 
-.selected-date-label {
-  flex: 1;
-  color: #fff;
+.edit-task-date-wrapper:hover,
+.edit-task-time-wrapper:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--color-primary);
+}
+
+.edit-calendar-icon-styled,
+.edit-clock-icon-styled {
+  color: #888;
+  flex-shrink: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.edit-selected-date-label,
+.edit-selected-time-label {
   font-size: 13px;
   pointer-events: none;
+  white-space: nowrap;
+  z-index: 1;
+  transition: color 0.2s ease;
+}
+
+.edit-task-date-picker,
+.edit-task-time-picker {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 2;
+  border: none;
+  background: transparent;
+}
+
+.edit-task-date-picker::-webkit-calendar-picker-indicator,
+.edit-task-time-picker::-webkit-calendar-picker-indicator {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  opacity: 0;
+  cursor: pointer;
 }
 
 .edit-task-priority-buttons {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  background: rgba(255, 255, 255, 0.05);
-  padding: 4px 12px;
-  border-radius: 6px;
-  border: 1px solid #444;
-  flex: 1;
+  flex: 1.5;
+  gap: 10px;
   justify-content: center;
-  height: 36px;
-  box-sizing: border-box;
+  padding: 0 12px;
 }
 
 .edit-priority-flag {
@@ -112,22 +143,40 @@
   transform: scale(1.05);
 }
 
+.edit-task-attachment-btn {
+  flex: 0.5;
+  justify-content: center;
+  color: #888;
+  padding: 0;
+}
+
+.edit-task-attachment-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
 .edit-task-actions {
   display: flex;
   gap: 12px;
-  justify-content: center;
+  justify-content: flex-end;
   margin-top: 8px;
 }
 
 .edit-save-btn {
-  background: var(--color-positive);
+  background: var(--color-primary);
   color: #000;
   border: none;
-  padding: 6px 16px;
+  padding: 6px 20px;
   border-radius: 6px;
   font-weight: 600;
   font-size: 14px;
   cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.edit-save-btn:hover {
+  opacity: 0.85;
 }
 
 .edit-cancel-btn {
@@ -136,8 +185,9 @@
   color: #888;
   font-size: 14px;
   cursor: pointer;
-  padding: 6px 16px;
+  padding: 6px 20px;
   border-radius: 6px;
+  transition: all 0.2s ease;
 }
 
 .edit-cancel-btn:hover {
@@ -145,24 +195,20 @@
   color: var(--color-negative);
 }
 
-.edit-task-attachment-btn {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid #444;
-  border-radius: 6px;
-  padding: 6px 12px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  transition: all 0.2s ease;
-  color: #888;
-  flex: 0.3;
-  justify-content: center;
-  height: 36px;
-  box-sizing: border-box;
+@media (max-width: 600px) {
+  .edit-task-form-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .edit-task-date-wrapper,
+  .edit-task-time-wrapper,
+  .edit-task-priority-buttons,
+  .edit-task-attachment-btn {
+    width: 100%;
+    flex: none;
+  }
+  .edit-task-actions {
+    justify-content: center;
+  }
 }
 
-.edit-task-attachment-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: var(--color-positive);
-  color: var(--color-positive);
-}
