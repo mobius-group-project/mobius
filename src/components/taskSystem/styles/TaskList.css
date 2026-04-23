@@ -50,3 +50,49 @@
   color: var(--color-primary); 
   opacity: 0.8;
 }
+
+.task-list {
+  cursor: default;
+}
+
+.drag-handle {
+  cursor: grab;
+  padding: 8px;
+  margin-bottom: 4px;
+  user-select: none;
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  text-align: center;
+  font-size: 16px;
+  letter-spacing: 2px;
+  color: #888;
+  transition: background-color 0.2s;
+}
+
+.drag-handle:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.draggable-task-wrapper {
+  cursor: grab;
+  user-select: none;
+}
+
+.draggable-task-wrapper:active {
+  cursor: grabbing;
+}
+
+.draggable-task-wrapper button,
+.draggable-task-wrapper input[type="checkbox"] {
+  cursor: pointer;
+}
+
+.draggable-task-wrapper button:active,
+.draggable-task-wrapper input[type="checkbox"]:active {
+  cursor: pointer;
+}

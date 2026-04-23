@@ -5,6 +5,7 @@
   padding: 12px 16px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   transition: background-color 0.2s ease;
+  position: relative;
 }
 
 .task-checkbox {
@@ -17,12 +18,10 @@
   cursor: pointer;
   outline: none;
   margin-top: 2px; 
-
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative; 
-
   transition: all 0.2s ease;
   flex-shrink: 0; 
 }
@@ -60,7 +59,7 @@
   height: 10px; 
   border: solid white;
   border-width: 0 2px 2px 0; 
-  transform: rotate(45deg) translate(-1px, -1px);;
+  transform: rotate(45deg) translate(-1px, -1px);
 }
 
 .task-info {
@@ -209,7 +208,6 @@
   flex-shrink: 0;
   opacity: 0;
   visibility: hidden;
-  transition: opacity 0.2s ease, visibility 0.2s ease;
 }
 
 .task-item:hover .delete-task-btn {
@@ -240,7 +238,6 @@
   flex-shrink: 0;
   opacity: 0;
   visibility: hidden;
-  transition: opacity 0.2s ease, visibility 0.2s ease;
 }
 
 .task-item:hover .edit-task-btn {
@@ -265,7 +262,6 @@
   flex-shrink: 0;
   opacity: 0;
   visibility: hidden;
-  transition: opacity 0.2s ease, visibility 0.2s ease;
 }
 
 .task-item:hover .comment-task-btn {
@@ -274,7 +270,7 @@
 }
 
 .comment-task-btn:hover {
-  color: var(--color-secondary);
+  color: var(--color-secondary-2);
 }
 
 .task-actions {
@@ -283,14 +279,65 @@
   align-items: center;
 }
 
-/* Comments */
+.comment-task-btn {
+  position: relative;
+}
+
+.comment-task-btn.has-comments {
+  opacity: 1 !important;
+  visibility: visible !important;
+  color: var(--color-primary);
+}
+
+.comments-badge {
+  position: absolute;
+  top: -6px;
+  right: -8px;
+  background: var(--color-primary);
+  color: #000;
+  font-size: 10px;
+  font-weight: bold;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+}
+
+.drag-handle-area {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  z-index: 1;
+}
+
+.drag-handle-area:active {
+  cursor: grabbing;
+}
+
+.task-checkbox,
+.task-actions button,
+.task-time-controls button,
+.task-description,
+.task-footer {
+  position: relative;
+  z-index: 2;
+}
+
 .task-comments {
   position: fixed;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 420px;
+  width: 400px;
   max-width: 90%;
+  height: 500px;
+  max-height: 80vh;
   background: var(--color-background);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 16px;
@@ -299,6 +346,17 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+.task-comments::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: -1;
 }
 
 .comments-header {
@@ -311,6 +369,7 @@
   color: var(--color-primary);
   font-weight: 600;
   font-size: 16px;
+  flex-shrink: 0;
 }
 
 .close-comments {
@@ -326,15 +385,14 @@
 .close-comments:hover {
   color: var(--color-primary);
 }
-
 .comments-list {
   flex: 1;
-  max-height: 350px;
   overflow-y: auto;
   padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-height: 0;
 }
 
 .comment-item {
@@ -363,18 +421,6 @@
   border-color: transparent rgba(96, 144, 190, 0.15) transparent transparent;
 }
 
-.comment-item::after {
-  content: '';
-  position: absolute;
-  left: -6px;
-  top: 12px;
-  width: 0;
-  height: 0;
-  border-style: solid;
-  border-width: 5px 7px 5px 0;
-  border-color: transparent rgba(96, 144, 190, 0.15) transparent transparent;
-}
-
 .no-comments {
   text-align: center;
   color: #666;
@@ -388,6 +434,7 @@
   padding: 16px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(255, 255, 255, 0.02);
+  flex-shrink: 0;
 }
 
 .comments-input input {
@@ -409,11 +456,11 @@
 }
 
 .comments-input button {
-  background: var(--color-primary);
+  background: var(--color-secondary-2);
   border: none;
   border-radius: 10px;
   padding: 0 20px;
-  color: #000;
+  color: #fff;
   cursor: pointer;
   font-weight: 600;
   font-size: 14px;
@@ -425,31 +472,4 @@
 
 .comments-input button:hover {
   opacity: 0.85;
-}
-
-.comment-task-btn {
-  position: relative;
-}
-
-.comment-task-btn.has-comments {
-  opacity: 1 !important;
-  visibility: visible !important;
-  color: var(--color-primary);
-}
-
-.comments-badge {
-  position: absolute;
-  top: -6px;
-  right: -8px;
-  background: var(--color-primary);
-  color: #000;
-  font-size: 10px;
-  font-weight: bold;
-  min-width: 16px;
-  height: 16px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 4px;
 }
