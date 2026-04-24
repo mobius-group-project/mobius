@@ -48,11 +48,45 @@ export function initializeDatabase() {
       task_id TEXT,
       session_type_id INTEGER,
       duration_planned INTEGER,
+      total_seconds INTEGER DEFAULT 0,
+      remaining_seconds INTEGER DEFAULT 0,
+      state TEXT DEFAULT 'idle',
       is_completed INTEGER DEFAULT 0,
+      ended_at DATETIME,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (task_id) REFERENCES tasks(id)
     );
   `);
+
+  // Non-destructive migrations for existing DB files.
+  try {
+    db.exec("ALTER TABLE tasks ADD COLUMN time_spent INTEGER DEFAULT 0");
+  } catch {}
+  try {
+    db.exec("ALTER TABLE tasks ADD COLUMN order_index INTEGER DEFAULT 0");
+  } catch {}
+  try {
+    db.exec(
+      "ALTER TABLE focus_sessions ADD COLUMN total_seconds INTEGER DEFAULT 0",
+    );
+  } catch {}
+  try {
+    db.exec(
+      "ALTER TABLE focus_sessions ADD COLUMN remaining_seconds INTEGER DEFAULT 0",
+    );
+  } catch {}
+  try {
+    db.exec("ALTER TABLE focus_sessions ADD COLUMN state TEXT DEFAULT 'idle'");
+  } catch {}
+  try {
+    db.exec("ALTER TABLE focus_sessions ADD COLUMN ended_at DATETIME");
+  } catch {}
+  try {
+    db.exec(
+      "ALTER TABLE focus_sessions ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP",
+    );
+  } catch {}
 
   seedDatabase(db);
 
@@ -87,8 +121,8 @@ function seedDatabase(database) {
     const projectId = projectResult.lastInsertRowid;
 
     const insertTask = database.prepare(`
-      INSERT INTO tasks (id, title, isDone, isRunning, deadline, description, priority, project_id, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO tasks (id, title, isDone, isRunning, deadline, description, priority, time_spent, order_index, project_id, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const now = new Date().toISOString();
@@ -104,6 +138,8 @@ function seedDatabase(database) {
       tomorrow,
       "Opis blablablablablabalablablaabl",
       "High",
+      0,
+      0,
       projectId,
       now,
     );
@@ -116,6 +152,8 @@ function seedDatabase(database) {
       new Date(Date.now() - 86400000).toISOString().split("T")[0],
       "Komponent został pomyślnie napisany",
       "Medium",
+      0,
+      1,
       projectId,
       now,
     );
@@ -128,6 +166,8 @@ function seedDatabase(database) {
       new Date(Date.now() + 172800000).toISOString().split("T")[0],
       "Zapoznać się z nowymi hookami",
       "Low",
+      0,
+      2,
       projectId,
       now,
     );

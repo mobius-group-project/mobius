@@ -14,8 +14,131 @@ app.get("/", (req, res) => {
   res.json({
     status: "OK",
     message: "Mobius API is running",
-    endpoints: ["/api/tasks"],
+    endpoints: [
+      "/api/tasks",
+      "/api/focus-session/active",
+      "/api/focus-sessions",
+    ],
   });
+});
+
+app.get("/api/focus-sessions", (req, res) => {
+  try {
+    const db = getDatabase();
+    const sessions = db
+      .prepare(
+        `SELECT *
+         FROM focus_sessions
+         ORDER BY created_at DESC, id DESC`,
+      )
+      .all();
+
+    res.json(sessions);
+  } catch (error) {
+    console.error("Error fetching focus sessions:", error);
+    res.status(500).json({ error: "Failed to fetch focus sessions" });
+  }
+});
+
+app.get("/api/focus-session/active", (req, res) => {
+  try {
+    const db = getDatabase();
+    const activeSession = db
+      .prepare(
+        `SELECT *
+         FROM focus_sessions
+         WHERE state IN ('running', 'paused')
+         ORDER BY updated_at DESC, id DESC
+         LIMIT 1`,
+      )
+      .get();
+
+    res.json(activeSession || null);
+  } catch (error) {
+    console.error("Error fetching active focus session:", error);
+    res.status(500).json({ error: "Failed to fetch active focus session" });
+  }
+});
+
+app.post("/api/focus-session/start", (req, res) => {
+  try {
+    const db = getDatabase();
+    const { duration_seconds } = req.body;
+
+    const duration = Number(duration_seconds);
+    if (!Number.isFinite(duration) || duration <= 0) {
+      res
+        .status(400)
+        .json({ error: "duration_seconds must be a positive number" });
+      return;
+    }
+
+    const insertSession = db.prepare(`
+      INSERT INTO focus_sessions (
+        duration_planned,
+        total_seconds,
+        remaining_seconds,
+        state,
+        is_completed,
+        updated_at,
+        created_at
+      )
+      VALUES (?, ?, ?, 'running', 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    `);
+
+    const result = insertSession.run(duration, duration, duration);
+    const session = db
+      .prepare("SELECT * FROM focus_sessions WHERE id = ?")
+      .get(result.lastInsertRowid);
+
+    res.status(201).json(session);
+  } catch (error) {
+    console.error("Error starting focus session:", error);
+    res.status(500).json({ error: "Failed to start focus session" });
+  }
+});
+
+app.patch("/api/focus-session/:id", (req, res) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+    const { remaining_seconds, state, is_completed } = req.body;
+
+    const updateSession = db.prepare(`
+      UPDATE focus_sessions
+      SET remaining_seconds = COALESCE(?, remaining_seconds),
+          state = COALESCE(?, state),
+          is_completed = COALESCE(?, is_completed),
+          ended_at = CASE
+            WHEN COALESCE(?, state) = 'finished' THEN CURRENT_TIMESTAMP
+            ELSE ended_at
+          END,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `);
+
+    updateSession.run(
+      remaining_seconds !== undefined ? remaining_seconds : null,
+      state || null,
+      is_completed !== undefined ? (is_completed ? 1 : 0) : null,
+      state || null,
+      id,
+    );
+
+    const session = db
+      .prepare("SELECT * FROM focus_sessions WHERE id = ?")
+      .get(id);
+
+    if (!session) {
+      res.status(404).json({ error: "Focus session not found" });
+      return;
+    }
+
+    res.json(session);
+  } catch (error) {
+    console.error("Error updating focus session:", error);
+    res.status(500).json({ error: "Failed to update focus session" });
+  }
 });
 
 app.get("/api/tasks", (req, res) => {
