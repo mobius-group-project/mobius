@@ -323,3 +323,276 @@ process.on("SIGINT", () => {
   console.log("\nShutting down server");
   process.exit(0);
 });
+
+// Pobierz wszystkie sesje aktywności
+app.get("/api/activity-sessions", (req, res) => {
+  try {
+    const db = getDatabase();
+    const sessions = db
+      .prepare(`
+        SELECT * FROM activity_sessions 
+        ORDER BY created_at DESC, start_time DESC
+      `)
+      .all();
+    res.json(sessions);
+  } catch (error) {
+    console.error("Error fetching activity sessions:", error);
+    res.status(500).json({ error: "Failed to fetch activity sessions" });
+  }
+});
+
+// Pobierz aktywną sesję (bez zakończonej end_time)
+app.get("/api/activity-sessions/active", (req, res) => {
+  try {
+    const db = getDatabase();
+    const activeSession = db
+      .prepare(`
+        SELECT * FROM activity_sessions 
+        WHERE end_time IS NULL
+        ORDER BY start_time DESC 
+        LIMIT 1
+      `)
+      .get();
+    res.json(activeSession || null);
+  } catch (error) {
+    console.error("Error fetching active session:", error);
+    res.status(500).json({ error: "Failed to fetch active session" });
+  }
+});
+
+// Rozpocznij nową sesję aktywności
+app.post("/api/activity-sessions/start", (req, res) => {
+  try {
+    const db = getDatabase();
+    const { id, activity_name, is_task, task_id, duration_seconds } = req.body;
+
+    if (!activity_name) {
+      res.status(400).json({ error: "activity_name is required" });
+      return;
+    }
+
+    const now = new Date().toISOString();
+    
+    // Sprawdź czy istnieje już aktywna sesja
+    const activeSession = db
+      .prepare("SELECT * FROM activity_sessions WHERE end_time IS NULL")
+      .get();
+    
+    if (activeSession) {
+      res.status(400).json({ error: "An active session already exists" });
+      return;
+    }
+
+    const insertSession = db.prepare(`
+      INSERT INTO activity_sessions (
+        id, activity_name, start_time, duration_seconds, 
+        is_task, task_id, created_at, updated_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    const sessionId = id || Date.now().toString();
+    insertSession.run(
+      sessionId,
+      activity_name,
+      now,
+      duration_seconds || 0,
+      is_task ? 1 : 0,
+      task_id || null,
+      now,
+      now
+    );
+
+    // Jeśli to sesja związana z zadaniem, zaktualizuj isRunning w tasks
+    if (is_task && task_id) {
+      db.prepare(`
+        UPDATE tasks SET isRunning = 1, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).run(task_id);
+    }
+
+    const session = db
+      .prepare("SELECT * FROM activity_sessions WHERE id = ?")
+      .get(sessionId);
+
+    res.status(201).json(session);
+  } catch (error) {
+    console.error("Error starting activity session:", error);
+    res.status(500).json({ error: "Failed to start activity session" });
+  }
+});
+
+// Zakończ sesję aktywności
+app.patch("/api/activity-sessions/:id/stop", (req, res) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+    const { duration_seconds } = req.body;
+
+    const now = new Date().toISOString();
+
+    // Pobierz sesję przed aktualizacją
+    const session = db
+      .prepare("SELECT * FROM activity_sessions WHERE id = ?")
+      .get(id);
+
+    if (!session) {
+      res.status(404).json({ error: "Session not found" });
+      return;
+    }
+
+    // Aktualizuj sesję
+    const updateSession = db.prepare(`
+      UPDATE activity_sessions 
+      SET end_time = ?,
+          duration_seconds = ?,
+          updated_at = ?
+      WHERE id = ?
+    `);
+
+    const finalDuration = duration_seconds !== undefined ? duration_seconds : session.duration_seconds;
+    updateSession.run(now, finalDuration, now, id);
+
+    // Jeśli to sesja związana z zadaniem, zaktualizuj time_spent
+    if (session.is_task && session.task_id) {
+      const task = db
+        .prepare("SELECT time_spent FROM tasks WHERE id = ?")
+        .get(session.task_id);
+      
+      const newTimeSpent = (task?.time_spent || 0) + finalDuration;
+      
+      db.prepare(`
+        UPDATE tasks 
+        SET time_spent = ?, isRunning = 0, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).run(newTimeSpent, session.task_id);
+    }
+
+    const updatedSession = db
+      .prepare("SELECT * FROM activity_sessions WHERE id = ?")
+      .get(id);
+
+    res.json(updatedSession);
+  } catch (error) {
+    console.error("Error stopping activity session:", error);
+    res.status(500).json({ error: "Failed to stop activity session" });
+  }
+});
+
+// Zaktualizuj trwającą sesję (aktualizacja czasu)
+app.patch("/api/activity-sessions/:id", (req, res) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+    const { duration_seconds } = req.body;
+
+    const updateSession = db.prepare(`
+      UPDATE activity_sessions 
+      SET duration_seconds = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ? AND end_time IS NULL
+    `);
+
+    updateSession.run(duration_seconds, id);
+
+    const session = db
+      .prepare("SELECT * FROM activity_sessions WHERE id = ?")
+      .get(id);
+
+    if (!session) {
+      res.status(404).json({ error: "Session not found" });
+      return;
+    }
+
+    res.json(session);
+  } catch (error) {
+    console.error("Error updating activity session:", error);
+    res.status(500).json({ error: "Failed to update activity session" });
+  }
+});
+
+// Usuń sesję aktywności
+app.delete("/api/activity-sessions/:id", (req, res) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+
+    // Sprawdź czy sesja istnieje
+    const session = db
+      .prepare("SELECT * FROM activity_sessions WHERE id = ?")
+      .get(id);
+
+    if (!session) {
+      res.status(404).json({ error: "Session not found" });
+      return;
+    }
+
+    // Jeśli sesja była aktywna i związana z zadaniem, zresetuj isRunning
+    if (session.end_time === null && session.is_task && session.task_id) {
+      db.prepare(`
+        UPDATE tasks SET isRunning = 0 WHERE id = ?
+      `).run(session.task_id);
+    }
+
+    const deleteSession = db.prepare("DELETE FROM activity_sessions WHERE id = ?");
+    deleteSession.run(id);
+
+    res.json({ success: true, message: "Session deleted" });
+  } catch (error) {
+    console.error("Error deleting activity session:", error);
+    res.status(500).json({ error: "Failed to delete activity session" });
+  }
+});
+
+// Zmień nazwę sesji
+app.patch("/api/activity-sessions/:id/rename", (req, res) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+    const { activity_name } = req.body;
+
+    if (!activity_name) {
+      res.status(400).json({ error: "activity_name is required" });
+      return;
+    }
+
+    const updateSession = db.prepare(`
+      UPDATE activity_sessions 
+      SET activity_name = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `);
+
+    updateSession.run(activity_name, id);
+
+    const session = db
+      .prepare("SELECT * FROM activity_sessions WHERE id = ?")
+      .get(id);
+
+    res.json(session);
+  } catch (error) {
+    console.error("Error renaming session:", error);
+    res.status(500).json({ error: "Failed to rename session" });
+  }
+});
+
+// Pobierz statystyki dzisiejszego dnia
+app.get("/api/activity-stats/today", (req, res) => {
+  try {
+    const db = getDatabase();
+    const today = new Date().toISOString().split('T')[0];
+    
+    const stats = db
+      .prepare(`
+        SELECT 
+          COALESCE(SUM(duration_seconds), 0) as total_seconds,
+          COUNT(*) as session_count
+        FROM activity_sessions 
+        WHERE date(start_time) = ?
+      `)
+      .get(today);
+    
+    res.json(stats);
+  } catch (error) {
+    console.error("Error fetching today's stats:", error);
+    res.status(500).json({ error: "Failed to fetch stats" });
+  }
+});

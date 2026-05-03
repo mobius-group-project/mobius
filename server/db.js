@@ -57,6 +57,25 @@ export function initializeDatabase() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (task_id) REFERENCES tasks(id)
     );
+    CREATE TABLE IF NOT EXISTS activity_sessions (
+      id TEXT PRIMARY KEY,
+      activity_name TEXT NOT NULL,
+      start_time DATETIME NOT NULL,
+      end_time DATETIME,
+      duration_seconds INTEGER DEFAULT 0,
+      is_task INTEGER DEFAULT 0,
+      task_id TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (task_id) REFERENCES tasks(id)
+    );
+
+  CREATE TABLE IF NOT EXISTS activity_toasts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    type TEXT DEFAULT 'info',
+    message TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
   `);
 
   // Non-destructive migrations for existing DB files.
@@ -86,6 +105,9 @@ export function initializeDatabase() {
     db.exec(
       "ALTER TABLE focus_sessions ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP",
     );
+  } catch {}
+  try {
+    db.exec("ALTER TABLE activity_sessions ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP");
   } catch {}
 
   seedDatabase(db);
