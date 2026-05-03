@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { activityTrackerService } from '../services/activityTrackerService';
+//import { taskService } from '../services/taskService';
 import { formatDurationDetailed } from '../components/TimeFormatter';
 
 export type TrackerState = 'idle' | 'running' | 'paused';
@@ -35,17 +37,18 @@ interface UseActivityTrackerReturn {
   seconds: number;
   toasts: ToastMessage[];
   duplicateConfirmation: DuplicateConfirmation | null;
-  startTracking: (activityName: string, isTask?: boolean, taskId?: string) => void;
-  continueSession: (session: ActivitySession) => void;
-  stopTracking: () => void;
+  startTracking: (activityName: string, isTask?: boolean, taskId?: string) => Promise<void>;
+  continueSession: (session: ActivitySession) => Promise<void>;
+  stopTracking: () => Promise<void>;
   resetTracking: () => void;
   getFormattedTime: () => string;
   getTotalTimeToday: () => number;
   removeToast: (id: number) => void;
   confirmDuplicateCreate: () => void;
   cancelDuplicateCreate: () => void;
-  renameSession: (sessionId: string, newName: string) => void;
-  deleteSession: (sessionId: string) => void;
+  renameSession: (sessionId: string, newName: string) => Promise<void>;
+  deleteSession: (sessionId: string) => Promise<void>;
+  loadSessionsFromDB: () => Promise<void>;
 }
 
 export const useActivityTracker = (): UseActivityTrackerReturn => {
@@ -57,6 +60,7 @@ export const useActivityTracker = (): UseActivityTrackerReturn => {
   const [duplicateConfirmation, setDuplicateConfirmation] = useState<DuplicateConfirmation | null>(null);
   const intervalRef = useRef<number | null>(null);
   const toastIdRef = useRef(0);
+  const lastSavedSeconds = useRef(0);
 
   const addToast = useCallback((type: ToastType, message: string) => {
     const id = toastIdRef.current++;
@@ -70,6 +74,66 @@ export const useActivityTracker = (): UseActivityTrackerReturn => {
   const removeToast = useCallback((id: number) => {
     setToasts(prev => prev.filter(t => t.id !== id));
   }, []);
+
+  const loadSessionsFromDB = useCallback(async () => {
+    try {
+      const dbSessions = await activityTrackerService.getSessions();
+      const mappedSessions: ActivitySession[] = dbSessions.map(s => ({
+        id: s.id,
+        activityName: s.activity_name,
+        startTime: new Date(s.start_time),
+        endTime: s.end_time ? new Date(s.end_time) : null,
+        durationSeconds: s.duration_seconds,
+        isTask: Boolean(s.is_task),
+        taskId: s.task_id || undefined,
+        createdAt: new Date(s.created_at),
+      }));
+      setSessions(mappedSessions);
+
+      // Sprawdź czy jest aktywna sesja
+      const activeDB = await activityTrackerService.getActiveSession();
+      if (activeDB && !currentSession) {
+        const activeSession: ActivitySession = {
+          id: activeDB.id,
+          activityName: activeDB.activity_name,
+          startTime: new Date(activeDB.start_time),
+          endTime: null,
+          durationSeconds: activeDB.duration_seconds,
+          isTask: Boolean(activeDB.is_task),
+          taskId: activeDB.task_id || undefined,
+          createdAt: new Date(activeDB.created_at),
+        };
+        setCurrentSession(activeSession);
+        setSeconds(activeDB.duration_seconds);
+        setState('running');
+      }
+    } catch (error) {
+      console.error('Failed to load sessions from DB:', error);
+      addToast('error', 'Nie udało się załadować sesji z bazy danych');
+    }
+  }, [currentSession, addToast]);
+
+  useEffect(() => {
+    loadSessionsFromDB();
+  }, [loadSessionsFromDB]);
+
+  // Zapisz aktualizacje czasu do DB co 10 sekund
+  useEffect(() => {
+    if (state === 'running' && currentSession) {
+      const interval = setInterval(async () => {
+        if (seconds !== lastSavedSeconds.current) {
+          try {
+            await activityTrackerService.updateSession(currentSession.id, seconds);
+            lastSavedSeconds.current = seconds;
+          } catch (error) {
+            console.error('Failed to save session progress:', error);
+          }
+        }
+      }, 10000);
+
+      return () => clearInterval(interval);
+    }
+  }, [state, currentSession, seconds]);
 
   const getFormattedTime = useCallback(() => {
     const h = Math.floor(seconds / 3600);
@@ -105,7 +169,7 @@ export const useActivityTracker = (): UseActivityTrackerReturn => {
     return newName;
   }, []);
 
-  const renameSession = useCallback((sessionId: string, newName: string) => {
+  const renameSession = useCallback(async (sessionId: string, newName: string) => {
     if (!newName.trim()) {
       addToast('warning', '✏️ Nazwa nie może być pusta!');
       return;
@@ -122,49 +186,59 @@ export const useActivityTracker = (): UseActivityTrackerReturn => {
       return;
     }
     
-    setSessions(prev => prev.map(session => {
-      if (session.id === sessionId) {
-        return {
-          ...session,
-          activityName: trimmedName,
-        };
-      }
-      return session;
-    }));
+    try {
+      await activityTrackerService.renameSession(sessionId, trimmedName);
+      
+      setSessions(prev => prev.map(session => {
+        if (session.id === sessionId) {
+          return { ...session, activityName: trimmedName };
+        }
+        return session;
+      }));
 
-    if (currentSession?.id === sessionId) {
-      setCurrentSession(prev => prev ? { ...prev, activityName: trimmedName } : null);
+      if (currentSession?.id === sessionId) {
+        setCurrentSession(prev => prev ? { ...prev, activityName: trimmedName } : null);
+      }
+      
+      addToast('success', `✅ Zmieniono nazwę na "${trimmedName}"`);
+    } catch (error) {
+      console.error('Failed to rename session:', error);
+      addToast('error', 'Nie udało się zmienić nazwy sesji');
     }
   }, [sessions, currentSession, addToast]);
 
-  const executeStartTracking = useCallback((
+  const executeStartTracking = useCallback(async (
     activityName: string, 
     isTask: boolean = false, 
     taskId?: string
   ) => {
-    let existingSession: ActivitySession | undefined;
-    
-    if (isTask && taskId) {
-      existingSession = sessions.find(s => s.taskId === taskId);
+    try {
+      const dbSession = await activityTrackerService.startSession(activityName, isTask, taskId);
+      
+      const newSession: ActivitySession = {
+        id: dbSession.id,
+        activityName: dbSession.activity_name,
+        startTime: new Date(dbSession.start_time),
+        endTime: null,
+        durationSeconds: dbSession.duration_seconds,
+        isTask,
+        taskId,
+        createdAt: new Date(dbSession.created_at),
+      };
+
+      setCurrentSession(newSession);
+      setSeconds(0);
+      setState('running');
+      lastSavedSeconds.current = 0;
+      
+      addToast('success', `▶️ Rozpoczęto: ${activityName}`);
+    } catch (error) {
+      console.error('Failed to start session:', error);
+      addToast('error', 'Nie udało się rozpocząć sesji');
     }
+  }, [addToast]);
 
-    const newSession: ActivitySession = {
-      id: existingSession ? existingSession.id : Date.now().toString(),
-      activityName: activityName.trim(),
-      startTime: new Date(),
-      endTime: null,
-      durationSeconds: existingSession ? existingSession.durationSeconds : 0,
-      isTask,
-      taskId,
-      createdAt: existingSession ? existingSession.createdAt : new Date(),
-    };
-
-    setCurrentSession(newSession);
-    setSeconds(existingSession ? existingSession.durationSeconds : 0);
-    setState('running');
-  }, [sessions]);
-
-  const startTracking = useCallback((
+  const startTracking = useCallback(async (
     activityName: string, 
     isTask: boolean = false, 
     taskId?: string
@@ -190,7 +264,7 @@ export const useActivityTracker = (): UseActivityTrackerReturn => {
       return;
     }
 
-    executeStartTracking(trimmedName, isTask, taskId);
+    await executeStartTracking(trimmedName, isTask, taskId);
   }, [sessions, addToast, executeStartTracking]);
 
   const confirmDuplicateCreate = useCallback(() => {
@@ -203,7 +277,7 @@ export const useActivityTracker = (): UseActivityTrackerReturn => {
     
     executeStartTracking(uniqueName, isTask, taskId);
     setDuplicateConfirmation(null);
-  }, [duplicateConfirmation, sessions, getUniqueActivityName, addToast, executeStartTracking, formatDurationDetailed]);
+  }, [duplicateConfirmation, sessions, getUniqueActivityName, addToast, executeStartTracking]);
 
   const cancelDuplicateCreate = useCallback(() => {
     if (!duplicateConfirmation) return;
@@ -216,63 +290,48 @@ export const useActivityTracker = (): UseActivityTrackerReturn => {
       return;
     }
 
-    setCurrentSession({
-      ...existingSession,
-      startTime: new Date(),
-    });
-    
-    setSeconds(existingSession.durationSeconds);
-    setState('running');
-    
+    executeStartTracking(existingSession.activityName, existingSession.isTask || false, existingSession.taskId);
     setDuplicateConfirmation(null);
-  }, [duplicateConfirmation, state, addToast]);
+  }, [duplicateConfirmation, state, addToast, executeStartTracking]);
 
-  const continueSession = useCallback((session: ActivitySession) => {
+  const continueSession = useCallback(async (session: ActivitySession) => {
     if (state === 'running') {
       addToast('warning', '⏸️ Najpierw zatrzymaj bieżącą sesję');
       return;
     }
 
-    setCurrentSession({
-      ...session,
-      startTime: new Date(),
-    });
-    
-    setSeconds(session.durationSeconds);
-    setState('running');
-  }, [state, addToast]);
+    await executeStartTracking(session.activityName, session.isTask || false, session.taskId);
+  }, [state, addToast, executeStartTracking]);
 
-  const stopTracking = useCallback(() => {
+  const stopTracking = useCallback(async () => {
     if (state === 'running' && currentSession) {
-      const newTimeAdded = seconds - (currentSession.durationSeconds || 0);
-      
-      if (newTimeAdded > 0 || currentSession.durationSeconds === 0) {
-        const updatedSession: ActivitySession = {
-          ...currentSession,
-          endTime: new Date(),
-          durationSeconds: seconds,
-        };
-
-        setSessions(prev => {
-          const exists = prev.some(s => s.id === currentSession.id);
-          
-          if (exists) {
-            return prev.map(s => s.id === currentSession.id ? updatedSession : s);
-          } else {
-            return [updatedSession, ...prev];
-          }
-        });
+      try {
+        await activityTrackerService.stopSession(currentSession.id, seconds);
+        
+        await loadSessionsFromDB();
+        
+        if (currentSession.isTask && currentSession.taskId) {
+          window.dispatchEvent(new CustomEvent('taskTimeUpdated', { 
+            detail: { taskId: currentSession.taskId, timeSpent: seconds }
+          }));
+        }
+        
+        setCurrentSession(null);
+        setSeconds(0);
+        setState('idle');
+        lastSavedSeconds.current = 0;
+        
+        addToast('success', '⏹️ Sesja zakończona i zapisana');
+      } catch (error) {
+        console.error('Failed to stop session:', error);
+        addToast('error', 'Nie udało się zakończyć sesji');
       }
-      
-      setCurrentSession(null);
-      setSeconds(0);
-      setState('idle');
     } else if (state === 'running') {
       setCurrentSession(null);
       setSeconds(0);
       setState('idle');
     }
-  }, [state, currentSession, seconds]);
+  }, [state, currentSession, seconds, addToast, loadSessionsFromDB]);
 
   const resetTracking = useCallback(() => {
     if (state === 'running' && currentSession) {
@@ -281,6 +340,21 @@ export const useActivityTracker = (): UseActivityTrackerReturn => {
       setState('idle');
     }
   }, [state, currentSession]);
+
+  const deleteSession = useCallback(async (sessionId: string) => {
+    if (currentSession?.id === sessionId) {
+      await stopTracking();
+    }
+    
+    try {
+      await activityTrackerService.deleteSession(sessionId);
+      setSessions(prev => prev.filter(s => s.id !== sessionId));
+      addToast('success', '🗑️ Sesja usunięta');
+    } catch (error) {
+      console.error('Failed to delete session:', error);
+      addToast('error', 'Nie udało się usunąć sesji');
+    }
+  }, [currentSession, stopTracking, addToast]);
 
   useEffect(() => {
     if (state === 'running') {
@@ -296,16 +370,6 @@ export const useActivityTracker = (): UseActivityTrackerReturn => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, [state]);
-
-  const deleteSession = useCallback((sessionId: string) => {
-    if (currentSession?.id === sessionId) {
-      setCurrentSession(null);
-      setSeconds(0);
-      setState('idle');
-    }
-    
-    setSessions(prev => prev.filter(s => s.id !== sessionId));
-  }, [currentSession]);
 
   return {
     state,
@@ -325,5 +389,6 @@ export const useActivityTracker = (): UseActivityTrackerReturn => {
     cancelDuplicateCreate,
     renameSession,
     deleteSession,
+    loadSessionsFromDB,
   };
 };
