@@ -1,5 +1,11 @@
 const API_URL = 'http://localhost:3001/api';
 
+export interface ITaskComment {
+  id: number;
+  content: string;
+  created_at?: string;
+}
+
 export interface ITask {
   id: string;
   title: string;
@@ -9,7 +15,7 @@ export interface ITask {
   description?: string;
   priority: 'High' | 'Medium' | 'Low';
   timeSpent: number;
-  comments?: string[];
+  comments?: ITaskComment[];
   created_at?: string;
   project_id?: number;
 }
@@ -24,7 +30,15 @@ function mapTask(task: any, priority?: 'High' | 'Medium' | 'Low'): ITask {
     description: task.description,
     priority: priority ?? task.priority ?? 'Low',
     timeSpent: task.time_spent ?? 0,
-    comments: [],
+    comments: Array.isArray(task.comments)
+      ? task.comments
+          .filter((comment: any) => comment && typeof comment.content === 'string')
+          .map((comment: any) => ({
+            id: Number(comment.id),
+            content: comment.content,
+            created_at: comment.created_at,
+          }))
+      : [],
     created_at: task.created_at,
     project_id: task.project_id,
   };
@@ -89,5 +103,28 @@ export const taskService = {
       body: JSON.stringify({ ids }),
     });
     if (!response.ok) throw new Error('Failed to reorder tasks');
+  },
+
+  async addComment(taskId: string, content: string): Promise<ITaskComment> {
+    const response = await fetch(`${API_URL}/tasks/${taskId}/comments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content }),
+    });
+    if (!response.ok) throw new Error('Failed to add comment');
+
+    const savedComment = await response.json();
+    return {
+      id: Number(savedComment.id),
+      content: savedComment.content,
+      created_at: savedComment.created_at,
+    };
+  },
+
+  async deleteComment(taskId: string, commentId: number): Promise<void> {
+    const response = await fetch(`${API_URL}/tasks/${taskId}/comments/${commentId}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) throw new Error('Failed to delete comment');
   },
 };

@@ -10,11 +10,21 @@
 - POST /api/tasks - create new task
 - PUT /api/tasks/:id - update task
 - DELETE /api/tasks/:id - delete task
+- PATCH /api/tasks/reorder - save task order
+
+- GET /api/tasks/:id/comments - get task comments
+- POST /api/tasks/:id/comments - add comment to task
+- DELETE /api/tasks/:taskId/comments/:commentId - delete comment
+
+- GET /api/focus-sessions - get focus sessions history
+- GET /api/focus-session/active - get active focus session
+- POST /api/focus-session/start - start focus session
+- PATCH /api/focus-session/:id - update focus session
 
 ### 3. Start app
 
 - First start: npm install
-- npm run dev
-- npm run server
 
-Than open http://localhost:3001 and http://localhost:3001/api/tasks
+- npm run dev
+
+Then open http://localhost:5173

@@ -11,6 +11,8 @@ interface Props {
   onToggle: () => void;
   onDelete: (id: string) => void;
   onUpdateTask: (task: ITask) => void | Promise<void>;
+  onAddComment: (taskId: string, comment: string) => void | Promise<void>;
+  onDeleteComment: (taskId: string, commentId: number) => void | Promise<void>;
   dragHandleProps?: any;
 }
 
@@ -21,7 +23,7 @@ const formatTime = (seconds: number) => {
   return [h, m, s].map(v => v < 10 ? "0" + v : v).join(":");
 };
 
-const TaskItem: React.FC<Props> = ({ task, onToggle, onDelete, onUpdateTask, dragHandleProps }) => {
+const TaskItem: React.FC<Props> = ({ task, onToggle, onDelete, onUpdateTask, onAddComment, onDeleteComment, dragHandleProps }) => {
   const [showConfirm, setShowConfirm] = useState(false);
   const [isTracking, setIsTracking] = useState(false);
   const [seconds, setSeconds] = useState(task.timeSpent || 0);
@@ -86,10 +88,14 @@ const TaskItem: React.FC<Props> = ({ task, onToggle, onDelete, onUpdateTask, dra
   };
 
   const handleAddComment = () => {
-    if (!newComment.trim()) return;
-    const updatedComments = [...(task.comments || []), newComment.trim()];
-    onUpdateTask({ ...task, comments: updatedComments });
+    const normalized = newComment.trim();
+    if (!normalized) return;
+    void onAddComment(task.id, normalized);
     setNewComment('');
+  };
+
+  const handleDeleteComment = (commentId: number) => {
+    void onDeleteComment(task.id, commentId);
   };
 
   if (isEditing) {
@@ -198,8 +204,17 @@ const TaskItem: React.FC<Props> = ({ task, onToggle, onDelete, onUpdateTask, dra
             <button className="close-comments" onClick={() => setShowComments(false)}>✕</button>
           </div>
           <div className="comments-list">
-            {task.comments?.map((comment, idx) => (
-              <div key={idx} className="comment-item">{comment}</div>
+            {task.comments?.map((comment) => (
+              <div key={comment.id} className="comment-item">
+                <span>{comment.content}</span>
+                <button
+                  className="delete-comment-btn"
+                  onClick={() => handleDeleteComment(comment.id)}
+                  aria-label="Delete comment"
+                >
+                  ✕
+                </button>
+              </div>
             ))}
             {(!task.comments || task.comments.length === 0) && (
               <div className="no-comments">No comments yet</div>
