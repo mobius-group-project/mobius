@@ -22,6 +22,8 @@ interface Props {
   onAddTask: (title: string, deadline: string, description?: string, priority?: 'High' | 'Medium' | 'Low') => void;
   onDelete: (id: string) => void;
   onUpdateTask: (task: ITask) => void;
+  onAddComment: (taskId: string, comment: string) => void | Promise<void>;
+  onDeleteComment: (taskId: string, commentId: number) => void | Promise<void>;
   onReorderTasks: (tasks: ITask[]) => void;
 }
 
@@ -29,12 +31,16 @@ const SortableTaskItem = ({
   task, 
   onToggle, 
   onDelete, 
-  onUpdateTask 
+  onUpdateTask,
+  onAddComment,
+  onDeleteComment,
 }: { 
   task: ITask;
   onToggle: () => void;
   onDelete: (id: string) => void;
   onUpdateTask: (task: ITask) => void;
+  onAddComment: (taskId: string, comment: string) => void | Promise<void>;
+  onDeleteComment: (taskId: string, commentId: number) => void | Promise<void>;
 }) => {
   const {
     attributes,
@@ -58,13 +64,15 @@ const SortableTaskItem = ({
         onToggle={onToggle}
         onDelete={onDelete}
         onUpdateTask={onUpdateTask}
+        onAddComment={onAddComment}
+        onDeleteComment={onDeleteComment}
         dragHandleProps={listeners}
       />
     </div>
   );
 };
 
-const TaskList: React.FC<Props> = ({ tasks, onToggleTask, onAddTask, onDelete, onUpdateTask, onReorderTasks }) => {
+const TaskList: React.FC<Props> = ({ tasks, onToggleTask, onAddTask, onDelete, onUpdateTask, onAddComment, onDeleteComment, onReorderTasks }) => {
   const [isAdding, setIsAdding] = useState(false);
 
   const handleAdd = (title: string, deadline: string, description?: string, priority?: 'High' | 'Medium' | 'Low') => {
@@ -96,6 +104,8 @@ const TaskList: React.FC<Props> = ({ tasks, onToggleTask, onAddTask, onDelete, o
                 onToggle={() => onToggleTask(task.id)}
                 onDelete={onDelete}
                 onUpdateTask={onUpdateTask}
+                onAddComment={onAddComment}
+                onDeleteComment={onDeleteComment}
               />
             ))
           ) : (
