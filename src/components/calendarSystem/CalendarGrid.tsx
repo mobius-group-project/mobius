@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import "./CalendarGrid.css";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -18,14 +18,45 @@ function generateTimeSlots(stepMinutes: number = 60) {
 const timeSlots = generateTimeSlots(60);
 
 const CalendarGrid: React.FC = () => {
-  // Определяем индекс сегодняшнего дня (0 = Mon)
-  const todayIndex = (new Date().getDay() + 6) % 7;
+  const today = new Date();
+  const todayIndex = (today.getDay() + 6) % 7;
+  const todayDate = today.getDate();
+
+  const weekDates = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date();
+    const diff = i - todayIndex;
+    d.setDate(today.getDate() + diff);
+    return d.getDate();
+  });
+
+  const bodyRef = useRef<HTMLDivElement | null>(null);
+  const firstRowRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!bodyRef.current || !firstRowRef.current) return;
+
+    const now = new Date();
+    const currentHour = now.getHours();
+
+    const rowHeight = firstRowRef.current.getBoundingClientRect().height;
+    const headerHeight = 60;
+
+    const target =
+      currentHour * rowHeight -
+      bodyRef.current.clientHeight / 2 +
+      headerHeight;
+
+    bodyRef.current.scrollTo({
+      top: Math.max(target, 0),
+      behavior: "smooth",
+    });
+  }, []);
 
   return (
     <div className="calendar-grid">
-      {/* Header */}
       <div className="calendar-header">
         <div className="calendar-header-empty" />
+
         {DAYS.map((day, index) => (
           <div
             key={day}
@@ -34,15 +65,27 @@ const CalendarGrid: React.FC = () => {
               (index === todayIndex ? " is-today" : "")
             }
           >
-            {day}
+            <div className="day-name">{day}</div>
+
+            <div
+              className={
+                "day-number" +
+                (index === todayIndex ? " today-number" : "")
+              }
+            >
+              {weekDates[index]}
+            </div>
           </div>
         ))}
       </div>
 
-      {/* Body */}
-      <div className="calendar-body">
-        {timeSlots.map((slot) => (
-          <div key={slot} className="calendar-row">
+      <div className="calendar-body" ref={bodyRef}>
+        {timeSlots.map((slot, i) => (
+          <div
+            key={slot}
+            className="calendar-row"
+            ref={i === 0 ? firstRowRef : null}
+          >
             <div className="calendar-time-label">{slot}</div>
 
             <div className="calendar-row-cells">
