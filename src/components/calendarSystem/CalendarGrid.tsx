@@ -18,13 +18,22 @@ function generateTimeSlots(stepMinutes: number = 60) {
 const timeSlots = generateTimeSlots(60);
 
 const CalendarGrid: React.FC = () => {
+  // Определяем индекс сегодняшнего дня (0 = Mon)
+  const todayIndex = (new Date().getDay() + 6) % 7;
+
   return (
     <div className="calendar-grid">
       {/* Header */}
       <div className="calendar-header">
         <div className="calendar-header-empty" />
-        {DAYS.map((day) => (
-          <div key={day} className="calendar-header-cell">
+        {DAYS.map((day, index) => (
+          <div
+            key={day}
+            className={
+              "calendar-header-cell" +
+              (index === todayIndex ? " is-today" : "")
+            }
+          >
             {day}
           </div>
         ))}
@@ -37,8 +46,14 @@ const CalendarGrid: React.FC = () => {
             <div className="calendar-time-label">{slot}</div>
 
             <div className="calendar-row-cells">
-              {DAYS.map((day) => (
-                <div key={day + slot} className="calendar-cell" />
+              {DAYS.map((day, index) => (
+                <div
+                  key={day + slot}
+                  className={
+                    "calendar-cell" +
+                    (index === todayIndex ? " is-today" : "")
+                  }
+                />
               ))}
             </div>
           </div>

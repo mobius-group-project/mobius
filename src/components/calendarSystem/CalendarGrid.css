@@ -48,7 +48,7 @@
 .calendar-row {
   display: grid;
   grid-template-columns: 80px repeat(7, 1fr);
-  height: 40px;
+  height: 80px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
 }
 
@@ -78,4 +78,19 @@
   background: rgba(255, 255, 255, 0.04);
   cursor: pointer;
   box-shadow: inset 0 0 0 1px var(--color-primary);
+}
+
+/* Подсветка текущего дня */
+.calendar-header-cell.is-today {
+  color: var(--color-primary);
+  background: rgba(255, 255, 255, 0.05);
+  font-weight: 700;
+}
+
+.calendar-cell.is-today {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.calendar-cell.is-today:hover {
+  background: rgba(255, 255, 255, 0.06);
 }
