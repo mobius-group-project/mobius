@@ -5,6 +5,8 @@ import TaskList from './components/taskSystem/TaskList';
 import { useTasks } from './hooks/useTasks';
 import FocusTimer from './components/focus/FocusTimer';
 import ActivityTracker from './components/timer/ActivityTracker';
+import CalendarPage from './components/calendarSystem/CalendarPage';
+
 
 
 const DashboardPage: React.FC = () => {
@@ -107,6 +109,7 @@ return (
           <Route path="/tracker" element={<TrackerPage />} />
           <Route path="/stats" element={<StatsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/calendar" element={<CalendarPage />} />
         </Routes>
       </main>
     </div>
