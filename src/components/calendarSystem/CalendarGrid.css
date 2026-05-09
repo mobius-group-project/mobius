@@ -158,3 +158,31 @@
   justify-content: flex-start;
   overflow: hidden;
 }
+
+.event-popup {
+  position: fixed;
+  background: white;
+  border-radius: 8px;
+  padding: 10px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.event-popup input {
+  width: 160px;
+  padding: 6px 8px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.event-popup button {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: none;
+  background: #A7C7E7;
+  cursor: pointer;
+}

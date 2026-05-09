@@ -36,6 +36,17 @@ const CalendarGrid: React.FC = () => {
   const [linePosition, setLinePosition] = useState(0);
   const [events, setEvents] = useState<CalendarEvent[]>(sampleEvents);
 
+  const [selectedSlot, setSelectedSlot] = useState<{
+    date: Date;
+    time: string;
+    x: number;
+    y: number;
+  } | null>(null);
+
+  const [newTitle, setNewTitle] = useState("");
+  const [newStart, setNewStart] = useState("");
+  const [newEnd, setNewEnd] = useState("");
+
   const formatDate = (d: Date) => d.toISOString().split("T")[0];
 
   const getDurationInMinutes = (start: string, end: string) => {
@@ -81,6 +92,25 @@ const CalendarGrid: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
+  const createEvent = () => {
+    if (!selectedSlot) return;
+
+    const newEvent: CalendarEvent = {
+      id: Date.now(),
+      title: newTitle || "New Event",
+      date: selectedSlot.date.toISOString().split("T")[0],
+      startTime: newStart,
+      endTime: newEnd,
+      color: "#A7C7E7"
+    };
+
+    setEvents((prev) => [...prev, newEvent]);
+    setSelectedSlot(null);
+    setNewTitle("");
+    setNewStart("");
+    setNewEnd("");
+  };
+
   return (
     <div className="calendar-grid">
       <div className="calendar-header">
@@ -95,7 +125,6 @@ const CalendarGrid: React.FC = () => {
             }
           >
             <div className="day-name">{day}</div>
-
             <div
               className={
                 "day-number" +
@@ -133,14 +162,28 @@ const CalendarGrid: React.FC = () => {
                       "calendar-cell" +
                       (index === todayIndex ? " is-today" : "")
                     }
+                    onClick={(e) => {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      setSelectedSlot({
+                        date: cellDate,
+                        time: slot,
+                        x: rect.right + 8,
+                        y: rect.top
+                      });
+                      setNewStart(slot);
+                      setNewEnd(
+                        `${String(Number(slot.split(":")[0]) + 1).padStart(2, "0")}:00`
+                      );
+                    }}
                   >
                     {events
-                      .filter(
-                        (ev) =>
-                          formatDate(new Date(ev.date)) ===
-                            formatDate(cellDate) &&
+                      .filter((ev) => {
+                        const evDate = new Date(ev.date);
+                        return (
+                          formatDate(evDate) === formatDate(cellDate) &&
                           ev.startTime === slot
-                      )
+                        );
+                      })
                       .map((ev) => {
                         const duration = getDurationInMinutes(
                           ev.startTime,
@@ -154,7 +197,7 @@ const CalendarGrid: React.FC = () => {
                             className="calendar-event"
                             style={{
                               backgroundColor: ev.color,
-                              height: `${height}%`,
+                              height: `${height}%`
                             }}
                           >
                             {ev.title}
@@ -167,6 +210,37 @@ const CalendarGrid: React.FC = () => {
             </div>
           </div>
         ))}
+
+        {selectedSlot && (
+          <div
+            className="event-popup"
+            style={{
+              top: selectedSlot.y,
+              left: selectedSlot.x
+            }}
+          >
+            <input
+              type="text"
+              placeholder="Title"
+              value={newTitle}
+              onChange={(e) => setNewTitle(e.target.value)}
+            />
+
+            <input
+              type="time"
+              value={newStart}
+              onChange={(e) => setNewStart(e.target.value)}
+            />
+
+            <input
+              type="time"
+              value={newEnd}
+              onChange={(e) => setNewEnd(e.target.value)}
+            />
+
+            <button onClick={createEvent}>Add</button>
+          </div>
+        )}
       </div>
     </div>
   );
