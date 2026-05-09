@@ -139,3 +139,22 @@
   border-radius: 50%;
 }
 
+.calendar-cell {
+  position: relative;
+}
+
+.calendar-event {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  top: 4px;
+  bottom: 4px;
+  border-radius: 6px;
+  padding: 4px 6px;
+  font-size: 12px;
+  color: #000;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  overflow: hidden;
+}

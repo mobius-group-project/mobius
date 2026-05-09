@@ -8,7 +8,7 @@ export const sampleEvents: CalendarEvent[] = [
     title: "Plan 1",
     day: 0,
     startTime: "08:00",
-    endTime: "09:00",
+    endTime: "13:00",
     color: "#FFB347"
   },
   {

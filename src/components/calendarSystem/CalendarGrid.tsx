@@ -1,6 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
 
 import "./CalendarGrid.css";
+import { sampleEvents } from "../calendarSystem/sampleEvents";
+import type { CalendarEvent } from "../calendarSystem/eventTypes";
+
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -33,6 +36,8 @@ const CalendarGrid: React.FC = () => {
   const bodyRef = useRef<HTMLDivElement | null>(null);
   const firstRowRef = useRef<HTMLDivElement | null>(null);
   const [linePosition, setLinePosition] = useState(0);
+  const [events, setEvents] = useState<CalendarEvent[]>(sampleEvents);
+
 
 
   useEffect(() => {
@@ -116,12 +121,28 @@ const CalendarGrid: React.FC = () => {
             <div className="calendar-row-cells">
               {DAYS.map((day, index) => (
                 <div
-                  key={day + slot}
-                  className={
-                    "calendar-cell" +
-                    (index === todayIndex ? " is-today" : "")
-                  }
-                />
+  key={day + slot}
+  className={
+    "calendar-cell" +
+    (index === todayIndex ? " is-today" : "")
+  }
+>
+  {events
+    .filter(
+      (ev) =>
+        ev.day === index &&
+        ev.startTime === slot
+    )
+    .map((ev) => (
+      <div
+        key={ev.id}
+        className="calendar-event"
+        style={{ backgroundColor: ev.color }}
+      >
+        {ev.title}
+      </div>
+    ))}
+</div>
               ))}
             </div>
           </div>
