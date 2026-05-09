@@ -1,4 +1,5 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
+
 import "./CalendarGrid.css";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -31,6 +32,8 @@ const CalendarGrid: React.FC = () => {
 
   const bodyRef = useRef<HTMLDivElement | null>(null);
   const firstRowRef = useRef<HTMLDivElement | null>(null);
+  const [linePosition, setLinePosition] = useState(0);
+
 
   useEffect(() => {
     if (!bodyRef.current || !firstRowRef.current) return;
@@ -51,6 +54,24 @@ const CalendarGrid: React.FC = () => {
       behavior: "smooth",
     });
   }, []);
+
+  useEffect(() => {
+  if (!firstRowRef.current) return;
+
+  const update = () => {
+    const now = new Date();
+    const hour = now.getHours();
+    const minutes = now.getMinutes();
+    const rowHeight = firstRowRef.current!.getBoundingClientRect().height;
+    const pos = hour * rowHeight + (minutes / 60) * rowHeight;
+    setLinePosition(pos);
+  };
+
+  update();
+  const interval = setInterval(update, 60000);
+  return () => clearInterval(interval);
+}, []);
+
 
   return (
     <div className="calendar-grid">
@@ -80,6 +101,10 @@ const CalendarGrid: React.FC = () => {
       </div>
 
       <div className="calendar-body" ref={bodyRef}>
+          <div
+             className="current-time-line"
+             style={{ top: `${linePosition}px` }}
+             />
         {timeSlots.map((slot, i) => (
           <div
             key={slot}
