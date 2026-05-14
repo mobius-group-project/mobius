@@ -21,8 +21,19 @@ export const useTasks = () => {
   }, []);
 
   useEffect(() => {
-    fetchTasks();
+  fetchTasks();
   }, [fetchTasks]);
+
+  useEffect(() => {
+    const handler = (e: CustomEvent) => {
+      const { taskId, timeSpent } = e.detail;
+      setTasks(prev =>
+        prev.map(t => t.id === taskId ? { ...t, timeSpent } : t)
+      );
+    };
+    window.addEventListener('taskTimeUpdated', handler as EventListener);
+    return () => window.removeEventListener('taskTimeUpdated', handler as EventListener);
+  }, []);
 
   const toggleTask = async (id: string) => {
     const task = tasks.find(t => t.id === id);

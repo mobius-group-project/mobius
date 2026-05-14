@@ -15,6 +15,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { type useActivityTracker } from '../../hooks/useActivityTracker';
 
 interface Props {
   tasks: ITask[];
@@ -23,18 +24,21 @@ interface Props {
   onDelete: (id: string) => void;
   onUpdateTask: (task: ITask) => void;
   onReorderTasks: (tasks: ITask[]) => void;
+  activityTracker: ReturnType<typeof useActivityTracker>;
 }
 
-const SortableTaskItem = ({ 
-  task, 
-  onToggle, 
-  onDelete, 
-  onUpdateTask 
-}: { 
+const SortableTaskItem = ({
+  task,
+  onToggle,
+  onDelete,
+  onUpdateTask,
+  activityTracker,
+}: {
   task: ITask;
   onToggle: () => void;
   onDelete: (id: string) => void;
   onUpdateTask: (task: ITask) => void;
+  activityTracker: ReturnType<typeof useActivityTracker>;
 }) => {
   const {
     attributes,
@@ -53,34 +57,40 @@ const SortableTaskItem = ({
 
   return (
     <div ref={setNodeRef} style={style} {...attributes}>
-      <TaskItem 
+      <TaskItem
         task={task}
         onToggle={onToggle}
         onDelete={onDelete}
         onUpdateTask={onUpdateTask}
         dragHandleProps={listeners}
+        activityTracker={activityTracker}
       />
     </div>
   );
 };
 
-const TaskList: React.FC<Props> = ({ tasks, onToggleTask, onAddTask, onDelete, onUpdateTask, onReorderTasks }) => {
+const TaskList: React.FC<Props> = ({
+  tasks,
+  onToggleTask,
+  onAddTask,
+  onDelete,
+  onUpdateTask,
+  onReorderTasks,
+  activityTracker,
+}) => {
   const [isAdding, setIsAdding] = useState(false);
 
   const handleAdd = (title: string, deadline: string, description?: string, priority?: 'High' | 'Medium' | 'Low') => {
     onAddTask(title, deadline, description, priority);
-    setIsAdding(false); 
+    setIsAdding(false);
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    
     if (active.id !== over?.id) {
       const oldIndex = tasks.findIndex((t) => t.id === active.id);
       const newIndex = tasks.findIndex((t) => t.id === over?.id);
-      
-      const newTasks = arrayMove(tasks, oldIndex, newIndex);
-      onReorderTasks(newTasks);
+      onReorderTasks(arrayMove(tasks, oldIndex, newIndex));
     }
   };
 
@@ -90,12 +100,13 @@ const TaskList: React.FC<Props> = ({ tasks, onToggleTask, onAddTask, onDelete, o
         <div className="task-list">
           {tasks.length > 0 ? (
             tasks.map((task) => (
-              <SortableTaskItem 
-                key={task.id} 
-                task={task} 
+              <SortableTaskItem
+                key={task.id}
+                task={task}
                 onToggle={() => onToggleTask(task.id)}
                 onDelete={onDelete}
                 onUpdateTask={onUpdateTask}
+                activityTracker={activityTracker}
               />
             ))
           ) : (
@@ -107,9 +118,9 @@ const TaskList: React.FC<Props> = ({ tasks, onToggleTask, onAddTask, onDelete, o
 
           <div className="task-list-footer">
             {isAdding ? (
-              <TaskForm 
-                onAdd={handleAdd} 
-                onCancel={() => setIsAdding(false)} 
+              <TaskForm
+                onAdd={handleAdd}
+                onCancel={() => setIsAdding(false)}
               />
             ) : (
               <button className="add-task-btn" onClick={() => setIsAdding(true)}>

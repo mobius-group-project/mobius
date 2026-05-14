@@ -7,11 +7,13 @@ import ConfirmDialog from '../../components/ConfirmDialog';
 import './styles/ActivityTracker.css';
 
 interface ActivityTrackerProps {
+  activityTracker: ReturnType<typeof useActivityTracker>;
   preselectedTask?: { id: string; title: string } | null;
   onSessionComplete?: (session: any) => void;
 }
 
 const ActivityTracker: React.FC<ActivityTrackerProps> = ({ 
+  activityTracker,
   preselectedTask = null, 
   onSessionComplete 
 }) => {
@@ -39,7 +41,7 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({
     cancelDuplicateCreate,
     renameSession,
     deleteSession,
-  } = useActivityTracker();
+  } = activityTracker;
 
   const handleStart = () => {
     if (preselectedTask) {

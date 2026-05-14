@@ -5,7 +5,7 @@ import TaskList from './components/taskSystem/TaskList';
 import { useTasks } from './hooks/useTasks';
 import FocusTimer from './components/focus/FocusTimer';
 import ActivityTracker from './components/timer/ActivityTracker';
-
+import { useActivityTracker } from './hooks/useActivityTracker';
 
 const DashboardPage: React.FC = () => {
   return (
@@ -16,7 +16,7 @@ const DashboardPage: React.FC = () => {
   );
 };
 
-const TasksPage: React.FC = () => {
+const TasksPage: React.FC<{ activityTracker: ReturnType<typeof useActivityTracker> }> = ({ activityTracker }) => {
   const { tasks, toggleTask, addTask, deleteTask, updateTask, reorderTasks, loading, error } = useTasks();
 
   return (
@@ -28,7 +28,9 @@ const TasksPage: React.FC = () => {
         </div>
       )}
       {loading ? (
-        <div style={{ color: 'var(--color-text-secondary)', padding: '32px 0', textAlign: 'center' }}>Ładowanie zadań...</div>
+        <div style={{ color: 'var(--color-text-secondary)', padding: '32px 0', textAlign: 'center' }}>
+          Ładowanie zadań...
+        </div>
       ) : (
         <TaskList
           tasks={tasks}
@@ -37,6 +39,7 @@ const TasksPage: React.FC = () => {
           onDelete={deleteTask}
           onUpdateTask={updateTask}
           onReorderTasks={reorderTasks}
+          activityTracker={activityTracker}
         />
       )}
     </div>
@@ -70,17 +73,19 @@ const SettingsPage: React.FC = () => {
   );
 };
 
-const TrackerPage: React.FC = () => {
+const TrackerPage: React.FC<{ activityTracker: ReturnType<typeof useActivityTracker> }> = ({ activityTracker }) => {
   return (
     <div className="route-view">
       <h1 className="route-title">Time Tracker</h1>
-      <ActivityTracker />
+      <ActivityTracker activityTracker={activityTracker} />
     </div>
   );
 };
 
 function App() {
-return (
+  const tracker = useActivityTracker();
+
+  return (
     <div
       style={{
         display: 'flex',
@@ -100,9 +105,9 @@ return (
       >
         <Routes>
           <Route path="/" element={<DashboardPage />} />
-          <Route path="/tasks" element={<TasksPage />} />
+          <Route path="/tasks" element={<TasksPage activityTracker={tracker} />} />
           <Route path="/focus" element={<FocusPage />} />
-          <Route path="/tracker" element={<TrackerPage />} />
+          <Route path="/tracker" element={<TrackerPage activityTracker={tracker} />} />
           <Route path="/stats" element={<StatsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Routes>

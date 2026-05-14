@@ -406,7 +406,7 @@ app.post("/api/activity-sessions/start", (req, res) => {
     // Jeśli to sesja związana z zadaniem, zaktualizuj isRunning w tasks
     if (is_task && task_id) {
       db.prepare(`
-        UPDATE tasks SET isRunning = 1, updated_at = CURRENT_TIMESTAMP
+        UPDATE tasks SET isRunning = 1
         WHERE id = ?
       `).run(task_id);
     }
@@ -462,10 +462,10 @@ app.patch("/api/activity-sessions/:id/stop", (req, res) => {
       const newTimeSpent = (task?.time_spent || 0) + finalDuration;
       
       db.prepare(`
-        UPDATE tasks 
-        SET time_spent = ?, isRunning = 0, updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
-      `).run(newTimeSpent, session.task_id);
+          UPDATE tasks 
+          SET time_spent = ?, isRunning = 0
+          WHERE id = ?
+        `).run(newTimeSpent, session.task_id);
     }
 
     const updatedSession = db

@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Calendar, Play, Pause, Flag, Trash2, Pencil, MessageSquare } from 'lucide-react';
 import './styles/TaskItem.css';
 import EditTaskForm from './EditTaskForm';
 import ConfirmDialog from '../ConfirmDialog';
 import { type ITask } from '../../services/taskService';
+import { type useActivityTracker } from '../../hooks/useActivityTracker';
 export type { ITask } from '../../services/taskService';
 
 interface Props {
@@ -12,41 +13,50 @@ interface Props {
   onDelete: (id: string) => void;
   onUpdateTask: (task: ITask) => void | Promise<void>;
   dragHandleProps?: any;
+  activityTracker: ReturnType<typeof useActivityTracker>;
 }
 
 const formatTime = (seconds: number) => {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
   const s = seconds % 60;
-  return [h, m, s].map(v => v < 10 ? "0" + v : v).join(":");
+  return [h, m, s].map(v => v < 10 ? '0' + v : v).join(':');
 };
 
-const TaskItem: React.FC<Props> = ({ task, onToggle, onDelete, onUpdateTask, dragHandleProps }) => {
+const TaskItem: React.FC<Props> = ({ task, onToggle, onDelete, onUpdateTask, dragHandleProps, activityTracker }) => {
   const [showConfirm, setShowConfirm] = useState(false);
-  const [isTracking, setIsTracking] = useState(false);
-  const [seconds, setSeconds] = useState(task.timeSpent || 0);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [newComment, setNewComment] = useState('');
 
-  useEffect(() => {
-    let interval: any;
-    if (isTracking && !task.isDone) {
-      interval = setInterval(() => {
-        setSeconds(prev => prev + 1);
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [isTracking, task.isDone]);
+  const { state, currentSession, seconds, startTracking, stopTracking } = activityTracker;
 
-  useEffect(() => {
-    if (!isTracking && seconds !== task.timeSpent) {
-      onUpdateTask({ ...task, timeSpent: seconds });
-    }
-  }, [isTracking, seconds]);
+  const isThisTaskRunning =
+    state === 'running' &&
+    currentSession?.isTask === true &&
+    currentSession?.taskId === task.id;
+
+  const displaySeconds = isThisTaskRunning ? seconds : (task.timeSpent || 0);
 
   const priorityClass = task.priority ? `priority-${task.priority.toLowerCase()}` : '';
+
+  const handleTimerToggle = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isThisTaskRunning) {
+      await stopTracking();
+    } else {
+      if (state === 'running') {
+        await stopTracking();
+      }
+      await startTracking(task.title, true, task.id);
+    }
+  };
+
+  const handleToggle = () => {
+    if (isThisTaskRunning) stopTracking();
+    onToggle();
+  };
 
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -63,26 +73,12 @@ const TaskItem: React.FC<Props> = ({ task, onToggle, onDelete, onUpdateTask, dra
     setShowComments(true);
   };
 
-  const handleToggle = () => {
-    setIsTracking(false);
-    onToggle();
-  };
-
-  const handleTimerToggle = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsTracking(!isTracking);
-  };
-
   const handleConfirmDelete = () => {
-    setIsDeleting(true); 
+    setIsDeleting(true);
     setTimeout(() => {
-      onDelete(task.id); 
+      onDelete(task.id);
       setShowConfirm(false);
-    }, 300); 
-  };
-
-  const handleCancelDelete = () => {
-    setShowConfirm(false);
+    }, 300);
   };
 
   const handleAddComment = () => {
@@ -109,16 +105,16 @@ const TaskItem: React.FC<Props> = ({ task, onToggle, onDelete, onUpdateTask, dra
 
   return (
     <>
-      <div className={`task-item ${task.isDone ? 'task-completed' : ''} ${priorityClass} ${isDeleting ? 'task-deleting' : ''}`}>
+      <div className={`task-item ${task.isDone ? 'task-completed' : ''} ${priorityClass} ${isDeleting ? 'task-deleting' : ''} ${isThisTaskRunning ? 'task-tracking' : ''}`}>
         <div {...dragHandleProps} className="drag-handle-area" />
-        
-        <input 
-          type="checkbox" 
-          checked={task.isDone} 
+
+        <input
+          type="checkbox"
+          checked={task.isDone}
           onChange={handleToggle}
           className="task-checkbox"
         />
-        
+
         <div className="task-info">
           <div className="task-header">
             <span className={`task-title ${task.isDone ? 'is-done' : ''}`}>
@@ -128,8 +124,8 @@ const TaskItem: React.FC<Props> = ({ task, onToggle, onDelete, onUpdateTask, dra
               <button className="edit-task-btn" onClick={handleEdit}>
                 <Pencil size={16} />
               </button>
-              <button 
-                className={`comment-task-btn ${task.comments && task.comments.length > 0 ? 'has-comments' : ''}`} 
+              <button
+                className={`comment-task-btn ${task.comments && task.comments.length > 0 ? 'has-comments' : ''}`}
                 onClick={handleComment}
               >
                 <MessageSquare size={16} />
@@ -144,35 +140,34 @@ const TaskItem: React.FC<Props> = ({ task, onToggle, onDelete, onUpdateTask, dra
           </div>
 
           {task.description && (
-            <p className="task-description">
-              {task.description}
-            </p>
+            <p className="task-description">{task.description}</p>
           )}
-          
+
           <div className="task-footer">
             <div className="task-meta-left">
               <div className="task-deadline">
                 <Calendar size={12} className="calendar-icon" />
                 <span className="deadline-date">{task.deadline}</span>
               </div>
-
               {task.priority && (
-                <Flag 
-                  size={14} 
-                  className={`priority-icon ${task.priority.toLowerCase()}`} 
-                  fill="currentColor" 
+                <Flag
+                  size={14}
+                  className={`priority-icon ${task.priority.toLowerCase()}`}
+                  fill="currentColor"
                 />
               )}
             </div>
 
             <div className="task-time-controls">
-              <span className="task-timer-display">{formatTime(seconds)}</span>
-              <button 
-                className="control-btn toggle-timer" 
+              <span className={`task-timer-display ${isThisTaskRunning ? 'timer-active' : ''}`}>
+                {formatTime(displaySeconds)}
+              </span>
+              <button
+                className={`control-btn toggle-timer ${isThisTaskRunning ? 'timer-running' : ''}`}
                 onClick={handleTimerToggle}
                 disabled={task.isDone}
               >
-                {isTracking ? (
+                {isThisTaskRunning ? (
                   <Pause size={14} fill="currentColor" />
                 ) : (
                   <Play size={14} fill="currentColor" />
@@ -187,7 +182,7 @@ const TaskItem: React.FC<Props> = ({ task, onToggle, onDelete, onUpdateTask, dra
           title="Delete Task"
           message={`Are you sure you want to delete "${task.title}"?`}
           onConfirm={handleConfirmDelete}
-          onCancel={handleCancelDelete}
+          onCancel={() => setShowConfirm(false)}
         />
       </div>
 
