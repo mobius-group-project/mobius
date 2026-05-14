@@ -2,6 +2,10 @@ import React, { useEffect, useRef, useState } from "react";
 
 import "./CalendarGrid.css";
 
+interface CalendarGridProps {
+  weekOffset: number;
+}
+
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 function generateTimeSlots(stepMinutes: number = 60) {
@@ -18,14 +22,13 @@ function generateTimeSlots(stepMinutes: number = 60) {
 
 const timeSlots = generateTimeSlots(60);
 
-const CalendarGrid: React.FC = () => {
+const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset }) => {
   const today = new Date();
   const todayIndex = (today.getDay() + 6) % 7;
-  const todayDate = today.getDate();
 
   const weekDates = Array.from({ length: 7 }, (_, i) => {
     const d = new Date();
-    const diff = i - todayIndex;
+    const diff = i - todayIndex + weekOffset * 7;
     d.setDate(today.getDate() + diff);
     return d.getDate();
   });
@@ -33,7 +36,6 @@ const CalendarGrid: React.FC = () => {
   const bodyRef = useRef<HTMLDivElement | null>(null);
   const firstRowRef = useRef<HTMLDivElement | null>(null);
   const [linePosition, setLinePosition] = useState(0);
-
 
   useEffect(() => {
     if (!bodyRef.current || !firstRowRef.current) return;
@@ -56,22 +58,23 @@ const CalendarGrid: React.FC = () => {
   }, []);
 
   useEffect(() => {
-  if (!firstRowRef.current) return;
+    if (!firstRowRef.current) return;
 
-  const update = () => {
-    const now = new Date();
-    const hour = now.getHours();
-    const minutes = now.getMinutes();
-    const rowHeight = firstRowRef.current!.getBoundingClientRect().height;
-    const pos = hour * rowHeight + (minutes / 60) * rowHeight;
-    setLinePosition(pos);
-  };
+    const update = () => {
+      const now = new Date();
+      const hour = now.getHours();
+      const minutes = now.getMinutes();
+      const rowHeight = firstRowRef.current!.getBoundingClientRect().height;
+      const pos = hour * rowHeight + (minutes / 60) * rowHeight;
+      setLinePosition(pos);
+    };
 
-  update();
-  const interval = setInterval(update, 60000);
-  return () => clearInterval(interval);
-}, []);
+    update();
+    const interval = setInterval(update, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
+  const isCurrentWeek = weekOffset === 0;
 
   return (
     <div className="calendar-grid">
@@ -83,7 +86,7 @@ const CalendarGrid: React.FC = () => {
             key={day}
             className={
               "calendar-header-cell" +
-              (index === todayIndex ? " is-today" : "")
+              (isCurrentWeek && index === todayIndex ? " is-today" : "")
             }
           >
             <div className="day-name">{day}</div>
@@ -91,7 +94,7 @@ const CalendarGrid: React.FC = () => {
             <div
               className={
                 "day-number" +
-                (index === todayIndex ? " today-number" : "")
+                (isCurrentWeek && index === todayIndex ? " today-number" : "")
               }
             >
               {weekDates[index]}
@@ -101,10 +104,12 @@ const CalendarGrid: React.FC = () => {
       </div>
 
       <div className="calendar-body" ref={bodyRef}>
+        {isCurrentWeek && (
           <div
-             className="current-time-line"
-             style={{ top: `${linePosition}px` }}
-             />
+            className="current-time-line"
+            style={{ top: `${linePosition}px` }}
+          />
+        )}
         {timeSlots.map((slot, i) => (
           <div
             key={slot}
@@ -119,7 +124,7 @@ const CalendarGrid: React.FC = () => {
                   key={day + slot}
                   className={
                     "calendar-cell" +
-                    (index === todayIndex ? " is-today" : "")
+                    (isCurrentWeek && index === todayIndex ? " is-today" : "")
                   }
                 />
               ))}
