@@ -6,6 +6,9 @@ import { useTasks } from './hooks/useTasks';
 import FocusTimer from './components/focus/FocusTimer';
 import ActivityTracker from './components/timer/ActivityTracker';
 import { useActivityTracker } from './hooks/useActivityTracker';
+import CalendarPage from './components/calendarSystem/CalendarPage';
+
+
 
 const DashboardPage: React.FC = () => {
   return (
@@ -17,7 +20,7 @@ const DashboardPage: React.FC = () => {
 };
 
 const TasksPage: React.FC<{ activityTracker: ReturnType<typeof useActivityTracker> }> = ({ activityTracker }) => {
-  const { tasks, toggleTask, addTask, deleteTask, updateTask, reorderTasks, loading, error } = useTasks();
+  const { tasks, toggleTask, addTask, deleteTask, updateTask, reorderTasks, addComment, deleteComment, loading, error } = useTasks();
 
   return (
     <div className="route-view">
@@ -38,6 +41,8 @@ const TasksPage: React.FC<{ activityTracker: ReturnType<typeof useActivityTracke
           onAddTask={addTask}
           onDelete={deleteTask}
           onUpdateTask={updateTask}
+          onAddComment={addComment}
+          onDeleteComment={deleteComment}
           onReorderTasks={reorderTasks}
           activityTracker={activityTracker}
         />
@@ -110,6 +115,7 @@ function App() {
           <Route path="/tracker" element={<TrackerPage activityTracker={tracker} />} />
           <Route path="/stats" element={<StatsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/calendar" element={<CalendarPage />} />
         </Routes>
       </main>
     </div>

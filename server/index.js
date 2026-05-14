@@ -147,11 +147,119 @@ app.get("/api/tasks", (req, res) => {
     const tasks = db
       .prepare("SELECT * FROM tasks ORDER BY order_index ASC")
       .all();
+    const comments = db
+      .prepare(
+        `SELECT id, task_id, content, created_at
+         FROM comments
+         ORDER BY created_at ASC, id ASC`,
+      )
+      .all();
 
-    res.json(tasks);
+    const commentsByTask = new Map();
+    comments.forEach((comment) => {
+      const list = commentsByTask.get(comment.task_id) || [];
+      list.push({
+        id: comment.id,
+        content: comment.content,
+        created_at: comment.created_at,
+      });
+      commentsByTask.set(comment.task_id, list);
+    });
+
+    const tasksWithComments = tasks.map((task) => ({
+      ...task,
+      comments: commentsByTask.get(task.id) || [],
+    }));
+
+    res.json(tasksWithComments);
   } catch (error) {
     console.error("Error fetching tasks:", error);
     res.status(500).json({ error: "Failed to fetch tasks" });
+  }
+});
+
+app.get("/api/tasks/:id/comments", (req, res) => {
+  try {
+    const db = getDatabase();
+
+    const comments = db
+      .prepare(
+        `SELECT id, content, created_at
+         FROM comments
+         WHERE task_id = ?
+         ORDER BY created_at ASC, id ASC`,
+      )
+      .all(req.params.id);
+
+    res.json(comments);
+  } catch (error) {
+    console.error("Error fetching task comments:", error);
+    res.status(500).json({ error: "Failed to fetch task comments" });
+  }
+});
+
+app.post("/api/tasks/:id/comments", (req, res) => {
+  try {
+    const db = getDatabase();
+    const { content } = req.body;
+    const normalizedContent = typeof content === "string" ? content.trim() : "";
+
+    if (!normalizedContent) {
+      res.status(400).json({ error: "Comment content is required" });
+      return;
+    }
+
+    const task = db
+      .prepare("SELECT id FROM tasks WHERE id = ?")
+      .get(req.params.id);
+
+    if (!task) {
+      res.status(404).json({ error: "Task not found" });
+      return;
+    }
+
+    const insertComment = db.prepare(`
+      INSERT INTO comments (task_id, content, created_at)
+      VALUES (?, ?, CURRENT_TIMESTAMP)
+    `);
+
+    const result = insertComment.run(req.params.id, normalizedContent);
+    const newComment = db
+      .prepare(
+        "SELECT id, task_id, content, created_at FROM comments WHERE id = ?",
+      )
+      .get(result.lastInsertRowid);
+
+    res.status(201).json(newComment);
+  } catch (error) {
+    console.error("Error creating task comment:", error);
+    res.status(500).json({ error: "Failed to create task comment" });
+  }
+});
+
+app.delete("/api/tasks/:taskId/comments/:commentId", (req, res) => {
+  try {
+    const db = getDatabase();
+    const { taskId, commentId } = req.params;
+
+    const comment = db
+      .prepare("SELECT id FROM comments WHERE id = ? AND task_id = ?")
+      .get(commentId, taskId);
+
+    if (!comment) {
+      res.status(404).json({ error: "Comment not found" });
+      return;
+    }
+
+    db.prepare("DELETE FROM comments WHERE id = ? AND task_id = ?").run(
+      commentId,
+      taskId,
+    );
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error deleting task comment:", error);
+    res.status(500).json({ error: "Failed to delete task comment" });
   }
 });
 
@@ -299,6 +407,8 @@ app.delete("/api/tasks/:id", (req, res) => {
   try {
     const db = getDatabase();
 
+    db.prepare("DELETE FROM comments WHERE task_id = ?").run(req.params.id);
+
     const deleteTask = db.prepare("DELETE FROM tasks WHERE id = ?");
     const result = deleteTask.run(req.params.id);
 
@@ -314,10 +424,7 @@ app.delete("/api/tasks/:id", (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`API available at http://localhost:${PORT}/api`);
-  console.log(`Database available at http://localhost:${PORT}/api/tasks\n`);
-});
+app.listen(PORT, () => {});
 
 process.on("SIGINT", () => {
   console.log("\nShutting down server");

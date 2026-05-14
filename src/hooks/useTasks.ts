@@ -90,6 +90,66 @@ export const useTasks = () => {
     }
   };
 
+  const addComment = async (taskId: string, comment: string) => {
+    const normalizedComment = comment.trim();
+    if (!normalizedComment) return;
+
+    const prev = tasks;
+    const tempId = -Date.now();
+    const optimistic = tasks.map(t =>
+      t.id === taskId
+        ? {
+            ...t,
+            comments: [
+              ...(t.comments || []),
+              { id: tempId, content: normalizedComment },
+            ],
+          }
+        : t
+    );
+    setTasks(optimistic);
+
+    try {
+      const savedComment = await taskService.addComment(taskId, normalizedComment);
+      setTasks(current =>
+        current.map(t => {
+          if (t.id !== taskId) return t;
+
+          const comments = (t.comments || []).map(commentItem =>
+            commentItem.id === tempId ? savedComment : commentItem,
+          );
+
+          return { ...t, comments };
+        })
+      );
+    } catch {
+      setTasks(prev);
+      setError('Nie udało się dodać komentarza.');
+    }
+  };
+
+  const deleteComment = async (taskId: string, commentId: number) => {
+    const prev = tasks;
+    const optimistic = tasks.map(t =>
+      t.id === taskId
+        ? { ...t, comments: (t.comments || []).filter(comment => comment.id !== commentId) }
+        : t
+    );
+    setTasks(optimistic);
+
+    // Negative ids are temporary optimistic comments that were not saved yet.
+    if (commentId < 0) {
+      return;
+    }
+
+    try {
+      await taskService.deleteComment(taskId, commentId);
+    } catch {
+      setTasks(prev);
+      setError('Nie udało się usunąć komentarza.');
+    }
+  };
+
   return {
     tasks,
     loading,
@@ -99,5 +159,7 @@ export const useTasks = () => {
     deleteTask,
     updateTask,
     reorderTasks,
+    addComment,
+    deleteComment,
   };
 };

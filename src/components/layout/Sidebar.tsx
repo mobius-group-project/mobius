@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Home, Timer, BarChart2, Settings, ListTodo, Clock } from 'lucide-react';
+import { Home, Timer, BarChart2, Settings, ListTodo, Clock, Calendar } from 'lucide-react';
 import './styles/Sidebar.css';
 
 interface NavItem {
@@ -40,6 +40,12 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Ustawienia',
     icon: <Settings size={18} />
   },
+  {
+  path: '/calendar',
+  label: 'Calendar',
+  icon: <Calendar size={18} />
+},
+
 ];
 
 const Sidebar: React.FC = () => {

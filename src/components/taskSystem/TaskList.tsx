@@ -23,21 +23,27 @@ interface Props {
   onAddTask: (title: string, deadline: string, description?: string, priority?: 'High' | 'Medium' | 'Low') => void;
   onDelete: (id: string) => void;
   onUpdateTask: (task: ITask) => void;
+  onAddComment: (taskId: string, comment: string) => void | Promise<void>;
+  onDeleteComment: (taskId: string, commentId: number) => void | Promise<void>;
   onReorderTasks: (tasks: ITask[]) => void;
   activityTracker: ReturnType<typeof useActivityTracker>;
 }
 
-const SortableTaskItem = ({
-  task,
-  onToggle,
-  onDelete,
+const SortableTaskItem = ({ 
+  task, 
+  onToggle, 
+  onDelete, 
   onUpdateTask,
+  onAddComment,
+  onDeleteComment,
   activityTracker,
-}: {
+}: { 
   task: ITask;
   onToggle: () => void;
   onDelete: (id: string) => void;
   onUpdateTask: (task: ITask) => void;
+  onAddComment: (taskId: string, comment: string) => void | Promise<void>;
+  onDeleteComment: (taskId: string, commentId: number) => void | Promise<void>;
   activityTracker: ReturnType<typeof useActivityTracker>;
 }) => {
   const {
@@ -62,6 +68,8 @@ const SortableTaskItem = ({
         onToggle={onToggle}
         onDelete={onDelete}
         onUpdateTask={onUpdateTask}
+        onAddComment={onAddComment}
+        onDeleteComment={onDeleteComment}
         dragHandleProps={listeners}
         activityTracker={activityTracker}
       />
@@ -69,14 +77,16 @@ const SortableTaskItem = ({
   );
 };
 
-const TaskList: React.FC<Props> = ({
-  tasks,
-  onToggleTask,
-  onAddTask,
-  onDelete,
-  onUpdateTask,
+const TaskList: React.FC<Props> = ({ 
+  tasks, 
+  onToggleTask, 
+  onAddTask, 
+  onDelete, 
+  onUpdateTask, 
+  onAddComment, 
+  onDeleteComment, 
   onReorderTasks,
-  activityTracker,
+  activityTracker 
 }) => {
   const [isAdding, setIsAdding] = useState(false);
 
@@ -106,6 +116,8 @@ const TaskList: React.FC<Props> = ({
                 onToggle={() => onToggleTask(task.id)}
                 onDelete={onDelete}
                 onUpdateTask={onUpdateTask}
+                onAddComment={onAddComment}
+                onDeleteComment={onDeleteComment}
                 activityTracker={activityTracker}
               />
             ))
