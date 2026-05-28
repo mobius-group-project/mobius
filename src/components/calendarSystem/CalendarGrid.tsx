@@ -88,12 +88,37 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset }) => {
     return () => clearInterval(interval);
   }, []);
 
+  const calculatePopupPosition = (rect: DOMRect) => {
+    const popupWidth = 340;
+    const popupHeight = 500;
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
+    
+    let x = rect.right + 10;
+    let y = rect.top;
+    
+    if (x + popupWidth > windowWidth) {
+      x = rect.left - popupWidth - 10;
+    }
+    
+    if (y + popupHeight > windowHeight) {
+      y = windowHeight - popupHeight - 10;
+    }
+    
+    if (y < 10) {
+      y = 10;
+    }
+    
+    return { x, y };
+  };
+
   const handleCellClick = (date: Date, time: string, event: React.MouseEvent) => {
     const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    const position = calculatePopupPosition(rect);
     
     setPopupPosition({
-      x: rect.right + 10,
-      y: rect.top,
+      x: position.x,
+      y: position.y,
       date: date,
       time: time
     });
@@ -266,18 +291,16 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset }) => {
                 />
               </div>
 
-              <div className="popup-location">
-                <input
-                  type="text"
-                  placeholder="📍 Location (optional)"
-                  value={formData.location}
-                  onChange={(e) => setFormData({...formData, location: e.target.value})}
-                  className="popup-input"
-                />
-              </div>
+              <input
+                type="text"
+                placeholder="Location"
+                value={formData.location}
+                onChange={(e) => setFormData({...formData, location: e.target.value})}
+                className="popup-input"
+              />
 
               <textarea
-                placeholder="📝 Description (optional)"
+                placeholder="Description"
                 value={formData.description}
                 onChange={(e) => setFormData({...formData, description: e.target.value})}
                 rows={2}
@@ -290,7 +313,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset }) => {
                   onChange={(e) => setFormData({...formData, recurrence: e.target.value as any})}
                   className="popup-select"
                 >
-                  <option value="none">🔄 No repeat</option>
+                  <option value="none">No repeat</option>
                   <option value="daily">Daily</option>
                   <option value="weekly">Weekly</option>
                   <option value="monthly">Monthly</option>
@@ -301,7 +324,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset }) => {
                   onChange={(e) => setFormData({...formData, reminderMinutes: Number(e.target.value)})}
                   className="popup-select"
                 >
-                  <option value={0}>⏰ No reminder</option>
+                  <option value={0}>No reminder</option>
                   <option value={5}>5 min before</option>
                   <option value={15}>15 min before</option>
                   <option value={30}>30 min before</option>
@@ -326,7 +349,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset }) => {
                   Cancel
                 </button>
                 <button className="popup-create" onClick={createEvent}>
-                  Create Event
+                  Create
                 </button>
               </div>
             </div>
