@@ -27,16 +27,15 @@
   cursor: pointer;
   transition: all 0.15s;
 }
-
-.preset-btn:hover {
-  border-color: var(--color-primary, #7c6af7);
-  color: var(--color-text, #fff);
+.preset-btn--active {
+  background: #7c6af7;
+  border-color: #7c6af7;
+  color: #ffffff;
 }
 
-.preset-btn--active {
-  background: var(--color-primary, #7c6af7);
-  border-color: var(--color-primary, #7c6af7);
-  color: #fff;
+.preset-btn:hover {
+  border-color: #7c6af7;
+  color: var(--color-text, #fff);
 }
 
 .date-inputs {
@@ -281,4 +280,71 @@
 .stats-empty-state p {
   font-size: 14px;
   margin: 0;
+}
+
+/* ── donut chart ──────────────────────────────────────────────── */
+.donut-wrap {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.donut-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  min-width: 120px;
+}
+
+.donut-legend__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: default;
+  opacity: 0.7;
+  transition: opacity 0.15s;
+}
+
+.donut-legend__item--active {
+  opacity: 1;
+}
+
+.donut-legend__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.donut-legend__name {
+  font-size: 12px;
+  color: var(--color-text, #fff);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.donut-legend__val {
+  font-size: 12px;
+  color: var(--color-text-secondary, #aaa);
+  white-space: nowrap;
+}
+
+/* ── chart tooltip (absolute positioned) ─────────────────────── */
+.chart-tooltip {
+  position: absolute;
+  pointer-events: none;
+  background: var(--color-surface, #1e1e2e);
+  border: 1px solid var(--color-border, #333);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  white-space: nowrap;
+  z-index: 10;
 }
