@@ -754,3 +754,16 @@ app.delete('/api/events/:id', (req, res) => {
     res.status(500).json({ error: 'Failed to delete event' });
   }
 });
+
+// DELETE all events
+app.delete('/api/events/all', (req, res) => {
+  try {
+    const db = getDatabase();
+    const result = db.prepare('DELETE FROM calendar_events').run();
+    console.log('Deleted rows:', result.changes);
+    res.json({ success: true, deletedCount: result.changes });
+  } catch (error) {
+    console.error('Error deleting events:', error);
+    res.status(500).json({ error: 'Failed to delete events' });
+  }
+});
