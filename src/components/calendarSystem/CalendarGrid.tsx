@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import type { CalendarEvent } from "./eventTypes";
-import { sampleEvents } from "./sampleEvents";
+import { calendarService } from "../../services/calendarService";
 import "./CalendarGrid.css";
 
 interface CalendarGridProps {
@@ -8,6 +8,7 @@ interface CalendarGridProps {
 }
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
 
 function generateTimeSlots(stepMinutes: number = 60) {
   const slots: string[] = [];
@@ -35,6 +36,9 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset }) => {
   const today = new Date();
   const todayIndex = (today.getDay() + 6) % 7;
   const isCurrentWeek = weekOffset === 0;
+  const [newLocation, setNewLocation] = useState("");
+  const [newDescription, setNewDescription] = useState("");
+  const [newRecurrence, setNewRecurrence] = useState<'none'|'daily'|'weekly'|'monthly'>("none");
 
   const weekDates = Array.from({ length: 7 }, (_, i) => {
     const d = new Date();
@@ -46,7 +50,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset }) => {
   const bodyRef = useRef<HTMLDivElement | null>(null);
   const firstRowRef = useRef<HTMLDivElement | null>(null);
   const [linePosition, setLinePosition] = useState(0);
-  const [events, setEvents] = useState<CalendarEvent[]>(sampleEvents);
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
 
   const [selectedSlot, setSelectedSlot] = useState<{
     date: Date;
@@ -70,6 +74,10 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset }) => {
   }, []);
 
   useEffect(() => {
+  calendarService.getEvents().then(setEvents).catch(console.error);
+}, []);
+
+  useEffect(() => {
     if (!firstRowRef.current) return;
     const update = () => {
       const now = new Date();
@@ -83,22 +91,31 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset }) => {
     return () => clearInterval(interval);
   }, []);
 
-  const createEvent = () => {
-    if (!selectedSlot) return;
-    const newEvent: CalendarEvent = {
-      id: Date.now(),
-      title: newTitle || "New Event",
+const createEvent = async () => {
+  if (!selectedSlot) return;
+  try {
+    const saved = await calendarService.createEvent({
+      title: newTitle || 'New Event',
       date: formatDate(selectedSlot.date),
       startTime: newStart,
       endTime: newEnd,
-      color: "#A7C7E7",
-    };
-    setEvents((prev) => [...prev, newEvent]);
-    setSelectedSlot(null);
-    setNewTitle("");
-    setNewStart("");
-    setNewEnd("");
-  };
+      color: '#A7C7E7',
+      location: newLocation || undefined,
+      description: newDescription || undefined,
+      recurrence: newRecurrence,
+    });
+    setEvents(prev => [...prev, saved]);
+  } catch (e) {
+    console.error('Failed to create event:', e);
+  }
+  setSelectedSlot(null);
+  setNewTitle('');
+  setNewStart('');
+  setNewEnd('');
+  setNewLocation('');
+  setNewDescription('');
+  setNewRecurrence('none');
+};
 
   return (
     <div className="calendar-grid">
@@ -174,20 +191,32 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset }) => {
             </div>
           </div>
         ))}
-
-        {selectedSlot && (
-          <div className="event-popup" style={{ top: selectedSlot.y, left: selectedSlot.x }}>
-            <input
-              type="text"
-              placeholder="Title"
-              value={newTitle}
-              onChange={(e) => setNewTitle(e.target.value)}
-            />
-            <input type="time" value={newStart} onChange={(e) => setNewStart(e.target.value)} />
-            <input type="time" value={newEnd} onChange={(e) => setNewEnd(e.target.value)} />
-            <button onClick={createEvent}>Add</button>
-          </div>
-        )}
+{selectedSlot && (
+  <div
+    className="event-popup"
+    style={{ top: selectedSlot.y, left: selectedSlot.x }}
+    onClick={(e) => e.stopPropagation()}
+  >
+    <input type="text" placeholder="Title" value={newTitle}
+      onChange={(e) => setNewTitle(e.target.value)} />
+    <input type="time" value={newStart}
+      onChange={(e) => setNewStart(e.target.value)} />
+    <input type="time" value={newEnd}
+      onChange={(e) => setNewEnd(e.target.value)} />
+    <input type="text" placeholder="Location (optional)" value={newLocation}
+      onChange={(e) => setNewLocation(e.target.value)} />
+    <textarea placeholder="Description (optional)" value={newDescription}
+      onChange={(e) => setNewDescription(e.target.value)} />
+    <select value={newRecurrence}
+      onChange={(e) => setNewRecurrence(e.target.value as any)}>
+      <option value="none">No repeat</option>
+      <option value="daily">Daily</option>
+      <option value="weekly">Weekly</option>
+      <option value="monthly">Monthly</option>
+    </select>
+    <button onClick={createEvent}>Add</button>
+  </div>
+)}
       </div>
     </div>
   );

@@ -703,3 +703,54 @@ app.get("/api/activity-stats/today", (req, res) => {
     res.status(500).json({ error: "Failed to fetch stats" });
   }
 });
+
+// GET all events
+app.get('/api/events', (req, res) => {
+  try {
+    const db = getDatabase();
+    const events = db.prepare('SELECT * FROM calendar_events ORDER BY date, start_time').all();
+    res.json(events);
+  } catch (error) {
+    console.error('Error fetching events:', error);
+    res.status(500).json({ error: 'Failed to fetch events' });
+  }
+});
+
+// POST new event
+app.post('/api/events', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { title, date, start_time, end_time, color, location, description, is_all_day, recurrence, reminder_minutes, task_id } = req.body;
+    const result = db.prepare(`
+      INSERT INTO calendar_events 
+        (title, date, start_time, end_time, color, location, description, is_all_day, recurrence, reminder_minutes, task_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      title, date, start_time, end_time,
+      color ?? '#A7C7E7',
+      location ?? null,
+      description ?? null,
+      is_all_day ? 1 : 0,
+      recurrence ?? 'none',
+      reminder_minutes ?? null,
+      task_id ?? null
+    );
+    const created = db.prepare('SELECT * FROM calendar_events WHERE id = ?').get(result.lastInsertRowid);
+    res.status(201).json(created);
+  } catch (error) {
+    console.error('Error creating event:', error);
+    res.status(500).json({ error: 'Failed to create event' });
+  }
+});
+
+// DELETE an event
+app.delete('/api/events/:id', (req, res) => {
+  try {
+    const db = getDatabase();
+    db.prepare('DELETE FROM calendar_events WHERE id = ?').run(req.params.id);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting event:', error);
+    res.status(500).json({ error: 'Failed to delete event' });
+  }
+});

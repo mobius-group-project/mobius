@@ -70,6 +70,23 @@ export function initializeDatabase() {
       FOREIGN KEY (task_id) REFERENCES tasks(id)
     );
 
+    CREATE TABLE IF NOT EXISTS calendar_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      date TEXT NOT NULL,
+      start_time TEXT NOT NULL,
+      end_time TEXT NOT NULL,
+      color TEXT DEFAULT '#A7C7E7',
+      location TEXT,
+      description TEXT,
+      is_all_day INTEGER DEFAULT 0,
+      recurrence TEXT DEFAULT 'none' CHECK(recurrence IN ('none','daily','weekly','monthly')),
+      reminder_minutes INTEGER,
+      task_id TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (task_id) REFERENCES tasks(id)
+);
+
   CREATE TABLE IF NOT EXISTS activity_toasts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     type TEXT DEFAULT 'info',
@@ -109,6 +126,12 @@ export function initializeDatabase() {
   try {
     db.exec("ALTER TABLE activity_sessions ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP");
   } catch {}
+  try { db.exec("ALTER TABLE calendar_events ADD COLUMN location TEXT"); } catch {}
+  try { db.exec("ALTER TABLE calendar_events ADD COLUMN description TEXT"); } catch {}
+  try { db.exec("ALTER TABLE calendar_events ADD COLUMN is_all_day INTEGER DEFAULT 0"); } catch {}
+  try { db.exec("ALTER TABLE calendar_events ADD COLUMN recurrence TEXT DEFAULT 'none'"); } catch {}
+  try { db.exec("ALTER TABLE calendar_events ADD COLUMN reminder_minutes INTEGER"); } catch {}
+  try { db.exec("ALTER TABLE calendar_events ADD COLUMN task_id TEXT"); } catch {}
 
   seedDatabase(db);
 
