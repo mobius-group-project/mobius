@@ -7,6 +7,7 @@ import FocusTimer from './components/focus/FocusTimer';
 import ActivityTracker from './components/timer/ActivityTracker';
 import { useActivityTracker } from './hooks/useActivityTracker';
 import CalendarPage from './components/calendarSystem/CalendarPage';
+import StatsPage from './components/stats/StatsPage';
 
 
 
@@ -60,14 +61,12 @@ const FocusPage: React.FC = () => {
   );
 };
 
-const StatsPage: React.FC = () => {
-  return (
-    <div className="route-view">
-      <h1 className="route-title">Statystyki</h1>
-      <p>Widok statystyk zostanie dodany w kolejnych iteracjach.</p>
-    </div>
-  );
-};
+const StatsPageRoute: React.FC = () => (
+  <div className="route-view">
+    <h1 className="route-title">Statystyki</h1>
+    <StatsPage />
+  </div>
+);
 
 const SettingsPage: React.FC = () => {
   return (
@@ -113,7 +112,7 @@ function App() {
           <Route path="/tasks" element={<TasksPage activityTracker={tracker} />} />
           <Route path="/focus" element={<FocusPage />} />
           <Route path="/tracker" element={<TrackerPage activityTracker={tracker} />} />
-          <Route path="/stats" element={<StatsPage />} />
+          <Route path="/stats" element={<StatsPageRoute />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/calendar" element={<CalendarPage />} />
         </Routes>
