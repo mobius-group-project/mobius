@@ -71,8 +71,17 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset }) => {
   }, []);
 
   useEffect(() => {
-    calendarService.getEvents().then(setEvents).catch(console.error);
+    loadEvents();
   }, []);
+
+  const loadEvents = async () => {
+    try {
+      const fetchedEvents = await calendarService.getEvents();
+      setEvents(fetchedEvents);
+    } catch (error) {
+      console.error('Failed to load events:', error);
+    }
+  };
 
   useEffect(() => {
     if (!firstRowRef.current) return;
@@ -89,7 +98,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset }) => {
   }, []);
 
   const calculatePopupPosition = (rect: DOMRect) => {
-    const popupWidth = 340;
+    const popupWidth = 320;
     const popupHeight = 500;
     const windowWidth = window.innerWidth;
     const windowHeight = window.innerHeight;
@@ -140,7 +149,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset }) => {
     if (!popupPosition) return;
     
     try {
-      const saved = await calendarService.createEvent({
+      await calendarService.createEvent({
         title: formData.title || 'Untitled Event',
         date: formatDate(popupPosition.date),
         startTime: formData.startTime,
@@ -152,11 +161,27 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset }) => {
         isAllDay: formData.isAllDay,
         reminderMinutes: formData.reminderMinutes || undefined,
       });
-      setEvents(prev => [...prev, saved]);
+      
+      await loadEvents();
       setPopupPosition(null);
     } catch (e) {
       console.error('Failed to create event:', e);
     }
+  };
+
+  const getEventsForCell = (date: Date, slot: string) => {
+    const dateStr = formatDate(date);
+    const slotHour = slot.split(":")[0];
+    
+    return events.filter((ev) => {
+      const evHour = ev.startTime.split(":")[0];
+      return ev.date === dateStr && evHour === slotHour;
+    });
+  };
+
+  const isRecurringCopy = (eventId: number, originalDate: string, currentDate: string) => {
+    const eventIdStr = eventId.toString();
+    return eventIdStr.length > 6 && currentDate !== originalDate;
   };
 
   const colorOptions = [
@@ -196,44 +221,46 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset }) => {
             <div className="calendar-row-cells">
               {DAYS.map((day, index) => {
                 const cellDate = weekDates[index];
+                const cellEvents = getEventsForCell(cellDate, slot);
+                
                 return (
                   <div
                     key={day + slot}
                     className={"calendar-cell" + (isCurrentWeek && index === todayIndex ? " is-today" : "")}
                     onClick={(e) => handleCellClick(cellDate, slot, e)}
                   >
-                    {events
-                      .filter((ev) => {
-                        const evHour = ev.startTime.split(":")[0];
-                        const slotHour = slot.split(":")[0];
-                        return (
-                          formatDate(new Date(ev.date)) === formatDate(cellDate) &&
-                          evHour === slotHour
-                        );
-                      })
-                      .map((ev) => {
-                        const duration = getDurationInMinutes(ev.startTime, ev.endTime);
-                        const rowHeight = 80;
-                        const startMinutes = Number(ev.startTime.split(":")[1]);
-                        const topOffset = (startMinutes / 60) * rowHeight;
-                        const height = (duration / 60) * rowHeight;
-                        return (
-                          <div
-                            key={ev.id}
-                            className="calendar-event"
-                            style={{
-                              backgroundColor: ev.color,
-                              height: `${height}px`,
-                              top: `${topOffset}px`,
-                            }}
-                          >
-                            <div className="calendar-event-title">{ev.title}</div>
-                            {ev.location && (
-                              <div className="calendar-event-location">📍 {ev.location}</div>
-                            )}
+                    {cellEvents.map((ev) => {
+                      const duration = getDurationInMinutes(ev.startTime, ev.endTime);
+                      const rowHeight = 80;
+                      const startMinutes = Number(ev.startTime.split(":")[1]);
+                      const topOffset = (startMinutes / 60) * rowHeight;
+                      const height = (duration / 60) * rowHeight;
+                      
+                      const isRecurring = isRecurringCopy(ev.id, ev.date, formatDate(cellDate));
+                      
+                      return (
+                        <div
+                          key={ev.id}
+                          className="calendar-event"
+                          style={{
+                            backgroundColor: ev.color,
+                            height: `${height}px`,
+                            top: `${topOffset}px`,
+                            opacity: isRecurring ? 0.85 : 1,
+                            border: isRecurring ? '1px dashed rgba(255,255,255,0.3)' : 'none',
+                          }}
+                          title={isRecurring ? `Recurring: ${ev.title}` : ev.title}
+                        >
+                          <div className="calendar-event-title">
+                            {ev.title}
+                            {isRecurring && ' 🔄'}
                           </div>
-                        );
-                      })}
+                          {ev.location && (
+                            <div className="calendar-event-location">📍 {ev.location}</div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 );
               })}
