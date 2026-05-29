@@ -32,11 +32,28 @@ function mapEvent(e: any): CalendarEvent {
   };
 }
 
+interface ExpandedCalendarEvent extends CalendarEvent {
+  originalId?: number;
+}
+
 export const calendarService = {
   async getEvents(): Promise<CalendarEvent[]> {
     const res = await fetch(`${API_URL}/events`);
     if (!res.ok) throw new Error('Failed to fetch events');
-    return (await res.json()).map(mapEvent);
+    const events = await res.json();
+    const expandedEvents: CalendarEvent[] = [];
+    
+    for (const event of events) {
+      const mappedEvent = mapEvent(event);
+      expandedEvents.push(mappedEvent);
+      
+      if (mappedEvent.recurrence && mappedEvent.recurrence !== 'none') {
+        const expanded = expandRecurringEvent(mappedEvent);
+        expandedEvents.push(...expanded);
+      }
+    }
+    
+    return expandedEvents;
   },
 
   async createEvent(event: Omit<CalendarEvent, 'id'>): Promise<CalendarEvent> {
@@ -66,3 +83,48 @@ export const calendarService = {
     if (!res.ok) throw new Error('Failed to delete event');
   },
 };
+
+function expandRecurringEvent(event: CalendarEvent): CalendarEvent[] {
+  const expanded: CalendarEvent[] = [];
+  const startDate = new Date(event.date);
+  const endDate = new Date();
+  endDate.setMonth(endDate.getMonth() + 3);
+  
+  let currentDate = new Date(startDate);
+  let occurrences = 0;
+  const maxOccurrences = 50;
+  
+  while (currentDate <= endDate && occurrences < maxOccurrences) {
+    if (formatDateForCompare(currentDate) !== event.date) {
+      expanded.push({
+        ...event,
+        id: generateTemporaryId(event.id, currentDate),
+        date: formatDateForCompare(currentDate),
+      });
+    }
+    
+    switch (event.recurrence) {
+      case 'daily':
+        currentDate.setDate(currentDate.getDate() + 1);
+        break;
+      case 'weekly':
+        currentDate.setDate(currentDate.getDate() + 7);
+        break;
+      case 'monthly':
+        currentDate.setMonth(currentDate.getMonth() + 1);
+        break;
+    }
+    
+    occurrences++;
+  }
+  
+  return expanded;
+}
+
+function generateTemporaryId(originalId: number, date: Date): number {
+  return parseInt(`${originalId}${formatDateForCompare(date).replace(/-/g, '')}`, 10);
+}
+
+function formatDateForCompare(d: Date): string {
+  return d.toISOString().split('T')[0];
+}

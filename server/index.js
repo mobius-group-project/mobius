@@ -704,6 +704,104 @@ app.get("/api/activity-stats/today", (req, res) => {
   }
 });
 
+// ─── STATS ENDPOINTS ─────────────────────────────────────────────────────────
+// Добавь эти эндпоинты в конец server.js (перед module.exports если есть)
+
+// Статистика за диапазон дат
+// GET /api/activity-stats/range?from=YYYY-MM-DD&to=YYYY-MM-DD
+app.get("/api/activity-stats/range", (req, res) => {
+  try {
+    const db = getDatabase();
+    const { from, to } = req.query;
+
+    if (!from || !to) {
+      return res.status(400).json({ error: "from and to query params are required" });
+    }
+
+    // Общая сводка за период
+    const summary = db
+      .prepare(`
+        SELECT
+          COALESCE(SUM(duration_seconds), 0)  AS total_seconds,
+          COUNT(*)                             AS session_count,
+          COALESCE(MAX(duration_seconds), 0)  AS longest_session,
+          COALESCE(AVG(duration_seconds), 0)  AS avg_session
+        FROM activity_sessions
+        WHERE end_time IS NOT NULL
+          AND date(start_time) >= ?
+          AND date(start_time) <= ?
+      `)
+      .get(from, to);
+
+    // Разбивка по дням
+    const daily = db
+      .prepare(`
+        SELECT
+          date(start_time)                    AS date,
+          COALESCE(SUM(duration_seconds), 0)  AS total_seconds,
+          COUNT(*)                            AS session_count
+        FROM activity_sessions
+        WHERE end_time IS NOT NULL
+          AND date(start_time) >= ?
+          AND date(start_time) <= ?
+        GROUP BY date(start_time)
+        ORDER BY date(start_time) ASC
+      `)
+      .all(from, to);
+
+    // Топ активностей по суммарному времени
+    const topActivities = db
+      .prepare(`
+        SELECT
+          activity_name,
+          COALESCE(SUM(duration_seconds), 0)  AS total_seconds,
+          COUNT(*)                            AS session_count
+        FROM activity_sessions
+        WHERE end_time IS NOT NULL
+          AND date(start_time) >= ?
+          AND date(start_time) <= ?
+        GROUP BY activity_name
+        ORDER BY total_seconds DESC
+        LIMIT 10
+      `)
+      .all(from, to);
+
+    res.json({ summary, daily, topActivities });
+  } catch (error) {
+    console.error("Error fetching range stats:", error);
+    res.status(500).json({ error: "Failed to fetch range stats" });
+  }
+});
+
+// Статистика по неделям (последние N недель)
+// GET /api/activity-stats/weekly?weeks=8
+app.get("/api/activity-stats/weekly", (req, res) => {
+  try {
+    const db = getDatabase();
+    const weeks = Math.min(parseInt(req.query.weeks) || 8, 52);
+
+    const weekly = db
+      .prepare(`
+        SELECT
+          strftime('%Y-W%W', start_time)      AS week,
+          COALESCE(SUM(duration_seconds), 0)  AS total_seconds,
+          COUNT(*)                            AS session_count,
+          COUNT(DISTINCT date(start_time))    AS active_days
+        FROM activity_sessions
+        WHERE end_time IS NOT NULL
+          AND start_time >= datetime('now', ? || ' days')
+        GROUP BY strftime('%Y-W%W', start_time)
+        ORDER BY week ASC
+      `)
+      .all(`-${weeks * 7}`);
+
+    res.json(weekly);
+  } catch (error) {
+    console.error("Error fetching weekly stats:", error);
+    res.status(500).json({ error: "Failed to fetch weekly stats" });
+  }
+});
+
 // GET all events
 app.get('/api/events', (req, res) => {
   try {
@@ -752,5 +850,18 @@ app.delete('/api/events/:id', (req, res) => {
   } catch (error) {
     console.error('Error deleting event:', error);
     res.status(500).json({ error: 'Failed to delete event' });
+  }
+});
+
+// DELETE all events
+app.delete('/api/events/all', (req, res) => {
+  try {
+    const db = getDatabase();
+    const result = db.prepare('DELETE FROM calendar_events').run();
+    console.log('Deleted rows:', result.changes);
+    res.json({ success: true, deletedCount: result.changes });
+  } catch (error) {
+    console.error('Error deleting events:', error);
+    res.status(500).json({ error: 'Failed to delete events' });
   }
 });
