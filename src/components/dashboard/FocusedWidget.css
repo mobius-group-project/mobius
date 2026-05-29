@@ -1,0 +1,311 @@
+/* Focused Widget */
+.focused-widget {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.focused-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.focused-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.focused-period-select {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--color-text-primary);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.focused-period-select:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.focused-period-select:focus {
+  outline: none;
+  border-color: #d4ff5c;
+}
+
+/* Circular Progress */
+.focused-circle-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 20px 0;
+}
+
+.focused-circle-svg {
+  width: 140px;
+  height: 140px;
+  filter: drop-shadow(0 0 10px rgba(212, 255, 92, 0.1));
+}
+
+.focused-circle-progress {
+  transition: stroke-dashoffset 0.5s ease;
+}
+
+.focused-time {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-size: 28px;
+  font-weight: 700;
+  color: #d4ff5c;
+  text-shadow: 0 0 20px rgba(212, 255, 92, 0.2);
+}
+
+/* Quick Note Section */
+.focused-note-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.note-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.note-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.note-add-btn {
+  background: #d4ff5c;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: 700;
+  color: #1a1a1a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.note-add-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(212, 255, 92, 0.3);
+}
+
+.note-add-btn:active {
+  transform: scale(0.95);
+}
+
+/* Note Form */
+.note-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.note-input-header {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  padding: 10px 12px;
+  color: var(--color-text-primary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.note-input-header::placeholder {
+  color: var(--color-text-secondary);
+}
+
+.note-input-header:focus {
+  outline: none;
+  border-color: #d4ff5c;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.note-input-body {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  padding: 10px 12px;
+  color: var(--color-text-primary);
+  font-size: 12px;
+  font-family: inherit;
+  resize: none;
+  min-height: 60px;
+}
+
+.note-input-body::placeholder {
+  color: var(--color-text-secondary);
+}
+
+.note-input-body:focus {
+  outline: none;
+  border-color: #d4ff5c;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.note-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.note-btn-cancel,
+.note-btn-save {
+  padding: 6px 16px;
+  border-radius: 6px;
+  border: none;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.note-btn-cancel {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--color-text-primary);
+}
+
+.note-btn-cancel:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.note-btn-save {
+  background: #d4ff5c;
+  color: #1a1a1a;
+}
+
+.note-btn-save:hover {
+  background: #c2ff2c;
+  box-shadow: 0 2px 8px rgba(212, 255, 92, 0.3);
+}
+
+/* Notes List */
+.notes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.notes-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.notes-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.notes-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+}
+
+.note-item {
+  background: rgba(212, 255, 92, 0.1);
+  border-left: 3px solid #d4ff5c;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Stats */
+.focused-stats {
+  display: flex;
+  justify-content: space-around;
+  padding: 16px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.stat-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: #d4ff5c;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .focused-circle-svg {
+    width: 120px;
+    height: 120px;
+  }
+
+  .focused-time {
+    font-size: 24px;
+  }
+
+  .focused-stats {
+    gap: 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .focused-widget {
+    gap: 16px;
+  }
+
+  .focused-circle-svg {
+    width: 100px;
+    height: 100px;
+  }
+
+  .focused-time {
+    font-size: 20px;
+  }
+
+  .note-form {
+    padding: 10px;
+  }
+
+  .note-input-header,
+  .note-input-body {
+    padding: 8px 10px;
+    font-size: 11px;
+  }
+}

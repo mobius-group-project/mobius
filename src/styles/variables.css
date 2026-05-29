@@ -3,11 +3,16 @@
 :root {
   /* Colors */
   --color-background: #16171D;
+  --color-card-background: #1f2027;
   --color-primary: #F6FE9A;
   --color-secondary: #FF9D47;
   --color-secondary-2: #6090BE;
   --color-positive: #5FBF8F;
   --color-negative: #FF4747;
+  
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #a0aec0;
+  --color-border: rgba(255, 255, 255, 0.08);
 
   --priority-high: var(--color-negative);   
   --priority-medium: var(--color-secondary); 

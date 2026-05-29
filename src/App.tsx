@@ -8,16 +8,12 @@ import ActivityTracker from './components/timer/ActivityTracker';
 import { useActivityTracker } from './hooks/useActivityTracker';
 import CalendarPage from './components/calendarSystem/CalendarPage';
 import StatsPage from './components/stats/StatsPage';
+import Dashboard from './components/dashboard/Dashboard';
 
 
 
 const DashboardPage: React.FC = () => {
-  return (
-    <div className="route-view">
-      <h1 className="route-title">Dashboard</h1>
-      <p>Glówny ekran aplikacji.</p>
-    </div>
-  );
+  return <Dashboard />;
 };
 
 const TasksPage: React.FC<{ activityTracker: ReturnType<typeof useActivityTracker> }> = ({ activityTracker }) => {
