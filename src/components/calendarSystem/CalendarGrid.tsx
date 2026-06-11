@@ -7,21 +7,19 @@ interface CalendarGridProps {
 }
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const ROW_HEIGHT = 80;
 
 function generateTimeSlots(stepMinutes: number = 60) {
   const slots: string[] = [];
   for (let h = 0; h < 24; h++) {
     for (let m = 0; m < 60; m += stepMinutes) {
-      const hh = String(h).padStart(2, "0");
-      const mm = String(m).padStart(2, "0");
-      slots.push(`${hh}:${mm}`);
+      slots.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
     }
   }
   return slots;
 }
 
 const timeSlots = generateTimeSlots(60);
-
 const formatDate = (d: Date) => d.toISOString().split("T")[0];
 
 const getDurationInMinutes = (start: string, end: string) => {
@@ -30,6 +28,23 @@ const getDurationInMinutes = (start: string, end: string) => {
   return (eh * 60 + em) - (sh * 60 + sm);
 };
 
+const minutesToTime = (minutes: number): string =>
+  `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
+
+interface DragState {
+  dayIndex: number;
+  startMinutes: number;
+  currentMinutes: number;
+}
+
+interface GhostEvent {
+  dayIndex: number;
+  date: Date;
+  startMinutes: number;
+  endMinutes: number;
+  title: string;
+}
+
 const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset }) => {
   const today = new Date();
   const todayIndex = (today.getDay() + 6) % 7;
@@ -37,17 +52,21 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset }) => {
 
   const weekDates = Array.from({ length: 7 }, (_, i) => {
     const d = new Date();
-    const diff = i - todayIndex + weekOffset * 7;
-    d.setDate(today.getDate() + diff);
+    d.setDate(today.getDate() + i - todayIndex + weekOffset * 7);
     return d;
   });
 
   const bodyRef = useRef<HTMLDivElement | null>(null);
   const firstRowRef = useRef<HTMLDivElement | null>(null);
+  const ghostInputRef = useRef<HTMLInputElement | null>(null);
   const [linePosition, setLinePosition] = useState(0);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [popupPosition, setPopupPosition] = useState<{ x: number; y: number; date: Date; time: string } | null>(null);
+  const [dragState, setDragState] = useState<DragState | null>(null);
+  const [ghostEvent, setGhostEvent] = useState<GhostEvent | null>(null);
+  const isDragging = useRef(false);
 
+  // popup state (for "More options" flow)
+  const [popupPosition, setPopupPosition] = useState<{ x: number; y: number; date: Date; time: string } | null>(null);
   const [formData, setFormData] = useState({
     title: "",
     startTime: "",
@@ -66,21 +85,16 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset }) => {
   useEffect(() => {
     if (!bodyRef.current || !firstRowRef.current) return;
     const now = new Date();
-    const currentHour = now.getHours();
     const rowHeight = firstRowRef.current.getBoundingClientRect().height;
-    const headerHeight = 60;
-    const target = currentHour * rowHeight - bodyRef.current.clientHeight / 2 + headerHeight;
+    const target = now.getHours() * rowHeight - bodyRef.current.clientHeight / 2 + 60;
     bodyRef.current.scrollTo({ top: Math.max(target, 0), behavior: "smooth" });
   }, []);
 
-  useEffect(() => {
-    loadEvents();
-  }, []);
+  useEffect(() => { loadEvents(); }, []);
 
   const loadEvents = async () => {
     try {
-      const fetchedEvents = await calendarService.getEvents();
-      setEvents(fetchedEvents);
+      setEvents(await calendarService.getEvents());
     } catch (error) {
       console.error('Failed to load events:', error);
     }
@@ -90,75 +104,138 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset }) => {
     if (!firstRowRef.current) return;
     const update = () => {
       const now = new Date();
-      const hour = now.getHours();
-      const minutes = now.getMinutes();
       const rowHeight = firstRowRef.current!.getBoundingClientRect().height;
-      setLinePosition(hour * rowHeight + (minutes / 60) * rowHeight);
+      setLinePosition(now.getHours() * rowHeight + (now.getMinutes() / 60) * rowHeight);
     };
     update();
     const interval = setInterval(update, 60000);
     return () => clearInterval(interval);
   }, []);
 
-  const calculatePopupPosition = (rect: DOMRect) => {
-    const popupWidth = 320;
-    const popupHeight = 500;
-    const windowWidth = window.innerWidth;
-    const windowHeight = window.innerHeight;
-    
-    let x = rect.right + 10;
-    let y = rect.top;
-    
-    if (x + popupWidth > windowWidth) {
-      x = rect.left - popupWidth - 10;
-    }
-    
-    if (y + popupHeight > windowHeight) {
-      y = windowHeight - popupHeight - 10;
-    }
-    
-    if (y < 10) {
-      y = 10;
-    }
-    
-    return { x, y };
+  const getMinutesFromClientY = (clientY: number, snap: 'floor' | 'round' = 'floor'): number => {
+    if (!bodyRef.current || !firstRowRef.current) return 0;
+    const bodyRect = bodyRef.current.getBoundingClientRect();
+    const rowHeight = firstRowRef.current.getBoundingClientRect().height;
+    const relativeY = clientY - bodyRect.top + bodyRef.current.scrollTop;
+    const raw = relativeY / rowHeight * 60;
+    const snapped = snap === 'floor' ? Math.floor(raw / 15) * 15 : Math.round(raw / 15) * 15;
+    return Math.max(0, Math.min(23 * 60 + 45, snapped));
   };
 
-  const handleCellClick = (date: Date, time: string, event: React.MouseEvent) => {
-    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
-    const position = calculatePopupPosition(rect);
-    
-    setPopupPosition({
-      x: position.x,
-      y: position.y,
-      date: date,
-      time: time
+  const getColumnLayout = () => {
+    const bodyWidth = bodyRef.current?.clientWidth ?? 640;
+    const colWidth = (bodyWidth - 80) / 7;
+    return { colWidth, colLeft: (i: number) => 80 + i * colWidth };
+  };
+
+  const dragStartClient = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+
+  const handleCellMouseDown = (dayIndex: number, e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    setGhostEvent(null);
+    setPopupPosition(null);
+    dragStartClient.current = { x: e.clientX, y: e.clientY };
+    const startMinutes = getMinutesFromClientY(e.clientY, 'floor');
+    setDragState({ dayIndex, startMinutes, currentMinutes: startMinutes });
+  };
+
+  const handleBodyMouseMove = (e: React.MouseEvent) => {
+    if (!dragState) return;
+    const current = getMinutesFromClientY(e.clientY, 'round');
+    const currentMinutes = Math.max(current, dragState.startMinutes + 15);
+    if (currentMinutes !== dragState.currentMinutes)
+      setDragState({ ...dragState, currentMinutes });
+  };
+
+  const handleBodyMouseUp = (e: React.MouseEvent) => {
+    if (!dragState) return;
+    const dy = e.clientY - dragStartClient.current.y;
+    const isClick = dy < 25;
+
+    if (isClick) {
+      // open popup at the clicked cell position
+      const popupWidth = 320;
+      const popupHeight = 500;
+      const { colWidth, colLeft } = getColumnLayout();
+      const cellRight = (bodyRef.current?.getBoundingClientRect().left ?? 0) + colLeft(dragState.dayIndex) + colWidth;
+      let x = cellRight + 10;
+      let y = e.clientY;
+      if (x + popupWidth > window.innerWidth) x = (bodyRef.current?.getBoundingClientRect().left ?? 0) + colLeft(dragState.dayIndex) - popupWidth - 10;
+      if (y + popupHeight > window.innerHeight) y = window.innerHeight - popupHeight - 10;
+      if (y < 10) y = 10;
+      const startTime = minutesToTime(dragState.startMinutes);
+      const endTime = minutesToTime(dragState.startMinutes + 60);
+      setFormData({ title: "", startTime, endTime, location: "", description: "", recurrence: "none", recurrenceEndType: "count", recurrenceCount: 1, recurrenceEndDate: "", color: "#A7C7E7", isAllDay: false, reminderMinutes: 0 });
+      setPopupPosition({ x, y, date: weekDates[dragState.dayIndex], time: startTime });
+      setDragState(null);
+      return;
+    }
+
+    const endMinutes = dragState.currentMinutes;
+    setGhostEvent({
+      dayIndex: dragState.dayIndex,
+      date: weekDates[dragState.dayIndex],
+      startMinutes: dragState.startMinutes,
+      endMinutes,
+      title: '',
     });
-    
+    setDragState(null);
+    isDragging.current = false;
+    setTimeout(() => ghostInputRef.current?.focus(), 50);
+  };
+
+  const createEventFromGhost = async () => {
+    if (!ghostEvent) return;
+    try {
+      await calendarService.createEvent({
+        title: ghostEvent.title || 'New Event',
+        date: formatDate(ghostEvent.date),
+        startTime: minutesToTime(ghostEvent.startMinutes),
+        endTime: minutesToTime(ghostEvent.endMinutes),
+        color: '#A7C7E7',
+        recurrence: 'none',
+        isAllDay: false,
+      });
+      await loadEvents();
+      setGhostEvent(null);
+    } catch (err) {
+      console.error('Failed to create event:', err);
+    }
+  };
+
+  const openMoreOptions = () => {
+    if (!ghostEvent || !bodyRef.current) return;
+    const bodyRect = bodyRef.current.getBoundingClientRect();
+    const scrollTop = bodyRef.current.scrollTop;
+    const { colLeft, colWidth } = getColumnLayout();
+    const ghostTop = (ghostEvent.startMinutes / 60) * ROW_HEIGHT - scrollTop + bodyRect.top;
+    const popupWidth = 320;
+    const popupHeight = 500;
+    let x = bodyRect.left + colLeft(ghostEvent.dayIndex) + colWidth + 10;
+    let y = ghostTop;
+    if (x + popupWidth > window.innerWidth) x = bodyRect.left + colLeft(ghostEvent.dayIndex) - popupWidth - 10;
+    if (y + popupHeight > window.innerHeight) y = window.innerHeight - popupHeight - 10;
+    if (y < 10) y = 10;
+
     setFormData({
-      title: "",
-      startTime: time,
-      endTime: `${String(Number(time.split(":")[0]) + 1).padStart(2, "0")}:00`,
-      location: "",
-      description: "",
-      recurrence: "none",
-      recurrenceEndType: "count",
-      recurrenceCount: 1,
-      recurrenceEndDate: "",
-      color: "#A7C7E7",
-      isAllDay: false,
-      reminderMinutes: 0
+      title: ghostEvent.title,
+      startTime: minutesToTime(ghostEvent.startMinutes),
+      endTime: minutesToTime(ghostEvent.endMinutes),
+      location: "", description: "", recurrence: "none",
+      recurrenceEndType: "count", recurrenceCount: 1, recurrenceEndDate: "",
+      color: "#A7C7E7", isAllDay: false, reminderMinutes: 0
     });
+    setGhostEvent(null);
+    setPopupPosition({ x, y, date: ghostEvent.date, time: minutesToTime(ghostEvent.startMinutes) });
   };
 
   const createEvent = async () => {
     if (!popupPosition) return;
-    
     try {
       const isRepeating = formData.recurrence !== 'none';
-
       await calendarService.createEvent({
-        title: formData.title || 'Untitled Event',
+        title: formData.title || 'New Event',
         date: formatDate(popupPosition.date),
         startTime: formData.startTime,
         endTime: formData.endTime,
@@ -171,7 +248,6 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset }) => {
         isAllDay: formData.isAllDay,
         reminderMinutes: formData.reminderMinutes || undefined,
       });
-      
       await loadEvents();
       setPopupPosition(null);
     } catch (e) {
@@ -182,17 +258,11 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset }) => {
   const getEventsForCell = (date: Date, slot: string) => {
     const dateStr = formatDate(date);
     const slotHour = slot.split(":")[0];
-    
-    return events.filter((ev) => {
-      const evHour = ev.startTime.split(":")[0];
-      return ev.date === dateStr && evHour === slotHour;
-    });
+    return events.filter(ev => ev.date === dateStr && ev.startTime.split(":")[0] === slotHour);
   };
 
-  const isRecurringCopy = (eventId: number, originalDate: string, currentDate: string) => {
-    const eventIdStr = eventId.toString();
-    return eventIdStr.length > 6 && currentDate !== originalDate;
-  };
+  const isRecurringCopy = (eventId: number, originalDate: string, currentDate: string) =>
+    eventId.toString().length > 6 && currentDate !== originalDate;
 
   const colorOptions = [
     { value: "#A7C7E7", label: "Blue" },
@@ -203,15 +273,14 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset }) => {
     { value: "#C7CEE6", label: "Purple" },
   ];
 
+  const { colWidth, colLeft } = getColumnLayout();
+
   return (
     <div className="calendar-grid">
       <div className="calendar-header">
         <div className="calendar-header-empty" />
         {DAYS.map((day, index) => (
-          <div
-            key={day}
-            className={"calendar-header-cell" + (isCurrentWeek && index === todayIndex ? " is-today" : "")}
-          >
+          <div key={day} className={"calendar-header-cell" + (isCurrentWeek && index === todayIndex ? " is-today" : "")}>
             <div className="day-name">{day}</div>
             <div className={"day-number" + (isCurrentWeek && index === todayIndex ? " today-number" : "")}>
               {weekDates[index].getDate()}
@@ -220,9 +289,70 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset }) => {
         ))}
       </div>
 
-      <div className="calendar-body" ref={bodyRef}>
-        {isCurrentWeek && (
-          <div className="current-time-line" style={{ top: `${linePosition}px` }} />
+      <div
+        className={"calendar-body" + (dragState ? " is-dragging" : "")}
+        ref={bodyRef}
+        onMouseMove={handleBodyMouseMove}
+        onMouseUp={handleBodyMouseUp}
+        onMouseLeave={() => {
+          if (dragState) {
+            setDragState(null);
+            isDragging.current = false;
+          }
+        }}
+      >
+        {isCurrentWeek && <div className="current-time-line" style={{ top: `${linePosition}px` }} />}
+
+        {/* drag preview overlay — only show when dragged far enough */}
+        {dragState && dragState.currentMinutes - dragState.startMinutes >= 15 && (() => {
+          const startMin = dragState.startMinutes;
+          const endMin = dragState.currentMinutes;
+          return (
+            <div
+              className="drag-preview"
+              style={{
+                left: colLeft(dragState.dayIndex) + 2,
+                width: colWidth - 4,
+                top: (startMin / 60) * ROW_HEIGHT,
+                height: Math.max(((endMin - startMin) / 60) * ROW_HEIGHT, 20),
+              }}
+            >
+              <span className="drag-preview-time">
+                {minutesToTime(startMin)} – {minutesToTime(endMin)}
+              </span>
+            </div>
+          );
+        })()}
+
+        {/* ghost event (after mouse up) */}
+        {ghostEvent && (
+          <div
+            className="ghost-event"
+            style={{
+              left: colLeft(ghostEvent.dayIndex) + 2,
+              width: colWidth - 4,
+              top: (ghostEvent.startMinutes / 60) * ROW_HEIGHT,
+              height: Math.max(((ghostEvent.endMinutes - ghostEvent.startMinutes) / 60) * ROW_HEIGHT, 48),
+            }}
+          >
+            <input
+              ref={ghostInputRef}
+              className="ghost-event-input"
+              placeholder="New Event"
+              value={ghostEvent.title}
+              onChange={(e) => setGhostEvent({ ...ghostEvent, title: e.target.value })}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') createEventFromGhost();
+                if (e.key === 'Escape') setGhostEvent(null);
+              }}
+            />
+            <div className="ghost-event-footer">
+              <span className="ghost-event-time">
+                {minutesToTime(ghostEvent.startMinutes)} – {minutesToTime(ghostEvent.endMinutes)}
+              </span>
+              <button className="ghost-more-btn" onClick={openMoreOptions}>More</button>
+            </div>
+          </div>
         )}
 
         {timeSlots.map((slot, i) => (
@@ -232,22 +362,18 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset }) => {
               {DAYS.map((day, index) => {
                 const cellDate = weekDates[index];
                 const cellEvents = getEventsForCell(cellDate, slot);
-                
                 return (
                   <div
                     key={day + slot}
                     className={"calendar-cell" + (isCurrentWeek && index === todayIndex ? " is-today" : "")}
-                    onClick={(e) => handleCellClick(cellDate, slot, e)}
+                    onMouseDown={(e) => handleCellMouseDown(index, e)}
                   >
                     {cellEvents.map((ev) => {
                       const duration = getDurationInMinutes(ev.startTime, ev.endTime);
-                      const rowHeight = 80;
                       const startMinutes = Number(ev.startTime.split(":")[1]);
-                      const topOffset = (startMinutes / 60) * rowHeight;
-                      const height = (duration / 60) * rowHeight;
-                      
+                      const topOffset = (startMinutes / 60) * ROW_HEIGHT;
+                      const height = (duration / 60) * ROW_HEIGHT;
                       const isRecurring = isRecurringCopy(ev.id, ev.date, formatDate(cellDate));
-                      
                       return (
                         <div
                           key={ev.id}
@@ -260,14 +386,12 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset }) => {
                             border: isRecurring ? '1px dashed rgba(255,255,255,0.3)' : 'none',
                           }}
                           title={isRecurring ? `Recurring: ${ev.title}` : ev.title}
+                          onMouseDown={(e) => e.stopPropagation()}
                         >
                           <div className="calendar-event-title">
-                            {ev.title}
-                            {isRecurring && ' 🔄'}
+                            {ev.title}{isRecurring && ' 🔄'}
                           </div>
-                          {ev.location && (
-                            <div className="calendar-event-location">📍 {ev.location}</div>
-                          )}
+                          {ev.location && <div className="calendar-event-location">📍 {ev.location}</div>}
                         </div>
                       );
                     })}
@@ -279,88 +403,44 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset }) => {
         ))}
       </div>
 
+      {/* backdrop to close ghost on outside click */}
+      {ghostEvent && (
+        <div className="ghost-backdrop" onClick={() => setGhostEvent(null)} />
+      )}
+
       {popupPosition && (
         <>
-          <div 
-            className="popup-backdrop" 
-            onClick={() => setPopupPosition(null)}
-          />
-          
-          <div 
+          <div className="popup-backdrop" onClick={() => setPopupPosition(null)} />
+          <div
             className="event-popup-modern"
-            style={{ 
-              position: 'fixed',
-              top: popupPosition.y,
-              left: popupPosition.x,
-              maxHeight: '80vh',
-              overflowY: 'auto'
-            }}
+            style={{ position: 'fixed', top: popupPosition.y, left: popupPosition.x, maxHeight: '80vh', overflowY: 'auto' }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="popup-header">
               <h4>Add Event</h4>
               <button className="popup-close" onClick={() => setPopupPosition(null)}>×</button>
             </div>
-
             <div className="popup-content">
               <input
-                type="text"
-                placeholder="Event title"
-                value={formData.title}
+                type="text" placeholder="Event title" value={formData.title} autoFocus
                 onChange={(e) => setFormData({...formData, title: e.target.value})}
-                autoFocus
                 className="popup-input"
               />
-
               <div className="popup-time-row">
-                <input
-                  type="time"
-                  value={formData.startTime}
-                  onChange={(e) => setFormData({...formData, startTime: e.target.value})}
-                  className="popup-time-input"
-                />
+                <input type="time" value={formData.startTime} onChange={(e) => setFormData({...formData, startTime: e.target.value})} className="popup-time-input" />
                 <span>→</span>
-                <input
-                  type="time"
-                  value={formData.endTime}
-                  onChange={(e) => setFormData({...formData, endTime: e.target.value})}
-                  className="popup-time-input"
-                />
+                <input type="time" value={formData.endTime} onChange={(e) => setFormData({...formData, endTime: e.target.value})} className="popup-time-input" />
               </div>
-
-              <input
-                type="text"
-                placeholder="Location"
-                value={formData.location}
-                onChange={(e) => setFormData({...formData, location: e.target.value})}
-                className="popup-input"
-              />
-
-              <textarea
-                placeholder="Description"
-                value={formData.description}
-                onChange={(e) => setFormData({...formData, description: e.target.value})}
-                rows={2}
-                className="popup-textarea"
-              />
-
+              <input type="text" placeholder="Location" value={formData.location} onChange={(e) => setFormData({...formData, location: e.target.value})} className="popup-input" />
+              <textarea placeholder="Description" value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} rows={2} className="popup-textarea" />
               <div className="popup-row">
-                <select
-                  value={formData.recurrence}
-                  onChange={(e) => setFormData({...formData, recurrence: e.target.value as any})}
-                  className="popup-select"
-                >
+                <select value={formData.recurrence} onChange={(e) => setFormData({...formData, recurrence: e.target.value as any})} className="popup-select">
                   <option value="none">No repeat</option>
                   <option value="daily">Daily</option>
                   <option value="weekly">Weekly</option>
                   <option value="monthly">Monthly</option>
                 </select>
-
-                <select
-                  value={formData.reminderMinutes}
-                  onChange={(e) => setFormData({...formData, reminderMinutes: Number(e.target.value)})}
-                  className="popup-select"
-                >
+                <select value={formData.reminderMinutes} onChange={(e) => setFormData({...formData, reminderMinutes: Number(e.target.value)})} className="popup-select">
                   <option value={0}>No reminder</option>
                   <option value={5}>5 min before</option>
                   <option value={15}>15 min before</option>
@@ -368,68 +448,31 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset }) => {
                   <option value={60}>1 hour before</option>
                 </select>
               </div>
-
               {formData.recurrence !== 'none' && (
                 <div className="popup-recurrence-end">
                   <div className="popup-recurrence-end-toggle">
-                    <button
-                      className={`recurrence-end-btn${formData.recurrenceEndType === 'count' ? ' active' : ''}`}
-                      onClick={() => setFormData({...formData, recurrenceEndType: 'count'})}
-                    >
-                      After N times
-                    </button>
-                    <button
-                      className={`recurrence-end-btn${formData.recurrenceEndType === 'date' ? ' active' : ''}`}
-                      onClick={() => setFormData({...formData, recurrenceEndType: 'date'})}
-                    >
-                      By date
-                    </button>
+                    <button className={`recurrence-end-btn${formData.recurrenceEndType === 'count' ? ' active' : ''}`} onClick={() => setFormData({...formData, recurrenceEndType: 'count'})}>After N times</button>
+                    <button className={`recurrence-end-btn${formData.recurrenceEndType === 'date' ? ' active' : ''}`} onClick={() => setFormData({...formData, recurrenceEndType: 'date'})}>By date</button>
                   </div>
-
                   {formData.recurrenceEndType === 'count' ? (
                     <div className="popup-recurrence-count-row">
                       <label>Repeat</label>
-                      <input
-                        type="number"
-                        min={1}
-                        max={365}
-                        value={formData.recurrenceCount}
-                        onChange={(e) => setFormData({...formData, recurrenceCount: Math.max(1, Number(e.target.value))})}
-                        className="popup-input popup-count-input"
-                      />
+                      <input type="number" min={1} max={365} value={formData.recurrenceCount} onChange={(e) => setFormData({...formData, recurrenceCount: Math.max(1, Number(e.target.value))})} className="popup-input popup-count-input" />
                       <label>times</label>
                     </div>
                   ) : (
-                    <input
-                      type="date"
-                      value={formData.recurrenceEndDate}
-                      min={formatDate(popupPosition!.date)}
-                      onChange={(e) => setFormData({...formData, recurrenceEndDate: e.target.value})}
-                      className="popup-input"
-                    />
+                    <input type="date" value={formData.recurrenceEndDate} min={formatDate(popupPosition.date)} onChange={(e) => setFormData({...formData, recurrenceEndDate: e.target.value})} className="popup-input" />
                   )}
                 </div>
               )}
-
               <div className="popup-colors">
                 {colorOptions.map(color => (
-                  <button
-                    key={color.value}
-                    className={`popup-color ${formData.color === color.value ? 'active' : ''}`}
-                    style={{ backgroundColor: color.value }}
-                    onClick={() => setFormData({...formData, color: color.value})}
-                    title={color.label}
-                  />
+                  <button key={color.value} className={`popup-color ${formData.color === color.value ? 'active' : ''}`} style={{ backgroundColor: color.value }} onClick={() => setFormData({...formData, color: color.value})} title={color.label} />
                 ))}
               </div>
-
               <div className="popup-actions">
-                <button className="popup-cancel" onClick={() => setPopupPosition(null)}>
-                  Cancel
-                </button>
-                <button className="popup-create" onClick={createEvent}>
-                  Create
-                </button>
+                <button className="popup-cancel" onClick={() => setPopupPosition(null)}>Cancel</button>
+                <button className="popup-create" onClick={createEvent}>Create</button>
               </div>
             </div>
           </div>

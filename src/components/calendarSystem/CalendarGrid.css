@@ -42,6 +42,98 @@
       transparent 60%);
 }
 
+.calendar-body.is-dragging {
+  cursor: ns-resize;
+  user-select: none;
+}
+
+.calendar-body.is-dragging .calendar-cell {
+  pointer-events: none;
+}
+
+.drag-preview {
+  position: absolute;
+  background: rgba(160, 190, 255, 0.35);
+  border: 1.5px solid rgba(160, 190, 255, 0.7);
+  border-radius: 4px;
+  z-index: 20;
+  pointer-events: none;
+  display: flex;
+  align-items: flex-start;
+  padding: 3px 6px;
+  box-sizing: border-box;
+}
+
+.drag-preview-time {
+  font-size: 10px;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.ghost-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 18;
+}
+
+.ghost-event {
+  position: absolute;
+  background: #A7C7E7;
+  border-radius: 4px;
+  z-index: 19;
+  padding: 4px 6px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+}
+
+.ghost-event-input {
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: #16171D;
+  width: 100%;
+  font-family: inherit;
+}
+
+.ghost-event-input::placeholder {
+  color: rgba(22, 23, 29, 0.5);
+}
+
+.ghost-event-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.ghost-event-time {
+  font-size: 10px;
+  color: rgba(22, 23, 29, 0.7);
+  white-space: nowrap;
+}
+
+.ghost-more-btn {
+  background: rgba(22, 23, 29, 0.12);
+  border: none;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(22, 23, 29, 0.7);
+  cursor: pointer;
+  padding: 1px 5px;
+  font-family: inherit;
+}
+
+.ghost-more-btn:hover {
+  background: rgba(22, 23, 29, 0.2);
+}
+
 .calendar-row {
   display: grid;
   grid-template-columns: 80px repeat(7, 1fr);
