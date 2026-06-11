@@ -844,6 +844,26 @@ app.post('/api/events', (req, res) => {
 });
 
 // DELETE an event
+app.put('/api/events/:id', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { title, date, start_time, end_time, color, location, description, is_all_day, recurrence, recurrence_count, recurrence_end_date, reminder_minutes } = req.body;
+    db.prepare(`
+      UPDATE calendar_events
+      SET title=?, date=?, start_time=?, end_time=?, color=?, location=?, description=?,
+          is_all_day=?, recurrence=?, recurrence_count=?, recurrence_end_date=?, reminder_minutes=?
+      WHERE id=?
+    `).run(title, date, start_time, end_time, color ?? '#A7C7E7', location ?? null, description ?? null,
+      is_all_day ? 1 : 0, recurrence ?? 'none', recurrence_count ?? null, recurrence_end_date ?? null,
+      reminder_minutes ?? null, req.params.id);
+    const updated = db.prepare('SELECT * FROM calendar_events WHERE id = ?').get(req.params.id);
+    res.json(updated);
+  } catch (error) {
+    console.error('Error updating event:', error);
+    res.status(500).json({ error: 'Failed to update event' });
+  }
+});
+
 app.delete('/api/events/:id', (req, res) => {
   try {
     const db = getDatabase();
