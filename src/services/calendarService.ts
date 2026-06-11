@@ -2,6 +2,7 @@ const API_URL = 'http://localhost:3001/api';
 
 export interface CalendarEvent {
   id: number;
+  originalEventId?: number;
   title: string;
   date: string;
   startTime: string;
@@ -86,6 +87,29 @@ export const calendarService = {
     return mapEvent(await res.json());
   },
 
+  async updateEvent(id: number, event: Omit<CalendarEvent, 'id'>): Promise<CalendarEvent> {
+    const res = await fetch(`${API_URL}/events/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: event.title,
+        date: event.date,
+        start_time: event.startTime,
+        end_time: event.endTime,
+        color: event.color,
+        location: event.location,
+        description: event.description,
+        is_all_day: event.isAllDay ? 1 : 0,
+        recurrence: event.recurrence ?? 'none',
+        recurrence_count: event.recurrenceCount ?? null,
+        recurrence_end_date: event.recurrenceEndDate ?? null,
+        reminder_minutes: event.reminderMinutes,
+      }),
+    });
+    if (!res.ok) throw new Error('Failed to update event');
+    return mapEvent(await res.json());
+  },
+
   async deleteEvent(id: number): Promise<void> {
     const res = await fetch(`${API_URL}/events/${id}`, { method: 'DELETE' });
     if (!res.ok) throw new Error('Failed to delete event');
@@ -119,6 +143,7 @@ function expandRecurringEvent(event: CalendarEvent): CalendarEvent[] {
     expanded.push({
       ...event,
       id: generateTemporaryId(event.id, new Date(currentDate)),
+      originalEventId: event.id,
       date: formatDateForCompare(currentDate),
     });
 

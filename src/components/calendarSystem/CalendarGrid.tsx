@@ -65,7 +65,10 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset }) => {
   const [ghostEvent, setGhostEvent] = useState<GhostEvent | null>(null);
   const isDragging = useRef(false);
 
-  // popup state (for "More options" flow)
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; event: CalendarEvent } | null>(null);
+  const [editingEventId, setEditingEventId] = useState<number | null>(null);
+
+  // popup state (for create / edit flow)
   const [popupPosition, setPopupPosition] = useState<{ x: number; y: number; date: Date; time: string } | null>(null);
   const [formData, setFormData] = useState({
     title: "",
@@ -230,11 +233,11 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset }) => {
     setPopupPosition({ x, y, date: ghostEvent.date, time: minutesToTime(ghostEvent.startMinutes) });
   };
 
-  const createEvent = async () => {
+  const saveEvent = async () => {
     if (!popupPosition) return;
     try {
       const isRepeating = formData.recurrence !== 'none';
-      await calendarService.createEvent({
+      const payload = {
         title: formData.title || 'New Event',
         date: formatDate(popupPosition.date),
         startTime: formData.startTime,
@@ -247,11 +250,66 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset }) => {
         recurrenceEndDate: isRepeating && formData.recurrenceEndType === 'date' ? formData.recurrenceEndDate || undefined : undefined,
         isAllDay: formData.isAllDay,
         reminderMinutes: formData.reminderMinutes || undefined,
-      });
+      };
+      if (editingEventId !== null) {
+        await calendarService.updateEvent(editingEventId, payload);
+      } else {
+        await calendarService.createEvent(payload);
+      }
       await loadEvents();
       setPopupPosition(null);
+      setEditingEventId(null);
     } catch (e) {
-      console.error('Failed to create event:', e);
+      console.error('Failed to save event:', e);
+    }
+  };
+
+  const handleContextMenu = (e: React.MouseEvent, ev: CalendarEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setContextMenu({ x: e.clientX, y: e.clientY, event: ev });
+  };
+
+  const handleEditEvent = () => {
+    if (!contextMenu) return;
+    const ev = contextMenu.event;
+    const realId = ev.originalEventId ?? ev.id;
+    const realEvent = events.find(e => e.id === realId) ?? ev;
+    setEditingEventId(realId);
+    setFormData({
+      title: realEvent.title,
+      startTime: realEvent.startTime,
+      endTime: realEvent.endTime,
+      location: realEvent.location ?? "",
+      description: realEvent.description ?? "",
+      recurrence: realEvent.recurrence ?? "none",
+      recurrenceEndType: realEvent.recurrenceEndDate ? "date" : "count",
+      recurrenceCount: realEvent.recurrenceCount ?? 1,
+      recurrenceEndDate: realEvent.recurrenceEndDate ?? "",
+      color: realEvent.color,
+      isAllDay: realEvent.isAllDay ?? false,
+      reminderMinutes: realEvent.reminderMinutes ?? 0,
+    });
+    const popupWidth = 320;
+    const popupHeight = 500;
+    let x = contextMenu.x + 8;
+    let y = contextMenu.y;
+    if (x + popupWidth > window.innerWidth) x = contextMenu.x - popupWidth - 8;
+    if (y + popupHeight > window.innerHeight) y = window.innerHeight - popupHeight - 10;
+    if (y < 10) y = 10;
+    setPopupPosition({ x, y, date: new Date(realEvent.date), time: realEvent.startTime });
+    setContextMenu(null);
+  };
+
+  const handleDeleteEvent = async () => {
+    if (!contextMenu) return;
+    const realId = contextMenu.event.originalEventId ?? contextMenu.event.id;
+    setContextMenu(null);
+    try {
+      await calendarService.deleteEvent(realId);
+      await loadEvents();
+    } catch (e) {
+      console.error('Failed to delete event:', e);
     }
   };
 
@@ -387,6 +445,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset }) => {
                           }}
                           title={isRecurring ? `Recurring: ${ev.title}` : ev.title}
                           onMouseDown={(e) => e.stopPropagation()}
+                          onContextMenu={(e) => handleContextMenu(e, ev)}
                         >
                           <div className="calendar-event-title">
                             {ev.title}{isRecurring && ' 🔄'}
@@ -471,10 +530,22 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset }) => {
                 ))}
               </div>
               <div className="popup-actions">
-                <button className="popup-cancel" onClick={() => setPopupPosition(null)}>Cancel</button>
-                <button className="popup-create" onClick={createEvent}>Create</button>
+                <button className="popup-cancel" onClick={() => { setPopupPosition(null); setEditingEventId(null); }}>Cancel</button>
+                <button className="popup-create" onClick={saveEvent}>{editingEventId !== null ? 'Save' : 'Create'}</button>
               </div>
             </div>
+          </div>
+        </>
+      )}
+
+      {contextMenu && (
+        <>
+          <div className="context-backdrop" onClick={() => setContextMenu(null)} />
+          <div className="context-menu" style={{ top: contextMenu.y, left: contextMenu.x }}>
+            <button className="context-menu-item" onClick={handleEditEvent}>Edit</button>
+            <button className="context-menu-item context-menu-item--danger" onClick={handleDeleteEvent}>
+              {contextMenu.event.originalEventId ? 'Delete series' : 'Delete'}
+            </button>
           </div>
         </>
       )}
