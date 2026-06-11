@@ -13,7 +13,6 @@ export function initializeDatabase() {
   db = new Database(dbPath);
   db.pragma("journal_mode = WAL");
 
-  // tables
   db.exec(`
     CREATE TABLE IF NOT EXISTS projects (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -57,6 +56,14 @@ export function initializeDatabase() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (task_id) REFERENCES tasks(id)
     );
+
+    CREATE TABLE IF NOT EXISTS focus_plants (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      plant_type TEXT NOT NULL,
+      session_duration INTEGER NOT NULL,
+      planted_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
     CREATE TABLE IF NOT EXISTS activity_sessions (
       id TEXT PRIMARY KEY,
       activity_name TEXT NOT NULL,
@@ -87,47 +94,25 @@ export function initializeDatabase() {
       task_id TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (task_id) REFERENCES tasks(id)
-);
+    );
 
-  CREATE TABLE IF NOT EXISTS activity_toasts (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    type TEXT DEFAULT 'info',
-    message TEXT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
+    CREATE TABLE IF NOT EXISTS activity_toasts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      type TEXT DEFAULT 'info',
+      message TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
   `);
 
   // Non-destructive migrations for existing DB files.
-  try {
-    db.exec("ALTER TABLE tasks ADD COLUMN time_spent INTEGER DEFAULT 0");
-  } catch {}
-  try {
-    db.exec("ALTER TABLE tasks ADD COLUMN order_index INTEGER DEFAULT 0");
-  } catch {}
-  try {
-    db.exec(
-      "ALTER TABLE focus_sessions ADD COLUMN total_seconds INTEGER DEFAULT 0",
-    );
-  } catch {}
-  try {
-    db.exec(
-      "ALTER TABLE focus_sessions ADD COLUMN remaining_seconds INTEGER DEFAULT 0",
-    );
-  } catch {}
-  try {
-    db.exec("ALTER TABLE focus_sessions ADD COLUMN state TEXT DEFAULT 'idle'");
-  } catch {}
-  try {
-    db.exec("ALTER TABLE focus_sessions ADD COLUMN ended_at DATETIME");
-  } catch {}
-  try {
-    db.exec(
-      "ALTER TABLE focus_sessions ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP",
-    );
-  } catch {}
-  try {
-    db.exec("ALTER TABLE activity_sessions ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP");
-  } catch {}
+  try { db.exec("ALTER TABLE tasks ADD COLUMN time_spent INTEGER DEFAULT 0"); } catch {}
+  try { db.exec("ALTER TABLE tasks ADD COLUMN order_index INTEGER DEFAULT 0"); } catch {}
+  try { db.exec("ALTER TABLE focus_sessions ADD COLUMN total_seconds INTEGER DEFAULT 0"); } catch {}
+  try { db.exec("ALTER TABLE focus_sessions ADD COLUMN remaining_seconds INTEGER DEFAULT 0"); } catch {}
+  try { db.exec("ALTER TABLE focus_sessions ADD COLUMN state TEXT DEFAULT 'idle'"); } catch {}
+  try { db.exec("ALTER TABLE focus_sessions ADD COLUMN ended_at DATETIME"); } catch {}
+  try { db.exec("ALTER TABLE focus_sessions ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP"); } catch {}
+  try { db.exec("ALTER TABLE activity_sessions ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP"); } catch {}
   try { db.exec("ALTER TABLE calendar_events ADD COLUMN location TEXT"); } catch {}
   try { db.exec("ALTER TABLE calendar_events ADD COLUMN description TEXT"); } catch {}
   try { db.exec("ALTER TABLE calendar_events ADD COLUMN is_all_day INTEGER DEFAULT 0"); } catch {}
@@ -136,6 +121,12 @@ export function initializeDatabase() {
   try { db.exec("ALTER TABLE calendar_events ADD COLUMN task_id TEXT"); } catch {}
   try { db.exec("ALTER TABLE calendar_events ADD COLUMN recurrence_count INTEGER"); } catch {}
   try { db.exec("ALTER TABLE calendar_events ADD COLUMN recurrence_end_date TEXT"); } catch {}
+  try { db.exec(`CREATE TABLE IF NOT EXISTS focus_plants (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    plant_type TEXT NOT NULL,
+    session_duration INTEGER NOT NULL,
+    planted_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`); } catch {}
 
   seedDatabase(db);
 
@@ -175,50 +166,10 @@ function seedDatabase(database) {
     `);
 
     const now = new Date().toISOString();
-    const tomorrow = new Date(Date.now() + 86400000)
-      .toISOString()
-      .split("T")[0];
+    const tomorrow = new Date(Date.now() + 86400000).toISOString().split("T")[0];
 
-    insertTask.run(
-      "1",
-      "Zrobić herbatę",
-      0,
-      0,
-      tomorrow,
-      "Opis blablablablablabalablablaabl",
-      "High",
-      0,
-      0,
-      projectId,
-      now,
-    );
-
-    insertTask.run(
-      "2",
-      "Napisać pierwszy komponent",
-      1,
-      0,
-      new Date(Date.now() - 86400000).toISOString().split("T")[0],
-      "Komponent został pomyślnie napisany",
-      "Medium",
-      0,
-      1,
-      projectId,
-      now,
-    );
-
-    insertTask.run(
-      "3",
-      "Przeczytać dokumentację React",
-      0,
-      0,
-      new Date(Date.now() + 172800000).toISOString().split("T")[0],
-      "Zapoznać się z nowymi hookami",
-      "Low",
-      0,
-      2,
-      projectId,
-      now,
-    );
+    insertTask.run("1", "Zrobić herbatę", 0, 0, tomorrow, "Opis blablablablablabalablablaabl", "High", 0, 0, projectId, now);
+    insertTask.run("2", "Napisać pierwszy komponent", 1, 0, new Date(Date.now() - 86400000).toISOString().split("T")[0], "Komponent został pomyślnie napisany", "Medium", 0, 1, projectId, now);
+    insertTask.run("3", "Przeczytać dokumentację React", 0, 0, new Date(Date.now() + 172800000).toISOString().split("T")[0], "Zapoznać się z nowymi hookami", "Low", 0, 2, projectId, now);
   }
 }

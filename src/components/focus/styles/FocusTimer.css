@@ -1,120 +1,276 @@
-.focus-timer {
-  max-width: 420px;
-  margin: 40px auto 0;
-  padding: 28px 28px 24px;
-  border-radius: 20px;
-  background: #1f2028;
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  box-shadow: 0 22px 55px rgba(0, 0, 0, 0.55);
-}
-
-.focus-timer__title {
-  margin-bottom: 20px;
-  text-align: center;
-  color: var(--color-primary);
-  font-size: var(--h2-size);
-}
-
-.focus-timer__presets {
+.ft {
+  max-width: 460px;
+  margin: 0 auto;
   display: flex;
-  justify-content: center;
-  gap: 10px;
-  margin-bottom: 24px;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  padding-bottom: 40px;
 }
 
-.focus-timer__preset {
-  padding: 8px 14px;
-  border-radius: 999px;
-  border: 1px solid var(--color-secondary-2);
-  background: transparent;
-  color: #ffffff;
-  cursor: pointer;
-  font-size: var(--small-size);
-  transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
-}
-
-.focus-timer__preset:hover {
-  border-color: var(--color-secondary);
-  transform: translateY(-1px);
-}
-
-.focus-timer__preset--active {
-  border-color: var(--color-secondary);
-  background: rgba(255, 157, 71, 0.16);
-}
-
-.focus-timer__display {
+/* ── plant picker ─────────────────────────────────────────────── */
+.ft-picker {
   display: flex;
+  gap: 16px;
   justify-content: center;
-  margin-bottom: 28px;
 }
 
-.focus-timer__circle-progress {
-  width: 220px;
-  aspect-ratio: 1 / 1;
-  border-radius: 50%;
+.ft-picker__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
   padding: 12px;
-  background:
-    conic-gradient(
-      var(--color-secondary) calc(var(--progress) * 360deg),
-      rgba(255, 255, 255, 0.06) 0
-    );
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: transparent;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
 }
 
-.focus-timer__circle-inner {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  background: #1b1c23;
+.ft-picker__item:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.ft-picker__item--active {
+  border-color: #7c6af7;
+  background: rgba(124, 106, 247, 0.12);
+}
+
+.ft-picker__label {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.ft-picker__item--active .ft-picker__label {
+  color: #a89bfa;
+}
+
+/* ── duration presets ─────────────────────────────────────────── */
+.ft-presets {
+  display: flex;
+  gap: 8px;
+}
+
+.ft-preset {
+  padding: 7px 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.ft-preset:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #fff;
+}
+
+.ft-preset--active {
+  border-color: #7c6af7;
+  background: rgba(124, 106, 247, 0.15);
+  color: #fff;
+}
+
+/* ── plant display ────────────────────────────────────────────── */
+.ft-plant-wrap {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 2.4rem;
+  padding: 28px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  min-height: 220px;
+}
+
+.ft-pixel-grid {
+  display: grid;
+  image-rendering: pixelated;
+}
+
+.ft-pixel {
+  border-radius: 2px;
+  transition: background 0.25s ease;
+}
+
+/* ── badges ───────────────────────────────────────────────────── */
+/* ── badge slot (outside plant wrap) ─────────────────────────── */
+.ft-badge-slot {
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ft-badge {
+  padding: 4px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.ft-badge--success {
+  background: rgba(76, 175, 80, 0.2);
+  border: 1px solid rgba(76, 175, 80, 0.4);
+  color: #81c784;
+}
+
+.ft-badge--paused {
+  background: rgba(255, 183, 77, 0.15);
+  border: 1px solid rgba(255, 183, 77, 0.3);
+  color: #ffb74d;
+}
+
+.ft-badge--running {
+  background: rgba(124, 106, 247, 0.15);
+  border: 1px solid rgba(124, 106, 247, 0.3);
+  color: #a89bfa;
+}
+
+/* ── presets row + custom input ──────────────────────────────── */
+.ft-presets-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ft-custom-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  padding: 0 12px;
+  height: 34px;
+}
+
+.ft-custom-input {
+  width: 40px;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #fff;
+  font-size: 13px;
+  text-align: center;
+  -moz-appearance: textfield;
+}
+
+.ft-custom-input::-webkit-outer-spin-button,
+.ft-custom-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+}
+
+.ft-custom-input-label {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* ── timer ────────────────────────────────────────────────────── */
+.ft-time {
+  font-size: 3rem;
   font-weight: 700;
   color: #ffffff;
+  letter-spacing: 0.05em;
+  font-variant-numeric: tabular-nums;
 }
 
-.focus-timer__controls {
+/* ── progress bar ─────────────────────────────────────────────── */
+.ft-progress-track {
+  width: 100%;
+  max-width: 320px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.ft-progress-fill {
+  height: 100%;
+  background: #7c6af7;
+  border-radius: 2px;
+  transition: width 1s linear;
+}
+
+/* ── controls ─────────────────────────────────────────────────── */
+.ft-controls {
   display: flex;
-  justify-content: center;
   gap: 10px;
-  margin-bottom: 12px;
 }
 
-.focus-timer__btn {
-  padding: 8px 16px;
+.ft-btn {
+  padding: 10px 28px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   background: transparent;
   color: #ffffff;
+  font-size: 14px;
   cursor: pointer;
-  font-size: var(--small-size);
-  transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
 }
 
-.focus-timer__btn:hover {
-  border-color: var(--color-secondary-2);
-  background: rgba(255, 255, 255, 0.04);
+.ft-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
   transform: translateY(-1px);
 }
 
-.focus-timer__btn.primary {
-  border-color: var(--color-primary);
-  background: rgba(246, 254, 154, 0.14);
-  color: var(--color-primary);
+.ft-btn--primary {
+  border-color: #7c6af7;
+  background: rgba(124, 106, 247, 0.18);
+  color: #c4bbff;
 }
 
-.focus-timer__btn.secondary {
-  border-color: var(--color-secondary-2);
-  background: rgba(255, 255, 255, 0.02);
+.ft-btn--primary:hover {
+  background: rgba(124, 106, 247, 0.3);
 }
 
-.focus-timer__state {
-  font-size: var(--small-size);
-  text-align: center;
-  color: rgba(255, 255, 255, 0.6);
+.ft-btn--ghost {
+  border-color: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 13px;
+}
+
+/* ── garden ───────────────────────────────────────────────────── */
+.ft-garden {
+  width: 100%;
+  margin-top: 8px;
+}
+
+.ft-garden__title {
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0 0 16px;
+}
+
+.ft-garden__grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.ft-garden-plant {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  transition: border-color 0.15s;
+}
+
+.ft-garden-plant:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.ft-garden-plant__date {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.3);
 }
