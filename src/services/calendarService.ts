@@ -2,6 +2,7 @@ const API_URL = 'http://localhost:3001/api';
 
 export interface CalendarEvent {
   id: number;
+  originalEventId?: number;
   title: string;
   date: string;
   startTime: string;
@@ -142,6 +143,7 @@ function expandRecurringEvent(event: CalendarEvent): CalendarEvent[] {
     expanded.push({
       ...event,
       id: generateTemporaryId(event.id, new Date(currentDate)),
+      originalEventId: event.id,
       date: formatDateForCompare(currentDate),
     });
 
