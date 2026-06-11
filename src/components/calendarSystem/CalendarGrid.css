@@ -315,6 +315,55 @@
   gap: 10px;
 }
 
+.popup-recurrence-end {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 0 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.popup-recurrence-end-toggle {
+  display: flex;
+  gap: 6px;
+}
+
+.recurrence-end-btn {
+  flex: 1;
+  padding: 5px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.recurrence-end-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.recurrence-end-btn.active {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.popup-recurrence-count-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.popup-count-input {
+  width: 64px !important;
+  text-align: center;
+}
+
 .popup-colors {
   display: flex;
   gap: 8px;

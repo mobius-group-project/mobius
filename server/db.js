@@ -81,6 +81,8 @@ export function initializeDatabase() {
       description TEXT,
       is_all_day INTEGER DEFAULT 0,
       recurrence TEXT DEFAULT 'none' CHECK(recurrence IN ('none','daily','weekly','monthly')),
+      recurrence_count INTEGER,
+      recurrence_end_date TEXT,
       reminder_minutes INTEGER,
       task_id TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -132,6 +134,8 @@ export function initializeDatabase() {
   try { db.exec("ALTER TABLE calendar_events ADD COLUMN recurrence TEXT DEFAULT 'none'"); } catch {}
   try { db.exec("ALTER TABLE calendar_events ADD COLUMN reminder_minutes INTEGER"); } catch {}
   try { db.exec("ALTER TABLE calendar_events ADD COLUMN task_id TEXT"); } catch {}
+  try { db.exec("ALTER TABLE calendar_events ADD COLUMN recurrence_count INTEGER"); } catch {}
+  try { db.exec("ALTER TABLE calendar_events ADD COLUMN recurrence_end_date TEXT"); } catch {}
 
   seedDatabase(db);
 

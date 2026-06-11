@@ -55,6 +55,9 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset }) => {
     location: "",
     description: "",
     recurrence: "none" as 'none' | 'daily' | 'weekly' | 'monthly',
+    recurrenceEndType: "count" as 'count' | 'date',
+    recurrenceCount: 1,
+    recurrenceEndDate: "",
     color: "#A7C7E7",
     isAllDay: false,
     reminderMinutes: 0
@@ -139,6 +142,9 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset }) => {
       location: "",
       description: "",
       recurrence: "none",
+      recurrenceEndType: "count",
+      recurrenceCount: 1,
+      recurrenceEndDate: "",
       color: "#A7C7E7",
       isAllDay: false,
       reminderMinutes: 0
@@ -149,6 +155,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset }) => {
     if (!popupPosition) return;
     
     try {
+      const isRepeating = formData.recurrence !== 'none';
+
       await calendarService.createEvent({
         title: formData.title || 'Untitled Event',
         date: formatDate(popupPosition.date),
@@ -158,6 +166,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset }) => {
         location: formData.location || undefined,
         description: formData.description || undefined,
         recurrence: formData.recurrence,
+        recurrenceCount: isRepeating && formData.recurrenceEndType === 'count' ? formData.recurrenceCount : undefined,
+        recurrenceEndDate: isRepeating && formData.recurrenceEndType === 'date' ? formData.recurrenceEndDate || undefined : undefined,
         isAllDay: formData.isAllDay,
         reminderMinutes: formData.reminderMinutes || undefined,
       });
@@ -358,6 +368,48 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset }) => {
                   <option value={60}>1 hour before</option>
                 </select>
               </div>
+
+              {formData.recurrence !== 'none' && (
+                <div className="popup-recurrence-end">
+                  <div className="popup-recurrence-end-toggle">
+                    <button
+                      className={`recurrence-end-btn${formData.recurrenceEndType === 'count' ? ' active' : ''}`}
+                      onClick={() => setFormData({...formData, recurrenceEndType: 'count'})}
+                    >
+                      After N times
+                    </button>
+                    <button
+                      className={`recurrence-end-btn${formData.recurrenceEndType === 'date' ? ' active' : ''}`}
+                      onClick={() => setFormData({...formData, recurrenceEndType: 'date'})}
+                    >
+                      By date
+                    </button>
+                  </div>
+
+                  {formData.recurrenceEndType === 'count' ? (
+                    <div className="popup-recurrence-count-row">
+                      <label>Repeat</label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={365}
+                        value={formData.recurrenceCount}
+                        onChange={(e) => setFormData({...formData, recurrenceCount: Math.max(1, Number(e.target.value))})}
+                        className="popup-input popup-count-input"
+                      />
+                      <label>times</label>
+                    </div>
+                  ) : (
+                    <input
+                      type="date"
+                      value={formData.recurrenceEndDate}
+                      min={formatDate(popupPosition!.date)}
+                      onChange={(e) => setFormData({...formData, recurrenceEndDate: e.target.value})}
+                      className="popup-input"
+                    />
+                  )}
+                </div>
+              )}
 
               <div className="popup-colors">
                 {colorOptions.map(color => (

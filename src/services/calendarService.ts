@@ -11,6 +11,10 @@ export interface CalendarEvent {
   description?: string;
   isAllDay?: boolean;
   recurrence?: 'none' | 'daily' | 'weekly' | 'monthly';
+  /** Number of times the event repeats after the original occurrence. */
+  recurrenceCount?: number;
+  /** Repeat until this date (inclusive), format "YYYY-MM-DD". */
+  recurrenceEndDate?: string;
   reminderMinutes?: number;
   taskId?: string;
 }
@@ -27,6 +31,8 @@ function mapEvent(e: any): CalendarEvent {
     description: e.description ?? undefined,
     isAllDay: Boolean(e.is_all_day),
     recurrence: e.recurrence ?? 'none',
+    recurrenceCount: e.recurrence_count ?? undefined,
+    recurrenceEndDate: e.recurrence_end_date ?? undefined,
     reminderMinutes: e.reminder_minutes ?? undefined,
     taskId: e.task_id ?? undefined,
   };
@@ -70,6 +76,8 @@ export const calendarService = {
         description: event.description,
         is_all_day: event.isAllDay ? 1 : 0,
         recurrence: event.recurrence ?? 'none',
+        recurrence_count: event.recurrenceCount ?? null,
+        recurrence_end_date: event.recurrenceEndDate ?? null,
         reminder_minutes: event.reminderMinutes,
         task_id: event.taskId,
       }),
@@ -84,40 +92,39 @@ export const calendarService = {
   },
 };
 
+/** Generates virtual copies of a recurring event for display on the calendar. */
 function expandRecurringEvent(event: CalendarEvent): CalendarEvent[] {
   const expanded: CalendarEvent[] = [];
   const startDate = new Date(event.date);
-  const endDate = new Date();
-  endDate.setMonth(endDate.getMonth() + 3);
-  
+
+  const endDate = event.recurrenceEndDate
+    ? new Date(event.recurrenceEndDate)
+    : (() => { const d = new Date(startDate); d.setMonth(d.getMonth() + 3); return d; })();
+
+  const maxCopies = event.recurrenceCount ?? 50;
+
   let currentDate = new Date(startDate);
-  let occurrences = 0;
-  const maxOccurrences = 50;
-  
-  while (currentDate <= endDate && occurrences < maxOccurrences) {
-    if (formatDateForCompare(currentDate) !== event.date) {
-      expanded.push({
-        ...event,
-        id: generateTemporaryId(event.id, currentDate),
-        date: formatDateForCompare(currentDate),
-      });
-    }
-    
+  let copies = 0;
+
+  while (copies < maxCopies) {
     switch (event.recurrence) {
-      case 'daily':
-        currentDate.setDate(currentDate.getDate() + 1);
-        break;
-      case 'weekly':
-        currentDate.setDate(currentDate.getDate() + 7);
-        break;
-      case 'monthly':
-        currentDate.setMonth(currentDate.getMonth() + 1);
-        break;
+      case 'daily':   currentDate.setDate(currentDate.getDate() + 1); break;
+      case 'weekly':  currentDate.setDate(currentDate.getDate() + 7); break;
+      case 'monthly': currentDate.setMonth(currentDate.getMonth() + 1); break;
+      default: return expanded;
     }
-    
-    occurrences++;
+
+    if (currentDate > endDate) break;
+
+    expanded.push({
+      ...event,
+      id: generateTemporaryId(event.id, new Date(currentDate)),
+      date: formatDateForCompare(currentDate),
+    });
+
+    copies++;
   }
-  
+
   return expanded;
 }
 

@@ -818,11 +818,11 @@ app.get('/api/events', (req, res) => {
 app.post('/api/events', (req, res) => {
   try {
     const db = getDatabase();
-    const { title, date, start_time, end_time, color, location, description, is_all_day, recurrence, reminder_minutes, task_id } = req.body;
+    const { title, date, start_time, end_time, color, location, description, is_all_day, recurrence, recurrence_count, recurrence_end_date, reminder_minutes, task_id } = req.body;
     const result = db.prepare(`
-      INSERT INTO calendar_events 
-        (title, date, start_time, end_time, color, location, description, is_all_day, recurrence, reminder_minutes, task_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO calendar_events
+        (title, date, start_time, end_time, color, location, description, is_all_day, recurrence, recurrence_count, recurrence_end_date, reminder_minutes, task_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       title, date, start_time, end_time,
       color ?? '#A7C7E7',
@@ -830,6 +830,8 @@ app.post('/api/events', (req, res) => {
       description ?? null,
       is_all_day ? 1 : 0,
       recurrence ?? 'none',
+      recurrence_count ?? null,
+      recurrence_end_date ?? null,
       reminder_minutes ?? null,
       task_id ?? null
     );
