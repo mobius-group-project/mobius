@@ -466,6 +466,54 @@ app.delete('/api/events/all', (req, res) => {
   }
 });
 
+// ─── NOTES ─────────────────────────────────────────────────────────────────────
+
+app.get('/api/notes', (req, res) => {
+  try {
+    const db = getDatabase();
+    res.json(db.prepare('SELECT * FROM notes ORDER BY created_at DESC, id DESC').all());
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch notes' });
+  }
+});
+
+app.post('/api/notes', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { title, content } = req.body;
+    const result = db.prepare(`INSERT INTO notes (title, content) VALUES (?, ?)`).run(title || '', content || '');
+    const note = db.prepare('SELECT * FROM notes WHERE id = ?').get(result.lastInsertRowid);
+    res.status(201).json(note);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to create note' });
+  }
+});
+
+app.put('/api/notes/:id', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { title, content } = req.body;
+    db.prepare(`UPDATE notes SET title = COALESCE(?, title), content = COALESCE(?, content), updated_at = CURRENT_TIMESTAMP WHERE id = ?`)
+      .run(title ?? null, content ?? null, req.params.id);
+    const note = db.prepare('SELECT * FROM notes WHERE id = ?').get(req.params.id);
+    if (!note) { res.status(404).json({ error: 'Note not found' }); return; }
+    res.json(note);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update note' });
+  }
+});
+
+app.delete('/api/notes/:id', (req, res) => {
+  try {
+    const db = getDatabase();
+    const result = db.prepare('DELETE FROM notes WHERE id = ?').run(req.params.id);
+    if (result.changes === 0) { res.status(404).json({ error: 'Note not found' }); return; }
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete note' });
+  }
+});
+
 // ─── START ────────────────────────────────────────────────────────────────────
 
 app.listen(PORT, () => {});

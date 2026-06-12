@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Flag, Calendar, Clock } from 'lucide-react';
 import type { ITask } from '../../services/taskService';
 import { calendarService, type CalendarEvent } from '../../services/calendarService';
 import { useFocusTimer } from '../../hooks/useFocusTimer';
 import { PixelPlant, type PlantType } from '../focus/FocusTimer';
+import { useNotes } from '../../hooks/useNotes';
 import './Dashboard.css';
 
 interface DashboardProps {
@@ -465,7 +466,48 @@ const FocusedCard: React.FC = () => {
 
 // Notes Card Component
 const NotesCard: React.FC = () => {
-  const [notes] = React.useState<string[]>([]);
+  const { notes, loading, addNote, deleteNote } = useNotes();
+  const [showForm, setShowForm] = useState(false);
+  const [title, setTitle] = useState('');
+  const editorRef = useRef<HTMLDivElement>(null);
+
+  const exec = (cmd: string, val?: string) => {
+    document.execCommand(cmd, false, val);
+    editorRef.current?.focus();
+  };
+
+  const insertCheckbox = () => {
+    const sel = window.getSelection();
+    if (!sel || !editorRef.current) return;
+    sel.deleteFromDocument();
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    const range = sel.getRangeAt(0);
+    range.insertNode(cb);
+    range.setStartAfter(cb);
+    range.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(range);
+    editorRef.current.focus();
+  };
+
+  const handleSave = async () => {
+    const content = editorRef.current?.innerHTML || '';
+    if (!title.trim() && !content.trim()) return;
+    await addNote(title, content);
+    setTitle('');
+    if (editorRef.current) editorRef.current.innerHTML = '';
+    setShowForm(false);
+  };
+
+  const ToolBtn: React.FC<{ onClick: () => void; label: React.ReactNode }> = ({ onClick, label }) => (
+    <button
+      onMouseDown={e => { e.preventDefault(); onClick(); }}
+      style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '4px', color: 'var(--color-text-primary)', cursor: 'pointer', fontSize: '13px', padding: '4px 8px', lineHeight: 1 }}
+    >
+      {label}
+    </button>
+  );
 
   return (
     <>
@@ -473,18 +515,83 @@ const NotesCard: React.FC = () => {
         <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#f6fe9a' }}>
           Notes
         </h2>
-        <button style={{ background: '#f6fe9a', border: 'none', width: '32px', height: '32px', borderRadius: '50%', cursor: 'pointer', fontSize: '18px', color: '#1a1a1a' }}>
+        <button
+          onClick={() => setShowForm(prev => !prev)}
+          style={{ background: '#f6fe9a', border: 'none', width: '32px', height: '32px', borderRadius: '50%', cursor: 'pointer', fontSize: '18px', color: '#1a1a1a' }}
+        >
           +
         </button>
       </div>
 
-      <div style={{ flex: 1, overflow: 'auto', minHeight: '0' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <div style={{ background: 'rgba(255, 255, 255, 0.05)', padding: '12px', borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
-            <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', marginBottom: '4px' }}>Today</div>
-            <div style={{ fontSize: '14px', color: 'var(--color-text-primary)' }}>No notes yet</div>
+      {showForm && (
+        <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '10px', marginBottom: '8px' }}>
+          <input
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            placeholder="Note title..."
+            style={{ width: '100%', background: 'transparent', border: 'none', color: 'var(--color-text-primary)', fontSize: '14px', fontWeight: 600, outline: 'none', marginBottom: '6px' }}
+          />
+          <div style={{ display: 'flex', gap: '4px', marginBottom: '6px' }}>
+            <ToolBtn onClick={() => exec('bold')} label={<b>B</b>} />
+            <ToolBtn onClick={() => exec('italic')} label={<i>I</i>} />
+            <ToolBtn onClick={() => exec('underline')} label={<u>U</u>} />
+            <ToolBtn onClick={() => exec('strikeThrough')} label={<s>S</s>} />
+            <ToolBtn onClick={insertCheckbox} label="☐" />
+          </div>
+          <div
+            ref={editorRef}
+            contentEditable
+            suppressContentEditableWarning
+            data-placeholder="Write your note..."
+            style={{ width: '100%', minHeight: '60px', background: 'rgba(0,0,0,0.2)', border: 'none', borderRadius: '4px', padding: '8px', color: 'var(--color-text-primary)', fontSize: '13px', outline: 'none', cursor: 'text' }}
+            onKeyDown={e => {
+              if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); handleSave(); }
+            }}
+          />
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px', marginTop: '6px' }}>
+            <button
+              onClick={() => { setShowForm(false); setTitle(''); if (editorRef.current) editorRef.current.innerHTML = ''; }}
+              style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.15)', color: 'var(--color-text-secondary)', padding: '4px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              style={{ background: '#f6fe9a', border: 'none', color: '#1a1a1a', padding: '4px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}
+            >
+              Save
+            </button>
           </div>
         </div>
+      )}
+
+      <div style={{ flex: 1, overflow: 'auto', minHeight: '0' }}>
+        {loading ? (
+          <p style={{ color: 'var(--color-text-secondary)', fontSize: '12px' }}>Loading...</p>
+        ) : notes.length === 0 ? (
+          <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>No notes yet</div>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {notes.map(note => (
+              <div key={note.id} style={{ background: 'rgba(255,255,255,0.05)', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '4px', textAlign: 'left' }}>{note.title}</div>
+                  <button
+                    onClick={() => deleteNote(note.id)}
+                    style={{ background: 'none', border: 'none', color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: '16px', padding: '0', lineHeight: 1 }}
+                  >
+                    ×
+                  </button>
+                </div>
+                {note.content && (
+                  <div style={{ fontSize: '13px', color: 'var(--color-text-primary)', lineHeight: '1.5', textAlign: 'left' }} dangerouslySetInnerHTML={{ __html: note.content }} />
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </>
   );
