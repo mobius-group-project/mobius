@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
-import { Task } from '../../services/taskService';
-import AddTaskForm from '../taskSystem/AddTaskForm';
+import type { ITask } from '../../services/taskService';
+import TaskForm from '../taskSystem/AddTaskForm';
 import './DashboardTaskList.css';
 
 interface DashboardTaskListProps {
-  tasks: Task[];
+  tasks: ITask[];
   onToggleTask: (id: string) => void;
-  onAddTask: (task: Omit<Task, 'id' | 'created_at'>) => void;
+  onAddTask: (title: string, deadline: string, description?: string, priority?: 'High' | 'Medium' | 'Low') => void;
   onDelete: (id: string) => void;
-  onUpdateTask: (id: string, updates: Partial<Task>) => void;
   onAddComment: (taskId: string, content: string) => void;
   onDeleteComment: (taskId: string, commentId: number) => void;
   activityTracker: any;
@@ -19,7 +18,6 @@ const DashboardTaskList: React.FC<DashboardTaskListProps> = ({
   onToggleTask,
   onAddTask,
   onDelete,
-  onUpdateTask,
   onAddComment,
   onDeleteComment,
   activityTracker,
@@ -61,9 +59,9 @@ const DashboardTaskList: React.FC<DashboardTaskListProps> = ({
 
       {showAddForm && (
         <div className="add-task-form-container">
-          <AddTaskForm
-            onSubmit={(taskData) => {
-              onAddTask(taskData);
+          <TaskForm
+            onAdd={(title, deadline, description, priority) => {
+              onAddTask(title, deadline, description, priority);
               setShowAddForm(false);
             }}
             onCancel={() => setShowAddForm(false)}
@@ -100,7 +98,7 @@ const DashboardTaskList: React.FC<DashboardTaskListProps> = ({
                 </span>
                 <span className="task-time">
                   <span className="clock-icon">🕐</span>
-                  {formatTime(task.time_spent || 0)}
+                  {formatTime(task.timeSpent || 0)}
                 </span>
                 <button
                   className="task-menu-btn"

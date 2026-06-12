@@ -10,15 +10,37 @@ import CalendarPage from './components/calendarSystem/CalendarPage';
 import StatsPage from './components/stats/StatsPage';
 import Dashboard from './components/dashboard/Dashboard';
 
-
-
-const DashboardPage: React.FC = () => {
-  return <Dashboard />;
+const DashboardPage: React.FC<{
+  tasks: ReturnType<typeof useTasks>['tasks'];
+  onToggleTask: ReturnType<typeof useTasks>['toggleTask'];
+  onDelete: ReturnType<typeof useTasks>['deleteTask'];
+  onReorderTasks: ReturnType<typeof useTasks>['reorderTasks'];
+  activityTracker: ReturnType<typeof useActivityTracker>;
+}> = ({ tasks, onToggleTask, onDelete, onReorderTasks, activityTracker }) => {
+  return (
+    <Dashboard
+      tasks={tasks}
+      onToggleTask={onToggleTask}
+      onDelete={onDelete}
+      onReorderTasks={onReorderTasks}
+      activityTracker={activityTracker}
+    />
+  );
 };
 
-const TasksPage: React.FC<{ activityTracker: ReturnType<typeof useActivityTracker> }> = ({ activityTracker }) => {
-  const { tasks, toggleTask, addTask, deleteTask, updateTask, reorderTasks, addComment, deleteComment, loading, error } = useTasks();
-
+const TasksPage: React.FC<{
+  tasks: ReturnType<typeof useTasks>['tasks'];
+  loading: boolean;
+  error: string | null;
+  onToggleTask: ReturnType<typeof useTasks>['toggleTask'];
+  onAddTask: ReturnType<typeof useTasks>['addTask'];
+  onDelete: ReturnType<typeof useTasks>['deleteTask'];
+  onUpdateTask: ReturnType<typeof useTasks>['updateTask'];
+  onAddComment: ReturnType<typeof useTasks>['addComment'];
+  onDeleteComment: ReturnType<typeof useTasks>['deleteComment'];
+  onReorderTasks: ReturnType<typeof useTasks>['reorderTasks'];
+  activityTracker: ReturnType<typeof useActivityTracker>;
+}> = ({ tasks, loading, error, onToggleTask, onAddTask, onDelete, onUpdateTask, onAddComment, onDeleteComment, onReorderTasks, activityTracker }) => {
   return (
     <div className="route-view">
       <h1 className="route-title">Tasks</h1>
@@ -34,13 +56,13 @@ const TasksPage: React.FC<{ activityTracker: ReturnType<typeof useActivityTracke
       ) : (
         <TaskList
           tasks={tasks}
-          onToggleTask={toggleTask}
-          onAddTask={addTask}
-          onDelete={deleteTask}
-          onUpdateTask={updateTask}
-          onAddComment={addComment}
-          onDeleteComment={deleteComment}
-          onReorderTasks={reorderTasks}
+          onToggleTask={onToggleTask}
+          onAddTask={onAddTask}
+          onDelete={onDelete}
+          onUpdateTask={onUpdateTask}
+          onAddComment={onAddComment}
+          onDeleteComment={onDeleteComment}
+          onReorderTasks={onReorderTasks}
           activityTracker={activityTracker}
         />
       )}
@@ -84,6 +106,7 @@ const TrackerPage: React.FC<{ activityTracker: ReturnType<typeof useActivityTrac
 
 function App() {
   const tracker = useActivityTracker();
+  const { tasks, loading, error, toggleTask, addTask, deleteTask, updateTask, reorderTasks, addComment, deleteComment } = useTasks();
 
   return (
     <div
@@ -104,8 +127,30 @@ function App() {
         }}
       >
         <Routes>
-          <Route path="/" element={<DashboardPage />} />
-          <Route path="/tasks" element={<TasksPage activityTracker={tracker} />} />
+          <Route path="/" element={
+            <DashboardPage
+              tasks={tasks}
+              onToggleTask={toggleTask}
+              onDelete={deleteTask}
+              onReorderTasks={reorderTasks}
+              activityTracker={tracker}
+            />
+          } />
+          <Route path="/tasks" element={
+            <TasksPage
+              tasks={tasks}
+              loading={loading}
+              error={error}
+              onToggleTask={toggleTask}
+              onAddTask={addTask}
+              onDelete={deleteTask}
+              onUpdateTask={updateTask}
+              onAddComment={addComment}
+              onDeleteComment={deleteComment}
+              onReorderTasks={reorderTasks}
+              activityTracker={tracker}
+            />
+          } />
           <Route path="/focus" element={<FocusPage />} />
           <Route path="/tracker" element={<TrackerPage activityTracker={tracker} />} />
           <Route path="/stats" element={<StatsPageRoute />} />

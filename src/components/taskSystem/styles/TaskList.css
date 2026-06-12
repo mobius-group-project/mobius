@@ -29,26 +29,29 @@
 .add-task-btn {
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: center;
+  gap: 8px;
   width: 100%;
-  padding: 12px 0;
-  background: transparent;
+  padding: 10px 16px;
+  background: #f6fe9a;
   border: none;
-  color: #888; 
+  border-radius: 24px;
+  color: #1a1a1a;
   font-family: inherit;
-  font-size: 15px;
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
-  transition: color 0.2s ease;
+  transition: all 0.2s ease;
   outline: none;
 }
 
 .add-task-btn:hover {
-  color: var(--color-primary); 
+  background: #e8ff66;
+  box-shadow: 0 4px 12px rgba(246, 254, 154, 0.3);
 }
 
 .plus-icon {
-  color: var(--color-primary); 
-  opacity: 0.8;
+  color: #1a1a1a;
 }
 
 .task-list {
