@@ -15,15 +15,13 @@ const DashboardPage: React.FC<{
   onToggleTask: ReturnType<typeof useTasks>['toggleTask'];
   onDelete: ReturnType<typeof useTasks>['deleteTask'];
   onReorderTasks: ReturnType<typeof useTasks>['reorderTasks'];
-  activityTracker: ReturnType<typeof useActivityTracker>;
-}> = ({ tasks, onToggleTask, onDelete, onReorderTasks, activityTracker }) => {
+}> = ({ tasks, onToggleTask, onDelete, onReorderTasks }) => {
   return (
     <Dashboard
       tasks={tasks}
       onToggleTask={onToggleTask}
       onDelete={onDelete}
       onReorderTasks={onReorderTasks}
-      activityTracker={activityTracker}
     />
   );
 };
@@ -133,7 +131,6 @@ function App() {
               onToggleTask={toggleTask}
               onDelete={deleteTask}
               onReorderTasks={reorderTasks}
-              activityTracker={tracker}
             />
           } />
           <Route path="/tasks" element={

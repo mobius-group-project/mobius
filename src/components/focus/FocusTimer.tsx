@@ -236,7 +236,7 @@ interface PixelPlantProps {
   maxWidth?: number; // normalizes pixelSize so all plants fit the same width
 }
 
-const PixelPlant: React.FC<PixelPlantProps> = ({
+export const PixelPlant: React.FC<PixelPlantProps> = ({
   type, progress, pixelSize = 14, gap = 2, maxWidth,
 }) => {
   const plant = PLANTS[type];
@@ -353,6 +353,11 @@ const FocusTimer: React.FC = () => {
         setJustFinished(true);
       },
     });
+
+  // persist plant type for dashboard
+  useEffect(() => {
+    localStorage.setItem('mobius.focusPlantType.v1', selectedPlant);
+  }, [selectedPlant]);
 
   // save plant when finished
   useEffect(() => {

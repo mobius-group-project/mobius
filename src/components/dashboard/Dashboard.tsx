@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Flag, Calendar } from 'lucide-react';
+import { Flag, Calendar, Clock } from 'lucide-react';
 import type { ITask } from '../../services/taskService';
 import { calendarService, type CalendarEvent } from '../../services/calendarService';
+import { useFocusTimer } from '../../hooks/useFocusTimer';
+import { PixelPlant, type PlantType } from '../focus/FocusTimer';
 import './Dashboard.css';
 
 interface DashboardProps {
@@ -10,7 +12,6 @@ interface DashboardProps {
   onToggleTask: (id: string) => void;
   onDelete: (id: string) => void;
   onReorderTasks: (tasks: ITask[]) => void;
-  activityTracker: any;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({
@@ -18,7 +19,6 @@ const Dashboard: React.FC<DashboardProps> = ({
   onToggleTask,
   onDelete,
   onReorderTasks,
-  activityTracker,
 }) => {
   const navigate = useNavigate();
   const [priorityFilters, setPriorityFilters] = useState<('High' | 'Medium' | 'Low')[]>([]);
@@ -237,7 +237,7 @@ const Dashboard: React.FC<DashboardProps> = ({
 
         {/* Focused Widget */}
         <div className="dashboard-card focused-card">
-          <FocusedCard activityTracker={activityTracker} />
+          <FocusedCard />
         </div>
 
         {/* Notes Card */}
@@ -366,45 +366,100 @@ const CalendarCard: React.FC = () => {
 };
 
 // Focused Card Component
-const FocusedCard: React.FC<{ activityTracker: any }> = ({ activityTracker }) => {
-  const totalSeconds = activityTracker?.getTotalTimeToday() || 0;
-  const dailyGoal = 24 * 3600;
-  const percentage = Math.min((totalSeconds / dailyGoal) * 100, 100);
-  const radius = 45;
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference - (percentage / 100) * circumference;
+const FocusedCard: React.FC = () => {
+  const navigate = useNavigate();
+  const { state, remainingSeconds, totalSeconds, progress } = useFocusTimer(25);
+  const [plantType, setPlantType] = useState<PlantType>('flower');
 
-  const formatTime = (seconds: number) => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    return `${hours}h ${minutes}m`;
+  useEffect(() => {
+    const saved = localStorage.getItem('mobius.focusPlantType.v1') as PlantType | null;
+    if (saved) setPlantType(saved);
+  }, []);
+
+  const isActive = state === 'running' || state === 'paused';
+
+  const formatTimer = (s: number) => {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+  };
+
+  // sad face pixel art: 9x9 grid, same style as plants
+  const sadPixels: [number, number, string][] = [
+    [3,1,'#3a3a4a'],[4,1,'#3a3a4a'],[5,1,'#3a3a4a'],
+    [2,2,'#3a3a4a'],[3,2,'#ffe0bd'],[4,2,'#ffe0bd'],[5,2,'#ffe0bd'],[6,2,'#3a3a4a'],
+    [1,3,'#3a3a4a'],[2,3,'#ffe0bd'],[3,3,'#ffe0bd'],[4,3,'#ffe0bd'],[5,3,'#ffe0bd'],[6,3,'#ffe0bd'],[7,3,'#3a3a4a'],
+    [1,4,'#3a3a4a'],[2,4,'#ffe0bd'],[3,4,'#212121'],[4,4,'#ffe0bd'],[5,4,'#212121'],[6,4,'#ffe0bd'],[7,4,'#3a3a4a'],
+    [1,5,'#3a3a4a'],[2,5,'#ffe0bd'],[3,5,'#ffe0bd'],[4,5,'#ffe0bd'],[5,5,'#ffe0bd'],[6,5,'#ffe0bd'],[7,5,'#3a3a4a'],
+    [1,6,'#3a3a4a'],[2,6,'#ffe0bd'],[3,6,'#3a3a4a'],[4,6,'#3a3a4a'],[5,6,'#3a3a4a'],[6,6,'#ffe0bd'],[7,6,'#3a3a4a'],
+    [2,7,'#3a3a4a'],[3,7,'#ffe0bd'],[4,7,'#ffe0bd'],[5,7,'#ffe0bd'],[6,7,'#3a3a4a'],
+    [3,8,'#3a3a4a'],[4,8,'#3a3a4a'],[5,8,'#3a3a4a'],
+  ];
+
+  const SadFace: React.FC = () => {
+    const cols = 9, rows = 9, cellSize = 22, gap = 2;
+    const grid: Record<string, string> = {};
+    sadPixels.forEach(([c, r, color]) => { grid[`${r},${c}`] = color; });
+    const cells: React.ReactNode[] = [];
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const color = grid[`${r},${c}`];
+        cells.push(
+          <div key={`${r},${c}`} style={{
+            width: cellSize, height: cellSize,
+            background: color ?? 'transparent',
+          }} />
+        );
+      }
+    }
+    return (
+      <div style={{
+        display: 'grid', gridTemplateColumns: `repeat(${cols}, ${cellSize}px)`, gap: `${gap}px`,
+        background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '8px',
+      }}>
+        {cells}
+      </div>
+    );
   };
 
   return (
-    <>
+    <div
+      onClick={() => navigate('/focus')}
+      style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', height: '100%' }}
+    >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#f6fe9a' }}>
           Focused
         </h2>
-        <div style={{ fontSize: '20px' }}>⏱️</div>
+        <Clock size={18} color="var(--color-text-primary)" />
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1, minHeight: '0' }}>
-        <div style={{ position: 'relative' }}>
-          <svg style={{ width: '220px', height: '220px' }} viewBox="0 0 120 120">
-            <circle cx="60" cy="60" r="45" fill="none" stroke="#2d3748" strokeWidth="8" />
-            <circle
-              cx="60" cy="60" r="45" fill="none" stroke="#9fff5c" strokeWidth="8"
-              strokeDasharray={circumference} strokeDashoffset={offset}
-              strokeLinecap="round" transform="rotate(-90 60 60)"
-            />
-          </svg>
-          <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', fontSize: '40px', fontWeight: 700, color: '#f6fe9a', textAlign: 'center', whiteSpace: 'nowrap' }}>
-            {formatTime(totalSeconds)}
-          </div>
-        </div>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: '8px', minHeight: 0 }}>
+        {isActive ? (
+          <>
+            <PixelPlant type={plantType} progress={progress} pixelSize={14} gap={2} />
+            <div style={{ fontSize: '28px', fontWeight: 700, color: '#f6fe9a', fontVariantNumeric: 'tabular-nums' }}>
+              {formatTimer(remainingSeconds)}
+            </div>
+            <div style={{
+              width: '80%', height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden',
+            }}>
+              <div style={{ width: `${progress * 100}%`, height: '100%', background: '#9fff5c', borderRadius: '2px', transition: 'width 1s linear' }} />
+            </div>
+            <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>
+              {state === 'paused' ? 'Paused' : 'Focusing'}
+            </span>
+          </>
+        ) : (
+          <>
+            <SadFace />
+            <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
+              No active focus
+            </span>
+          </>
+        )}
       </div>
-    </>
+    </div>
   );
 };
 
