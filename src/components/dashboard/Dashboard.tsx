@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Flag } from 'lucide-react';
+import { Flag, Calendar } from 'lucide-react';
 import type { ITask } from '../../services/taskService';
+import { calendarService, type CalendarEvent } from '../../services/calendarService';
 import './Dashboard.css';
 
 interface DashboardProps {
@@ -250,7 +251,14 @@ const Dashboard: React.FC<DashboardProps> = ({
 
 // Calendar Card Component
 const CalendarCard: React.FC = () => {
-  const getDays = () => {
+  const navigate = useNavigate();
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+
+  useEffect(() => {
+    calendarService.getEvents().then(setEvents).catch(() => {});
+  }, []);
+
+  const getWeekDays = () => {
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const today = new Date();
     const weekStart = new Date(today);
@@ -259,12 +267,22 @@ const CalendarCard: React.FC = () => {
     return days.map((day, index) => {
       const date = new Date(weekStart);
       date.setDate(weekStart.getDate() + index);
-      return { name: day, date: date.getDate() };
+      return {
+        name: day,
+        date: date.getDate(),
+        dateStr: date.toISOString().split('T')[0],
+      };
     });
   };
 
-  const days = getDays();
+  const weekDays = getWeekDays();
   const hours = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}:00`);
+
+  const getEventsForCell = (dateStr: string, hour: string) => {
+    return events.filter((ev: CalendarEvent) =>
+      ev.date === dateStr && ev.startTime && ev.startTime.startsWith(hour.substring(0, 2))
+    );
+  };
 
   return (
     <>
@@ -272,13 +290,19 @@ const CalendarCard: React.FC = () => {
         <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#f6fe9a' }}>
           Weekly Calendar
         </h2>
-        <button style={{ background: 'none', border: 'none', color: 'var(--color-text-primary)', cursor: 'pointer', fontSize: '18px' }} onClick={() => {}}>📅</button>
+        <button
+          onClick={() => navigate('/calendar')}
+          style={{ background: 'none', border: 'none', color: 'var(--color-text-primary)', cursor: 'pointer', padding: '4px', borderRadius: '4px', display: 'flex', alignItems: 'center' }}
+          title="Open Calendar"
+        >
+          <Calendar size={18} />
+        </button>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 0, flex: 1, minHeight: 0 }}>
         <div style={{ display: 'grid', gridTemplateColumns: '45px ' + Array(7).fill('1fr').join(' '), gap: '0', fontSize: '11px', borderRadius: '6px 6px 0 0', background: 'rgba(0, 0, 0, 0.2)', flexShrink: 0 }}>
           <div></div>
-          {days.map((day, idx) => (
+          {weekDays.map((day, idx) => (
             <div key={idx} style={{ textAlign: 'center', padding: '6px 2px', background: 'rgba(255, 255, 255, 0.05)', borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
               <div style={{ fontSize: '10px', fontWeight: 600, color: 'var(--color-text-secondary)' }}>{day.name}</div>
               <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-primary)' }}>{day.date}</div>
@@ -292,20 +316,47 @@ const CalendarCard: React.FC = () => {
               <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)', textAlign: 'right', padding: '8px 6px', background: 'rgba(0, 0, 0, 0.3)', fontWeight: 600, borderRight: '1px solid rgba(255, 255, 255, 0.05)', position: 'sticky', left: 0 }}>
                 {hour}
               </div>
-              {days.map((_, dayIdx) => (
-                <div
-                  key={`${hour}-${dayIdx}`}
-                  style={{
-                    minHeight: '28px',
-                    background: 'rgba(255, 255, 255, 0.01)',
-                    border: '1px solid rgba(255, 255, 255, 0.05)',
-                    borderRight: dayIdx === 6 ? 'none' : '1px solid rgba(255, 255, 255, 0.05)',
-                    transition: 'background 0.2s'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'}
-                  onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.01)'}
-                ></div>
-              ))}
+              {weekDays.map((day, dayIdx) => {
+                const cellEvents = getEventsForCell(day.dateStr, hour);
+                return (
+                  <div
+                    key={`${hour}-${dayIdx}`}
+                    style={{
+                      minHeight: '28px',
+                      background: 'rgba(255, 255, 255, 0.01)',
+                      border: '1px solid rgba(255, 255, 255, 0.05)',
+                      borderRight: dayIdx === 6 ? 'none' : '1px solid rgba(255, 255, 255, 0.05)',
+                      transition: 'background 0.2s',
+                      position: 'relative',
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.01)'}
+                  >
+                    {cellEvents.map((ev: CalendarEvent) => (
+                      <div
+                        key={ev.id}
+                        title={ev.title}
+                        style={{
+                          position: 'absolute',
+                          inset: '1px',
+                          background: ev.color || '#a7c7e7',
+                          borderRadius: '3px',
+                          padding: '1px 4px',
+                          fontSize: '9px',
+                          fontWeight: 600,
+                          color: '#1a1a1a',
+                          overflow: 'hidden',
+                          whiteSpace: 'nowrap',
+                          textOverflow: 'ellipsis',
+                          zIndex: 1,
+                        }}
+                      >
+                        {ev.title}
+                      </div>
+                    ))}
+                  </div>
+                );
+              })}
             </React.Fragment>
           ))}
         </div>
