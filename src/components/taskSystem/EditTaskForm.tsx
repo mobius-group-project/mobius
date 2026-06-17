@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { Calendar, Flag, Paperclip, Clock } from 'lucide-react';
+import React, { useState } from 'react';
+import { Calendar, Flag, Clock } from 'lucide-react';
 import type { ITask } from './TaskItem';
 import './styles/EditTaskForm.css';
 
@@ -12,11 +12,17 @@ interface EditTaskFormProps {
 const EditTaskForm: React.FC<EditTaskFormProps> = ({ task, onSave, onCancel }) => {
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description || '');
-  const [deadlineDate, setDeadlineDate] = useState('');
-  const [deadlineTime, setDeadlineTime] = useState('');
+  const parseDeadline = (deadline: string) => {
+    if (!deadline || deadline === 'No deadline') return { date: '', hour: '', minute: '' };
+    const [date, time] = deadline.split(' ');
+    const [hour, minute] = (time || '').split(':');
+    return { date: date || '', hour: hour || '', minute: minute || '' };
+  };
+  const parsed = parseDeadline(task.deadline);
+  const [deadlineDate, setDeadlineDate] = useState(parsed.date);
+  const [deadlineHour, setDeadlineHour] = useState(parsed.hour);
+  const [deadlineMinute, setDeadlineMinute] = useState(parsed.minute);
   const [priority, setPriority] = useState<'High' | 'Medium' | 'Low' | null>(task.priority || null);
-  const dateInputRef = useRef<HTMLInputElement>(null);
-  const timeInputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,10 +30,8 @@ const EditTaskForm: React.FC<EditTaskFormProps> = ({ task, onSave, onCancel }) =
 
     let formattedDeadline = 'No deadline';
     if (deadlineDate) {
-      const time = deadlineTime || '23:59';
+      const time = deadlineHour ? `${deadlineHour}:${deadlineMinute || '00'}` : '23:59';
       formattedDeadline = `${deadlineDate} ${time}`;
-    } else if (task.deadline && task.deadline !== 'No deadline') {
-      formattedDeadline = task.deadline;
     }
 
     const updatedTask: ITask = {
@@ -49,50 +53,15 @@ const EditTaskForm: React.FC<EditTaskFormProps> = ({ task, onSave, onCancel }) =
     }
   };
 
-  const handleDateWrapperClick = () => {
-    dateInputRef.current?.showPicker();
-  };
-
-  const handleTimeWrapperClick = () => {
-    timeInputRef.current?.showPicker();
-  };
-
   const formatDate = (dateString: string) => {
     if (!dateString) return 'Date';
     const [_year, month, day] = dateString.split('-');
     return `${day}.${month}`;
   };
 
-  const formatTime = (timeString: string) => {
-    if (!timeString) return 'Time';
-    return timeString;
-  };
-
-  const getCurrentDeadlineDisplay = () => {
-    if (deadlineDate) {
-      return formatDate(deadlineDate);
-    }
-    if (task.deadline && task.deadline !== 'No deadline') {
-      const parts = task.deadline.split(' ');
-      if (parts[0]) {
-        const [_year, month, day] = parts[0].split('-');
-        return `${day}.${month}`;
-      }
-    }
-    return 'Date';
-  };
-
-  const getCurrentTimeDisplay = () => {
-    if (deadlineTime) {
-      return formatTime(deadlineTime);
-    }
-    if (task.deadline && task.deadline !== 'No deadline') {
-      const parts = task.deadline.split(' ');
-      if (parts[1]) {
-        return parts[1];
-      }
-    }
-    return 'Time';
+  const handleHourChange = (val: string) => {
+    setDeadlineHour(val);
+    if (val && !deadlineMinute) setDeadlineMinute('00');
   };
 
   const today = new Date().toISOString().split('T')[0];
@@ -116,13 +85,12 @@ const EditTaskForm: React.FC<EditTaskFormProps> = ({ task, onSave, onCancel }) =
       />
 
       <div className="edit-task-form-row">
-        <div className="edit-task-date-wrapper" onClick={handleDateWrapperClick}>
+        <div className="edit-task-date-wrapper">
           <Calendar size={16} className="edit-calendar-icon-styled" />
           <span className="edit-selected-date-label" style={{ color: deadlineDate ? 'var(--color-primary)' : '#888' }}>
-            {getCurrentDeadlineDisplay()}
+            {formatDate(deadlineDate)}
           </span>
           <input
-            ref={dateInputRef}
             type="date"
             className="edit-task-date-picker"
             value={deadlineDate}
@@ -131,18 +99,37 @@ const EditTaskForm: React.FC<EditTaskFormProps> = ({ task, onSave, onCancel }) =
           />
         </div>
 
-        <div className="edit-task-time-wrapper" onClick={handleTimeWrapperClick}>
+        <div className="edit-task-time-wrapper">
           <Clock size={16} className="edit-clock-icon-styled" />
-          <span className="edit-selected-time-label" style={{ color: deadlineTime ? 'var(--color-primary)' : '#888' }}>
-            {getCurrentTimeDisplay()}
-          </span>
           <input
-            ref={timeInputRef}
-            type="time"
-            className="edit-task-time-picker"
-            value={deadlineTime}
-            onChange={(e) => setDeadlineTime(e.target.value)}
-            step="60"
+            type="number"
+            className="task-time-number"
+            min={0}
+            max={23}
+            placeholder="HH"
+            value={deadlineHour}
+            onChange={(e) => handleHourChange(e.target.value.padStart(2, '0').slice(-2))}
+            onBlur={(e) => {
+              const v = parseInt(e.target.value);
+              if (!isNaN(v)) handleHourChange(Math.min(23, Math.max(0, v)).toString().padStart(2, '0'));
+            }}
+            style={{ color: deadlineHour ? 'var(--color-primary)' : '#888' }}
+          />
+          <span className="task-time-colon">:</span>
+          <input
+            type="number"
+            className="task-time-number"
+            min={0}
+            max={59}
+            step={5}
+            placeholder="MM"
+            value={deadlineMinute}
+            onChange={(e) => setDeadlineMinute(e.target.value.padStart(2, '0').slice(-2))}
+            onBlur={(e) => {
+              const v = parseInt(e.target.value);
+              if (!isNaN(v)) setDeadlineMinute(Math.min(59, Math.max(0, v)).toString().padStart(2, '0'));
+            }}
+            style={{ color: deadlineMinute ? 'var(--color-primary)' : '#888' }}
           />
         </div>
 
@@ -170,14 +157,6 @@ const EditTaskForm: React.FC<EditTaskFormProps> = ({ task, onSave, onCancel }) =
           </button>
         </div>
 
-        <button 
-          type="button"
-          className="edit-task-attachment-btn"
-          onClick={() => console.log('Attachments - future implementation')}
-          title="Attach files (coming soon)"
-        >
-          <Paperclip size={16} />
-        </button>
       </div>
 
       <div className="edit-task-actions">

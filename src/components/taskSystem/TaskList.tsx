@@ -108,6 +108,20 @@ const TaskList: React.FC<Props> = ({
     <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
       <SortableContext items={tasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
         <div className="task-list">
+          <div className="task-list-header">
+            {isAdding ? (
+              <TaskForm
+                onAdd={handleAdd}
+                onCancel={() => setIsAdding(false)}
+              />
+            ) : (
+              <button className="add-task-btn" onClick={() => setIsAdding(true)}>
+                <Plus size={18} className="plus-icon" />
+                <span>Add task</span>
+              </button>
+            )}
+          </div>
+
           {tasks.length > 0 ? (
             tasks.map((task) => (
               <SortableTaskItem
@@ -127,20 +141,6 @@ const TaskList: React.FC<Props> = ({
               <div className="task-item-empty" />
             </>
           )}
-
-          <div className="task-list-footer">
-            {isAdding ? (
-              <TaskForm
-                onAdd={handleAdd}
-                onCancel={() => setIsAdding(false)}
-              />
-            ) : (
-              <button className="add-task-btn" onClick={() => setIsAdding(true)}>
-                <Plus size={18} className="plus-icon" />
-                <span>Add task</span>
-              </button>
-            )}
-          </div>
         </div>
       </SortableContext>
     </DndContext>

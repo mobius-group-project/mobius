@@ -22,8 +22,8 @@
   background: rgba(255, 255, 255, 0.02);
 }
 
-.task-list-footer {
-  margin-top: 8px;
+.task-list-header {
+  margin-bottom: 8px;
 }
 
 .add-task-btn {

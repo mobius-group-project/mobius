@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Calendar, Flag, Paperclip, Clock } from 'lucide-react';
+import { Calendar, Flag, Clock } from 'lucide-react';
 import './styles/AddTaskForm.css';
 
 interface Props {
@@ -11,7 +11,8 @@ const TaskForm: React.FC<Props> = ({ onAdd, onCancel }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [deadlineDate, setDeadlineDate] = useState('');
-  const [deadlineTime, setDeadlineTime] = useState('');
+  const [deadlineHour, setDeadlineHour] = useState('');
+  const [deadlineMinute, setDeadlineMinute] = useState('');
   const [priority, setPriority] = useState<'High' | 'Medium' | 'Low' | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -19,9 +20,10 @@ const TaskForm: React.FC<Props> = ({ onAdd, onCancel }) => {
     if (!title.trim()) return;
     
     let formattedDeadline = 'No deadline';
-    if (deadlineDate) {
-      const time = deadlineTime || '23:59';
-      formattedDeadline = `${deadlineDate} ${time}`;
+    if (deadlineDate || deadlineHour) {
+      const date = deadlineDate || new Date().toISOString().split('T')[0];
+      const time = deadlineHour ? `${deadlineHour}:${deadlineMinute || '00'}` : '23:59';
+      formattedDeadline = `${date} ${time}`;
     }
     
     onAdd(title.trim(), formattedDeadline, description.trim() || undefined, priority || undefined);
@@ -29,7 +31,8 @@ const TaskForm: React.FC<Props> = ({ onAdd, onCancel }) => {
     setTitle('');
     setDescription('');
     setDeadlineDate('');
-    setDeadlineTime('');
+    setDeadlineHour('');
+    setDeadlineMinute('');
     setPriority(null);
   };
 
@@ -49,9 +52,9 @@ const TaskForm: React.FC<Props> = ({ onAdd, onCancel }) => {
     return `${day}.${month}`;
   };
 
-  const formatTime = (timeString: string) => {
-    if (!timeString) return 'Time';
-    return timeString;
+  const handleHourChange = (val: string) => {
+    setDeadlineHour(val);
+    if (val && !deadlineMinute) setDeadlineMinute('00');
   };
 
   return (
@@ -89,15 +92,35 @@ const TaskForm: React.FC<Props> = ({ onAdd, onCancel }) => {
 
         <div className="task-time-wrapper">
           <Clock size={16} className="clock-icon-styled" />
-          <span className="selected-time-label" style={{ color: deadlineTime ? 'var(--color-primary)' : '#888' }}>
-            {formatTime(deadlineTime)}
-          </span>
           <input
-            type="time"
-            className="task-time-picker"
-            value={deadlineTime}
-            onChange={(e) => setDeadlineTime(e.target.value)}
-            step="60"
+            type="number"
+            className="task-time-number"
+            min={0}
+            max={23}
+            placeholder="HH"
+            value={deadlineHour}
+            onChange={(e) => handleHourChange(e.target.value.padStart(2, '0').slice(-2))}
+            onBlur={(e) => {
+              const v = parseInt(e.target.value);
+              if (!isNaN(v)) handleHourChange(Math.min(23, Math.max(0, v)).toString().padStart(2, '0'));
+            }}
+            style={{ color: deadlineHour ? 'var(--color-primary)' : '#888' }}
+          />
+          <span className="task-time-colon">:</span>
+          <input
+            type="number"
+            className="task-time-number"
+            min={0}
+            max={59}
+            step={5}
+            placeholder="MM"
+            value={deadlineMinute}
+            onChange={(e) => setDeadlineMinute(e.target.value.padStart(2, '0').slice(-2))}
+            onBlur={(e) => {
+              const v = parseInt(e.target.value);
+              if (!isNaN(v)) setDeadlineMinute(Math.min(59, Math.max(0, v)).toString().padStart(2, '0'));
+            }}
+            style={{ color: deadlineMinute ? 'var(--color-primary)' : '#888' }}
           />
         </div>
         
@@ -128,14 +151,6 @@ const TaskForm: React.FC<Props> = ({ onAdd, onCancel }) => {
           </button>
         </div>
 
-        <button 
-          type="button"
-          className="task-attachment-btn"
-          onClick={() => console.log('Attachments - future implementation')}
-          title="Attach files (coming soon)"
-        >
-          <Paperclip size={16} />
-        </button>
       </div>
       
       <div className="form-actions">
