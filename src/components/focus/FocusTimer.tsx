@@ -339,8 +339,15 @@ const GardenPlant: React.FC<{ type: PlantType; plantedAt: string }> = ({ type, p
 
 // ─── main component ───────────────────────────────────────────────────────────
 
-const FocusTimer: React.FC = () => {
-  const [selectedPlant, setSelectedPlant] = useState<PlantType>('flower');
+interface FocusTimerProps {
+  compact?: boolean;
+}
+
+const FocusTimer: React.FC<FocusTimerProps> = ({ compact = false }) => {
+  const [selectedPlant, setSelectedPlant] = useState<PlantType>(() => {
+    const saved = localStorage.getItem('mobius.focusPlantType.v1') as PlantType | null;
+    return saved && PLANTS[saved] ? saved : 'flower';
+  });
   const [selectedMinutes, setSelectedMinutes] = useState(25);
   const [customInput, setCustomInput] = useState('');
   const [garden, setGarden] = useState<IFocusPlant[]>([]);
@@ -406,6 +413,74 @@ const FocusTimer: React.FC = () => {
   const isRunning  = state === 'running';
   const isPaused   = state === 'paused';
   const isFinished = state === 'finished';
+
+  if (compact) {
+    return (
+      <div className="ft ft--compact">
+        <div className="ft-compact-main">
+          <div className="ft-badge-slot">
+            {isFinished && justFinished && <div className="ft-badge ft-badge--success">🌱 Zasadzono!</div>}
+            {isPaused && <div className="ft-badge ft-badge--paused">⏸ Pauza</div>}
+            {isRunning && <div className="ft-badge ft-badge--running">{getGrowthMessage(progress)}</div>}
+          </div>
+
+          <div className="ft-plant-wrap ft-plant-wrap--compact">
+            <PixelPlant type={selectedPlant} progress={isIdle ? 0 : progress} pixelSize={10} gap={2} />
+          </div>
+
+          <div className="ft-time ft-time--compact">{formatTime(remainingSeconds)}</div>
+
+          {!isIdle && (
+            <div className="ft-progress-track">
+              <div className="ft-progress-fill" style={{ width: `${progress * 100}%` }} />
+            </div>
+          )}
+
+          <div className="ft-controls">
+            {isIdle && (
+              <>
+                <button className="ft-btn ft-btn--primary ft-btn--icon" onClick={() => start(selectedMinutes)}>▶</button>
+                <div className="ft-custom-input-wrap">
+                  <input
+                    type="number"
+                    className="ft-custom-input"
+                    placeholder={String(selectedMinutes)}
+                    min={1}
+                    max={999}
+                    value={customInput}
+                    onChange={e => handleCustomMinutes(e.target.value)}
+                  />
+                  <span className="ft-custom-input-label">min</span>
+                </div>
+              </>
+            )}
+            {isRunning && <button className="ft-btn" onClick={pause}>Pauza</button>}
+            {isPaused && (
+              <>
+                <button className="ft-btn ft-btn--primary" onClick={resume}>Wznów</button>
+                <button className="ft-btn ft-btn--ghost" onClick={reset}>Porzuć</button>
+              </>
+            )}
+            {isFinished && <button className="ft-btn ft-btn--primary" onClick={reset}>Nowa sesja</button>}
+          </div>
+        </div>
+
+        <div className="ft-compact-gallery">
+          {(Object.keys(PLANTS) as PlantType[]).map(type => (
+            <button
+              key={type}
+              className={`ft-compact-gallery__item ${selectedPlant === type ? 'ft-compact-gallery__item--active' : ''}`}
+              onClick={() => { if (isIdle) setSelectedPlant(type); }}
+              disabled={!isIdle}
+              title={PLANTS[type].label}
+            >
+              <PixelPlant type={type} progress={1} maxWidth={52} gap={1} />
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="ft">
