@@ -77,6 +77,8 @@ export const taskService = {
   async deleteTask(id: string): Promise<void> {
     const db = await getDb();
     await db.execute('DELETE FROM comments WHERE task_id = ?', [id]);
+    await db.execute('UPDATE activity_sessions SET task_id = NULL, is_task = 0 WHERE task_id = ?', [id]);
+    await db.execute('UPDATE calendar_events SET task_id = NULL WHERE task_id = ?', [id]);
     await db.execute('DELETE FROM tasks WHERE id = ?', [id]);
   },
 
