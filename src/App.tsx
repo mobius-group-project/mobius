@@ -96,7 +96,6 @@ const SettingsPage: React.FC = () => {
 const TrackerPage: React.FC<{ activityTracker: ReturnType<typeof useActivityTracker> }> = ({ activityTracker }) => {
   return (
     <div className="route-view">
-      <h1 className="route-title">Time Tracker</h1>
       <ActivityTracker activityTracker={activityTracker} />
     </div>
   );
