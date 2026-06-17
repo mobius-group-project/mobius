@@ -1,11 +1,9 @@
 .activity-tracker {
   max-width: 700px;
   margin: 0 auto;
-  background: var(--bg);
-  border-radius: 24px;
-  padding: 32px;
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 64px);
 }
 
 /* ==================== */
@@ -16,9 +14,9 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 32px;
+  margin-bottom: 16px;
   flex-wrap: wrap;
-  gap: 16px;
+  gap: 12px;
 }
 
 .tracker-header h2 {
@@ -88,7 +86,7 @@
 /* ==================== */
 
 .tracker-input-section {
-  margin-bottom: 32px;
+  margin-bottom: 14px;
 }
 
 .activity-input {
@@ -175,8 +173,8 @@
 /* ==================== */
 
 .current-activity {
-  margin-bottom: 32px;
-  padding: 12px 16px;
+  margin-bottom: 14px;
+  padding: 8px 14px;
   background: rgba(96, 144, 190, 0.1);
   border-radius: 12px;
   border-left: 3px solid var(--color-secondary-2);
@@ -215,11 +213,11 @@
 /* ==================== */
 
 .timer-display {
-  margin: 48px 0;
+  margin: 16px 0;
   text-align: center;
   width: 100%;
   overflow: visible;
-  padding: 20px 0;
+  padding: 8px 0;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -235,7 +233,7 @@
   background-clip: text;
   display: block;
   white-space: nowrap;
-  font-size: clamp(48px, 15vw, 96px);
+  font-size: clamp(40px, 11vw, 72px);
   letter-spacing: clamp(2px, 1vw, 4px);
   line-height: 1.2;
   padding: 0.1em 0;
@@ -252,7 +250,7 @@
   display: flex;
   gap: 12px;
   justify-content: center;
-  margin-bottom: 48px;
+  margin-bottom: 16px;
   flex-wrap: wrap;
 }
 
@@ -348,9 +346,13 @@
 /* ==================== */
 
 .recent-sessions {
-  margin-top: 32px;
-  padding-top: 24px;
+  margin-top: 14px;
+  padding-top: 14px;
   border-top: 1px solid var(--border);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .recent-sessions h3 {
@@ -365,6 +367,9 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
 }
 
 .session-item {
@@ -542,7 +547,8 @@
 /* Empty state */
 .empty-sessions {
   text-align: center;
-  padding: 48px 24px;
+  padding: 20px 24px;
+  flex: 1;
   color: var(--text);
   font-family: var(--font-main);
   font-size: 14px;

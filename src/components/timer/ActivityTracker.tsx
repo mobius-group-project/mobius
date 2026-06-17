@@ -126,7 +126,6 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({
 
       {/* Header */}
       <div className="tracker-header">
-        <h2>Activity Tracker</h2>
         <div className="tracker-header-right">
           <div className="today-stats">
             Dzisiaj: <strong>
@@ -211,7 +210,7 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({
         <div className="recent-sessions">
           <h3>Ostatnie sesje</h3>
           <div className="sessions-list">
-            {sessions.slice(0, 5).map((session) => (
+            {sessions.map((session) => (
               <div key={session.id} className="session-item">
                 <div className="session-info">
                   {editingSessionId === session.id ? (

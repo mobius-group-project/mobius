@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { activityTrackerService } from '../services/activityTrackerService';
+import { getDb } from '../services/db';
 
 export type TrackerState = 'idle' | 'running' | 'paused';
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
@@ -241,49 +242,16 @@ export const useActivityTracker = (): UseActivityTrackerReturn => {
       addToast('warning', '✏️ Wpisz nazwę aktywności przed rozpoczęciem!');
       return;
     }
-
-    const trimmedName = activityName.trim();
-
-    const existingSession = sessions.find(
-      s => s.activityName.toLowerCase() === trimmedName.toLowerCase()
-    );
-
-    if (existingSession) {
-      setDuplicateConfirmation({
-        existingSession,
-        newActivityName: trimmedName,
-        isTask,
-        taskId,
-      });
-      return;
-    }
-
-    await executeStartTracking(trimmedName, isTask, taskId);
-  }, [sessions, addToast, executeStartTracking]);
+    await executeStartTracking(activityName.trim(), isTask, taskId);
+  }, [addToast, executeStartTracking]);
 
   const confirmDuplicateCreate = useCallback(() => {
-    if (!duplicateConfirmation) return;
-    const { newActivityName, isTask, taskId } = duplicateConfirmation;
-    const uniqueName = getUniqueActivityName(newActivityName, sessions);
-    executeStartTracking(uniqueName, isTask, taskId);
     setDuplicateConfirmation(null);
-  }, [duplicateConfirmation, sessions, getUniqueActivityName, executeStartTracking]);
+  }, []);
 
   const cancelDuplicateCreate = useCallback(() => {
-    if (!duplicateConfirmation) return;
-    const { existingSession } = duplicateConfirmation;
-    if (state === 'running') {
-      addToast('warning', '⏸️ Najpierw zatrzymaj bieżącą sesję');
-      setDuplicateConfirmation(null);
-      return;
-    }
-    executeStartTracking(
-      existingSession.activityName,
-      existingSession.isTask || false,
-      existingSession.taskId
-    );
     setDuplicateConfirmation(null);
-  }, [duplicateConfirmation, state, addToast, executeStartTracking]);
+  }, []);
 
   // ИСПРАВЛЕНИЕ 2: continueSession напрямую через executeStartTracking
   // executeStartTracking сам закроет любую активную сессию в БД
@@ -294,12 +262,27 @@ export const useActivityTracker = (): UseActivityTrackerReturn => {
   const stopTracking = useCallback(async () => {
     if (state === 'running' && currentSession) {
       try {
-        await activityTrackerService.stopSession(currentSession.id, seconds);
+        const existing = sessions.find(
+          s => s.activityName.toLowerCase() === currentSession.activityName.toLowerCase()
+        );
+
+        if (existing) {
+          await activityTrackerService.mergeSessions(existing.id, seconds, currentSession.id);
+        } else {
+          await activityTrackerService.stopSession(currentSession.id, seconds);
+        }
+
         await refreshSessions();
 
         if (currentSession.isTask && currentSession.taskId) {
+          const db = await getDb();
+          const rows = await db.select<{ time_spent: number }[]>(
+            'SELECT time_spent FROM tasks WHERE id = ?',
+            [currentSession.taskId]
+          );
+          const totalTime = rows[0]?.time_spent ?? 0;
           window.dispatchEvent(new CustomEvent('taskTimeUpdated', {
-            detail: { taskId: currentSession.taskId, timeSpent: seconds }
+            detail: { taskId: currentSession.taskId, timeSpent: totalTime }
           }));
         }
 
@@ -317,7 +300,7 @@ export const useActivityTracker = (): UseActivityTrackerReturn => {
       setSeconds(0);
       setState('idle');
     }
-  }, [state, currentSession, seconds, addToast, refreshSessions]);
+  }, [state, currentSession, seconds, sessions, addToast, refreshSessions]);
 
   const resetTracking = useCallback(async () => {
     if (currentSession) {
