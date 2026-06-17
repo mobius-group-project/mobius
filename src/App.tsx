@@ -41,7 +41,6 @@ const TasksPage: React.FC<{
 }> = ({ tasks, loading, error, onToggleTask, onAddTask, onDelete, onUpdateTask, onAddComment, onDeleteComment, onReorderTasks, activityTracker }) => {
   return (
     <div className="route-view">
-      <h1 className="route-title">Tasks</h1>
       {error && (
         <div style={{ color: '#ff6b6b', background: '#2a1a1a', border: '1px solid #ff6b6b', borderRadius: 8, padding: '12px 16px', marginBottom: 16 }}>
           {error}

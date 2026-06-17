@@ -126,7 +126,6 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({
 
       {/* Header */}
       <div className="tracker-header">
-        <h2>Activity Tracker</h2>
         <div className="tracker-header-right">
           <div className="today-stats">
             Dzisiaj: <strong>
