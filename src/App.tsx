@@ -70,7 +70,6 @@ const TasksPage: React.FC<{
 const FocusPage: React.FC = () => {
   return (
     <div className="route-view">
-      <h1 className="route-title">Focus</h1>
       <FocusTimer />
     </div>
   );
@@ -78,19 +77,9 @@ const FocusPage: React.FC = () => {
 
 const StatsPageRoute: React.FC = () => (
   <div className="route-view">
-    <h1 className="route-title">Statystyki</h1>
     <StatsPage />
   </div>
 );
-
-const SettingsPage: React.FC = () => {
-  return (
-    <div className="route-view">
-      <h1 className="route-title">Ustawienia</h1>
-      <p>Konfiguracja aplikacji pojawi się tutaj w przyszłości.</p>
-    </div>
-  );
-};
 
 const TrackerPage: React.FC<{ activityTracker: ReturnType<typeof useActivityTracker> }> = ({ activityTracker }) => {
   return (
@@ -149,7 +138,6 @@ function App() {
           <Route path="/focus" element={<FocusPage />} />
           <Route path="/tracker" element={<TrackerPage activityTracker={tracker} />} />
           <Route path="/stats" element={<StatsPageRoute />} />
-          <Route path="/settings" element={<SettingsPage />} />
           <Route path="/calendar" element={<CalendarPage />} />
         </Routes>
       </main>

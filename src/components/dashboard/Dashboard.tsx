@@ -67,7 +67,6 @@ const Dashboard: React.FC<DashboardProps> = ({
 
   return (
     <div className="dashboard">
-      <h1 className="dashboard-title">Dashboard</h1>
       <div className="dashboard-grid">
         {/* Today's Task List */}
         <div className="dashboard-card task-list-card">
