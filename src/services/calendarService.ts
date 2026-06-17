@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:3001/api';
+import { getDb } from './db';
 
 export interface CalendarEvent {
   id: number;
@@ -12,9 +12,7 @@ export interface CalendarEvent {
   description?: string;
   isAllDay?: boolean;
   recurrence?: 'none' | 'daily' | 'weekly' | 'monthly';
-  /** Number of times the event repeats after the original occurrence. */
   recurrenceCount?: number;
-  /** Repeat until this date (inclusive), format "YYYY-MM-DD". */
   recurrenceEndDate?: string;
   reminderMinutes?: number;
   taskId?: string;
@@ -39,124 +37,85 @@ function mapEvent(e: any): CalendarEvent {
   };
 }
 
-interface ExpandedCalendarEvent extends CalendarEvent {
-  originalId?: number;
-}
-
 export const calendarService = {
   async getEvents(): Promise<CalendarEvent[]> {
-    const res = await fetch(`${API_URL}/events`);
-    if (!res.ok) throw new Error('Failed to fetch events');
-    const events = await res.json();
-    const expandedEvents: CalendarEvent[] = [];
-    
-    for (const event of events) {
-      const mappedEvent = mapEvent(event);
-      expandedEvents.push(mappedEvent);
-      
-      if (mappedEvent.recurrence && mappedEvent.recurrence !== 'none') {
-        const expanded = expandRecurringEvent(mappedEvent);
-        expandedEvents.push(...expanded);
+    const db = await getDb();
+    const rows = await db.select<any[]>('SELECT * FROM calendar_events ORDER BY date, start_time');
+    const result: CalendarEvent[] = [];
+    for (const row of rows) {
+      const event = mapEvent(row);
+      result.push(event);
+      if (event.recurrence && event.recurrence !== 'none') {
+        result.push(...expandRecurringEvent(event));
       }
     }
-    
-    return expandedEvents;
+    return result;
   },
 
   async createEvent(event: Omit<CalendarEvent, 'id'>): Promise<CalendarEvent> {
-    const res = await fetch(`${API_URL}/events`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        title: event.title,
-        date: event.date,
-        start_time: event.startTime,
-        end_time: event.endTime,
-        color: event.color,
-        location: event.location,
-        description: event.description,
-        is_all_day: event.isAllDay ? 1 : 0,
-        recurrence: event.recurrence ?? 'none',
-        recurrence_count: event.recurrenceCount ?? null,
-        recurrence_end_date: event.recurrenceEndDate ?? null,
-        reminder_minutes: event.reminderMinutes,
-        task_id: event.taskId,
-      }),
-    });
-    if (!res.ok) throw new Error('Failed to create event');
-    return mapEvent(await res.json());
+    const db = await getDb();
+    const result = await db.execute(
+      `INSERT INTO calendar_events (title, date, start_time, end_time, color, location, description, is_all_day, recurrence, recurrence_count, recurrence_end_date, reminder_minutes, task_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        event.title, event.date, event.startTime, event.endTime,
+        event.color ?? '#A7C7E7', event.location ?? null, event.description ?? null,
+        event.isAllDay ? 1 : 0, event.recurrence ?? 'none',
+        event.recurrenceCount ?? null, event.recurrenceEndDate ?? null,
+        event.reminderMinutes ?? null, event.taskId ?? null,
+      ]
+    );
+    const rows = await db.select<any[]>('SELECT * FROM calendar_events WHERE id = ?', [result.lastInsertId]);
+    return mapEvent(rows[0]);
   },
 
   async updateEvent(id: number, event: Omit<CalendarEvent, 'id'>): Promise<CalendarEvent> {
-    const res = await fetch(`${API_URL}/events/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        title: event.title,
-        date: event.date,
-        start_time: event.startTime,
-        end_time: event.endTime,
-        color: event.color,
-        location: event.location,
-        description: event.description,
-        is_all_day: event.isAllDay ? 1 : 0,
-        recurrence: event.recurrence ?? 'none',
-        recurrence_count: event.recurrenceCount ?? null,
-        recurrence_end_date: event.recurrenceEndDate ?? null,
-        reminder_minutes: event.reminderMinutes,
-      }),
-    });
-    if (!res.ok) throw new Error('Failed to update event');
-    return mapEvent(await res.json());
+    const db = await getDb();
+    await db.execute(
+      `UPDATE calendar_events SET title=?, date=?, start_time=?, end_time=?, color=?, location=?, description=?,
+       is_all_day=?, recurrence=?, recurrence_count=?, recurrence_end_date=?, reminder_minutes=? WHERE id=?`,
+      [
+        event.title, event.date, event.startTime, event.endTime,
+        event.color ?? '#A7C7E7', event.location ?? null, event.description ?? null,
+        event.isAllDay ? 1 : 0, event.recurrence ?? 'none',
+        event.recurrenceCount ?? null, event.recurrenceEndDate ?? null,
+        event.reminderMinutes ?? null, id,
+      ]
+    );
+    const rows = await db.select<any[]>('SELECT * FROM calendar_events WHERE id = ?', [id]);
+    return mapEvent(rows[0]);
   },
 
   async deleteEvent(id: number): Promise<void> {
-    const res = await fetch(`${API_URL}/events/${id}`, { method: 'DELETE' });
-    if (!res.ok) throw new Error('Failed to delete event');
+    const db = await getDb();
+    await db.execute('DELETE FROM calendar_events WHERE id = ?', [id]);
   },
 };
 
-/** Generates virtual copies of a recurring event for display on the calendar. */
 function expandRecurringEvent(event: CalendarEvent): CalendarEvent[] {
   const expanded: CalendarEvent[] = [];
   const startDate = new Date(event.date);
-
   const endDate = event.recurrenceEndDate
     ? new Date(event.recurrenceEndDate)
     : (() => { const d = new Date(startDate); d.setMonth(d.getMonth() + 3); return d; })();
-
   const maxCopies = event.recurrenceCount ?? 50;
-
-  let currentDate = new Date(startDate);
+  let current = new Date(startDate);
   let copies = 0;
-
   while (copies < maxCopies) {
     switch (event.recurrence) {
-      case 'daily':   currentDate.setDate(currentDate.getDate() + 1); break;
-      case 'weekly':  currentDate.setDate(currentDate.getDate() + 7); break;
-      case 'monthly': currentDate.setMonth(currentDate.getMonth() + 1); break;
+      case 'daily':   current.setDate(current.getDate() + 1); break;
+      case 'weekly':  current.setDate(current.getDate() + 7); break;
+      case 'monthly': current.setMonth(current.getMonth() + 1); break;
       default: return expanded;
     }
-
-    if (currentDate > endDate) break;
-
+    if (current > endDate) break;
     expanded.push({
       ...event,
-      id: generateTemporaryId(event.id, new Date(currentDate)),
+      id: parseInt(`${event.id}${current.toISOString().split('T')[0].replace(/-/g, '')}`, 10),
       originalEventId: event.id,
-      date: formatDateForCompare(currentDate),
+      date: current.toISOString().split('T')[0],
     });
-
     copies++;
   }
-
   return expanded;
-}
-
-function generateTemporaryId(originalId: number, date: Date): number {
-  return parseInt(`${originalId}${formatDateForCompare(date).replace(/-/g, '')}`, 10);
-}
-
-function formatDateForCompare(d: Date): string {
-  return d.toISOString().split('T')[0];
 }
