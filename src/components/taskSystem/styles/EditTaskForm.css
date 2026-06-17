@@ -1,7 +1,7 @@
 .edit-task-form {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   width: 100%;
 }
 
@@ -41,7 +41,7 @@
 
 .edit-task-form-row {
   display: flex;
-  gap: 12px;
+  gap: 8px;
   align-items: stretch;
   width: 100%;
 }
@@ -62,7 +62,7 @@
 .edit-task-date-wrapper,
 .edit-task-time-wrapper {
   position: relative;
-  flex: 1.5;
+  flex: 1;
   gap: 8px;
   padding: 0 12px;
   cursor: pointer;
@@ -117,10 +117,10 @@
 }
 
 .edit-task-priority-buttons {
-  flex: 1.5;
-  gap: 10px;
+  flex: 0;
+  gap: 6px;
   justify-content: center;
-  padding: 0 12px;
+  padding: 0 10px;
 }
 
 .edit-priority-flag {
@@ -160,7 +160,7 @@
   display: flex;
   gap: 12px;
   justify-content: flex-end;
-  margin-top: 8px;
+  margin-top: 4px;
 }
 
 .edit-save-btn {
