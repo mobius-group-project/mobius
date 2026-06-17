@@ -65,6 +65,21 @@ export const activityTrackerService = {
     return rows[0];
   },
 
+  async mergeSessions(existingId: string, additionalSeconds: number, activeSessionId: string): Promise<void> {
+    const db = await getDb();
+    await db.execute(
+      'UPDATE activity_sessions SET duration_seconds = duration_seconds + ? WHERE id = ?',
+      [additionalSeconds, existingId]
+    );
+    const active = await db.select<IActivitySession[]>('SELECT * FROM activity_sessions WHERE id = ?', [activeSessionId]);
+    if (active[0]?.is_task && active[0]?.task_id) {
+      const tasks = await db.select<any[]>('SELECT time_spent FROM tasks WHERE id = ?', [active[0].task_id]);
+      const prev = tasks[0]?.time_spent ?? 0;
+      await db.execute('UPDATE tasks SET time_spent = ?, isRunning = 0 WHERE id = ?', [prev + additionalSeconds, active[0].task_id]);
+    }
+    await db.execute('DELETE FROM activity_sessions WHERE id = ?', [activeSessionId]);
+  },
+
   async updateSession(sessionId: string, duration_seconds: number): Promise<IActivitySession> {
     const db = await getDb();
     await db.execute(

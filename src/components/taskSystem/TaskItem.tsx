@@ -39,7 +39,7 @@ const TaskItem: React.FC<Props> = ({ task, onToggle, onDelete, onUpdateTask, onA
     currentSession?.isTask === true &&
     currentSession?.taskId === task.id;
 
-  const displaySeconds = isThisTaskRunning ? seconds : (task.timeSpent || 0);
+  const displaySeconds = isThisTaskRunning ? (task.timeSpent || 0) + seconds : (task.timeSpent || 0);
 
   const priorityClass = task.priority ? `priority-${task.priority.toLowerCase()}` : '';
 
