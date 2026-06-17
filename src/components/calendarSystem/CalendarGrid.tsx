@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
+import { Calendar, Flag } from "lucide-react";
 import { calendarService, type CalendarEvent } from "../../services/calendarService";
+import { taskService, type ITask } from "../../services/taskService";
 import "./CalendarGrid.css";
 
 interface CalendarGridProps {
@@ -7,7 +9,7 @@ interface CalendarGridProps {
 }
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const ROW_HEIGHT = 80;
+const ROW_HEIGHT = 68;
 
 function generateTimeSlots(stepMinutes: number = 60) {
   const slots: string[] = [];
@@ -61,10 +63,12 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset }) => {
   const ghostInputRef = useRef<HTMLInputElement | null>(null);
   const [linePosition, setLinePosition] = useState(0);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [tasks, setTasks] = useState<ITask[]>([]);
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [ghostEvent, setGhostEvent] = useState<GhostEvent | null>(null);
   const isDragging = useRef(false);
 
+  const [taskPreview, setTaskPreview] = useState<{ task: ITask; x: number; y: number } | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; event: CalendarEvent } | null>(null);
   const [editingEventId, setEditingEventId] = useState<number | null>(null);
 
@@ -93,13 +97,60 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset }) => {
     bodyRef.current.scrollTo({ top: Math.max(target, 0), behavior: "smooth" });
   }, []);
 
-  useEffect(() => { loadEvents(); }, []);
+  useEffect(() => { loadEvents(); loadTasks(); }, []);
 
   const loadEvents = async () => {
     try {
       setEvents(await calendarService.getEvents());
     } catch (error) {
       console.error('Failed to load events:', error);
+    }
+  };
+
+  const loadTasks = async () => {
+    try {
+      const all = await taskService.getTasks();
+      setTasks(all.filter(t => t.deadline && t.deadline !== 'No deadline'));
+    } catch (error) {
+      console.error('Failed to load tasks:', error);
+    }
+  };
+
+  const getTasksForCell = (date: Date, slot: string) => {
+    const dateStr = formatDate(date);
+    const slotHour = slot.split(':')[0];
+    return tasks.filter(t => {
+      const [taskDate, taskTime] = t.deadline.split(' ');
+      return taskDate === dateStr && taskTime?.split(':')[0] === slotHour;
+    });
+  };
+
+  const handleTaskClick = (e: React.MouseEvent, task: ITask) => {
+    e.stopPropagation();
+    const popupW = 280;
+    const popupH = 200;
+    let x = e.clientX + 12;
+    let y = e.clientY;
+    if (x + popupW > window.innerWidth) x = e.clientX - popupW - 12;
+    if (y + popupH > window.innerHeight) y = window.innerHeight - popupH - 10;
+    setTaskPreview({ task, x, y });
+  };
+
+  const handleToggleTaskDone = async () => {
+    if (!taskPreview) return;
+    const updated = { ...taskPreview.task, isDone: !taskPreview.task.isDone };
+    await taskService.updateTask(updated);
+    setTaskPreview({ ...taskPreview, task: updated });
+    window.dispatchEvent(new CustomEvent('taskToggled', { detail: { taskId: updated.id, isDone: updated.isDone } }));
+    await loadTasks();
+  };
+
+  const priorityColor = (priority: string) => {
+    switch (priority) {
+      case 'High': return '#FF6B6B';
+      case 'Medium': return '#FFB347';
+      case 'Low': return '#98D8AA';
+      default: return '#AAAAAA';
     }
   };
 
@@ -426,6 +477,34 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset }) => {
                     className={"calendar-cell" + (isCurrentWeek && index === todayIndex ? " is-today" : "")}
                     onMouseDown={(e) => handleCellMouseDown(index, e)}
                   >
+                    {(() => {
+                      const cellTasks = getTasksForCell(cellDate, slot);
+                      if (!cellTasks.length) return null;
+                      const count = cellTasks.length;
+                      const minTop = Math.min(...cellTasks.map(t => {
+                        const minutes = Number(t.deadline.split(' ')[1]?.split(':')[1] ?? 0);
+                        return Math.round((minutes / 60) * ROW_HEIGHT);
+                      }));
+                      return (
+                        <div style={{ position: 'absolute', top: 0, left: 0, right: '2px', bottom: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+                          {cellTasks.map((task, idx) => {
+                            const w = `calc(100% / ${count} - 2px)`;
+                            const l = `calc(100% / ${count} * ${idx} + 1px)`;
+                            return (
+                              <div
+                                key={`task-${task.id}`}
+                                className="calendar-task-deadline"
+                                style={{ backgroundColor: priorityColor(task.priority), top: `${minTop}px`, opacity: task.isDone ? 0.5 : 1, left: l, width: w, right: 'auto', pointerEvents: 'auto' }}
+                                onMouseDown={(e) => e.stopPropagation()}
+                                onClick={(e) => handleTaskClick(e, task)}
+                              >
+                                <span className="calendar-task-deadline-title">⬦ {task.title}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
                     {cellEvents.map((ev) => {
                       const duration = getDurationInMinutes(ev.startTime, ev.endTime);
                       const startMinutes = Number(ev.startTime.split(":")[1]);
@@ -533,6 +612,43 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset }) => {
                 <button className="popup-cancel" onClick={() => { setPopupPosition(null); setEditingEventId(null); }}>Cancel</button>
                 <button className="popup-create" onClick={saveEvent}>{editingEventId !== null ? 'Save' : 'Create'}</button>
               </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {taskPreview && (
+        <>
+          <div className="popup-backdrop" onClick={() => setTaskPreview(null)} />
+          <div
+            className="task-preview-popup"
+            style={{ position: 'fixed', top: taskPreview.y, left: taskPreview.x }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="task-preview-row">
+              <input
+                type="checkbox"
+                className={`task-preview-checkbox priority-${taskPreview.task.priority?.toLowerCase()}`}
+                checked={taskPreview.task.isDone}
+                onChange={handleToggleTaskDone}
+              />
+              <span className={`task-preview-title ${taskPreview.task.isDone ? 'done' : ''}`}>
+                {taskPreview.task.title}
+              </span>
+            </div>
+            {taskPreview.task.description && (
+              <p className="task-preview-desc">{taskPreview.task.description}</p>
+            )}
+            <div className="task-preview-meta">
+              <Calendar size={12} className="task-preview-meta-icon" />
+              <span className="task-preview-deadline">{taskPreview.task.deadline}</span>
+              {taskPreview.task.priority && (
+                <Flag
+                  size={13}
+                  style={{ color: priorityColor(taskPreview.task.priority), marginLeft: 6 }}
+                  fill={priorityColor(taskPreview.task.priority)}
+                />
+              )}
             </div>
           </div>
         </>

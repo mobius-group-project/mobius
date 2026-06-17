@@ -108,7 +108,7 @@ const TaskList: React.FC<Props> = ({
     <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
       <SortableContext items={tasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
         <div className="task-list">
-          <div className="task-list-header">
+          <div className="tasklist-add-header">
             {isAdding ? (
               <TaskForm
                 onAdd={handleAdd}
