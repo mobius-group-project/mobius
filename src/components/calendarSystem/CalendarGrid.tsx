@@ -6,6 +6,8 @@ import "./CalendarGrid.css";
 
 interface CalendarGridProps {
   weekOffset: number;
+  dayOffset?: number;
+  view?: 'day' | 'week';
 }
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -47,16 +49,25 @@ interface GhostEvent {
   title: string;
 }
 
-const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset }) => {
+const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset, dayOffset = 0, view = 'week' }) => {
   const today = new Date();
   const todayIndex = (today.getDay() + 6) % 7;
-  const isCurrentWeek = weekOffset === 0;
+  const isCurrentWeek = weekOffset === 0 && view === 'week';
+  const isToday = dayOffset === 0 && view === 'day';
 
-  const weekDates = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date();
-    d.setDate(today.getDate() + i - todayIndex + weekOffset * 7);
-    return d;
-  });
+  const weekDates = view === 'day'
+    ? (() => {
+        const d = new Date();
+        d.setDate(today.getDate() + dayOffset);
+        return [d];
+      })()
+    : Array.from({ length: 7 }, (_, i) => {
+        const d = new Date();
+        d.setDate(today.getDate() + i - todayIndex + weekOffset * 7);
+        return d;
+      });
+
+  const displayDays = view === 'day' ? [''] : DAYS;
 
   const bodyRef = useRef<HTMLDivElement | null>(null);
   const firstRowRef = useRef<HTMLDivElement | null>(null);
@@ -386,16 +397,19 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset }) => {
 
   return (
     <div className="calendar-grid">
-      <div className="calendar-header">
+      <div className="calendar-header" style={{ gridTemplateColumns: `80px repeat(${weekDates.length}, 1fr)` }}>
         <div className="calendar-header-empty" />
-        {DAYS.map((day, index) => (
-          <div key={day} className={"calendar-header-cell" + (isCurrentWeek && index === todayIndex ? " is-today" : "")}>
-            <div className="day-name">{day}</div>
-            <div className={"day-number" + (isCurrentWeek && index === todayIndex ? " today-number" : "")}>
-              {weekDates[index].getDate()}
+        {displayDays.map((day, index) => {
+          const isHighlight = view === 'day' ? isToday : (isCurrentWeek && index === todayIndex);
+          return (
+            <div key={index} className={"calendar-header-cell" + (isHighlight ? " is-today" : "")}>
+              <div className="day-name">{day}</div>
+              <div className={"day-number" + (isHighlight ? " today-number" : "")}>
+                {weekDates[index].getDate()}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <div
@@ -465,16 +479,16 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset }) => {
         )}
 
         {timeSlots.map((slot, i) => (
-          <div key={slot} className="calendar-row" ref={i === 0 ? firstRowRef : null}>
+          <div key={slot} className="calendar-row" ref={i === 0 ? firstRowRef : null} style={{ gridTemplateColumns: `80px repeat(${weekDates.length}, 1fr)` }}>
             <div className="calendar-time-label">{slot}</div>
             <div className="calendar-row-cells">
-              {DAYS.map((day, index) => {
+              {displayDays.map((_day, index) => {
                 const cellDate = weekDates[index];
                 const cellEvents = getEventsForCell(cellDate, slot);
                 return (
                   <div
-                    key={day + slot}
-                    className={"calendar-cell" + (isCurrentWeek && index === todayIndex ? " is-today" : "")}
+                    key={index + slot}
+                    className={"calendar-cell" + ((view === 'day' ? isToday : isCurrentWeek && index === todayIndex) ? " is-today" : "")}
                     onMouseDown={(e) => handleCellMouseDown(index, e)}
                   >
                     {(() => {
