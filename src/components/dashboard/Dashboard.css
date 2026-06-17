@@ -1,6 +1,6 @@
 /* Main Dashboard Container */
 .dashboard {
-  padding: 8px 16px 16px 12px;
+  padding: 0;
   background: var(--color-background);
   height: 100%;
   width: 100%;
@@ -23,52 +23,97 @@
 .dashboard-grid {
   display: grid;
   grid-template-columns: 0.9fr 1.4fr 0.9fr;
-  grid-template-rows: 1fr 1fr;
-  gap: 10px;
+  grid-template-rows: 1fr 0.5fr 0.5fr;
+  gap: 0;
   flex: 1;
   min-height: 0;
   overflow: hidden;
-  max-height: calc(100vh - 100px);
+  height: calc(100vh - 80px);
 }
 
 /* Dashboard Cards */
 .dashboard-card {
-  background: var(--color-card-background);
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
+  background: transparent;
+  border: none;
+  border-right: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 0;
   padding: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: none;
   display: flex;
   flex-direction: column;
   gap: 12px;
   overflow-y: auto;
   min-height: 0;
   max-height: 100%;
-  border-radius: 16px;
 }
 
 .task-list-card {
   grid-column: 1;
-  grid-row: 1 / 3;
+  grid-row: 1 / 4;
   overflow: hidden;
   min-height: 0;
+  border-right: none;
 }
 
 .calendar-card {
   grid-column: 2;
-  grid-row: 1 / 3;
+  grid-row: 1 / 4;
+  padding: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border-left: none;
+  border-right: none;
+}
+
+.calendar-card .calendar-grid {
+  flex: 1 !important;
+  height: auto !important;
+  min-height: 0;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.calendar-card .calendar-header {
+  padding-top: 6px;
+  grid-template-columns: 44px repeat(7, 1fr) !important;
+}
+
+.calendar-card .calendar-row {
+  grid-template-columns: 44px repeat(7, 1fr) !important;
+}
+
+.calendar-card .calendar-time-label {
+  font-size: 9px;
+  padding-right: 6px;
+}
+
+.calendar-card .current-time-line {
+  left: 34px;
+}
+
+.calendar-month-label {
+  padding: 0 4px 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.7);
+  flex-shrink: 0;
+  font-family: var(--font-main);
 }
 
 .focused-card {
   grid-column: 3;
   grid-row: 1;
   overflow-y: auto;
+  border-right: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
 }
 
 .notes-card {
   grid-column: 3;
-  grid-row: 2;
+  grid-row: 2 / 4;
   overflow-y: auto;
+  border-right: none;
 }
 
 /* Scrollbar Styling */

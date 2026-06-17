@@ -208,6 +208,15 @@
   margin-left: 4px;
 }
 
+.calendar-header-cell.compact {
+  flex-direction: column;
+  gap: 2px;
+}
+
+.calendar-header-cell.compact .today-number {
+  margin-left: 0;
+}
+
 .current-time-line {
   position: absolute;
   left: 60px;
