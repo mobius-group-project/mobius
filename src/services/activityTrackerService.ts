@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:3001/api';
+import { getDb } from './db';
 
 export interface IActivitySession {
   id: string;
@@ -14,74 +14,95 @@ export interface IActivitySession {
 
 export const activityTrackerService = {
   async getSessions(): Promise<IActivitySession[]> {
-    const response = await fetch(`${API_URL}/activity-sessions`);
-    if (!response.ok) throw new Error('Failed to fetch sessions');
-    return response.json();
+    const db = await getDb();
+    return db.select<IActivitySession[]>(
+      'SELECT * FROM activity_sessions ORDER BY created_at DESC, start_time DESC'
+    );
   },
 
   async getActiveSession(): Promise<IActivitySession | null> {
-    const response = await fetch(`${API_URL}/activity-sessions/active`);
-    if (!response.ok) throw new Error('Failed to fetch active session');
-    const data = await response.json();
-    return data || null;
+    const db = await getDb();
+    const rows = await db.select<IActivitySession[]>(
+      'SELECT * FROM activity_sessions WHERE end_time IS NULL ORDER BY start_time DESC LIMIT 1'
+    );
+    return rows[0] ?? null;
   },
 
-  async startSession(activity_name: string, is_task: boolean = false, task_id?: string): Promise<IActivitySession> {
-    const response = await fetch(`${API_URL}/activity-sessions/start`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id: Date.now().toString(),
-        activity_name,
-        is_task,
-        task_id,
-        duration_seconds: 0,
-      }),
-    });
-    if (!response.ok) throw new Error('Failed to start session');
-    return response.json();
+  async startSession(activity_name: string, is_task = false, task_id?: string): Promise<IActivitySession> {
+    const db = await getDb();
+    const active = await this.getActiveSession();
+    if (active) throw new Error('An active session already exists');
+    const id = Date.now().toString();
+    const now = new Date().toISOString();
+    await db.execute(
+      `INSERT INTO activity_sessions (id, activity_name, start_time, duration_seconds, is_task, task_id, created_at, updated_at)
+       VALUES (?, ?, ?, 0, ?, ?, ?, ?)`,
+      [id, activity_name, now, is_task ? 1 : 0, task_id ?? null, now, now]
+    );
+    if (is_task && task_id) {
+      await db.execute('UPDATE tasks SET isRunning = 1 WHERE id = ?', [task_id]);
+    }
+    const rows = await db.select<IActivitySession[]>('SELECT * FROM activity_sessions WHERE id = ?', [id]);
+    return rows[0];
   },
 
   async stopSession(sessionId: string, duration_seconds: number): Promise<IActivitySession> {
-    const response = await fetch(`${API_URL}/activity-sessions/${sessionId}/stop`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ duration_seconds }),
-    });
-    if (!response.ok) throw new Error('Failed to stop session');
-    return response.json();
+    const db = await getDb();
+    const sessions = await db.select<IActivitySession[]>('SELECT * FROM activity_sessions WHERE id = ?', [sessionId]);
+    const session = sessions[0];
+    if (!session) throw new Error('Session not found');
+    const now = new Date().toISOString();
+    await db.execute(
+      'UPDATE activity_sessions SET end_time=?, duration_seconds=?, updated_at=? WHERE id=?',
+      [now, duration_seconds, now, sessionId]
+    );
+    if (session.is_task && session.task_id) {
+      const tasks = await db.select<any[]>('SELECT time_spent FROM tasks WHERE id = ?', [session.task_id]);
+      const prev = tasks[0]?.time_spent ?? 0;
+      await db.execute('UPDATE tasks SET time_spent=?, isRunning=0 WHERE id=?', [prev + duration_seconds, session.task_id]);
+    }
+    const rows = await db.select<IActivitySession[]>('SELECT * FROM activity_sessions WHERE id = ?', [sessionId]);
+    return rows[0];
   },
 
   async updateSession(sessionId: string, duration_seconds: number): Promise<IActivitySession> {
-    const response = await fetch(`${API_URL}/activity-sessions/${sessionId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ duration_seconds }),
-    });
-    if (!response.ok) throw new Error('Failed to update session');
-    return response.json();
+    const db = await getDb();
+    await db.execute(
+      'UPDATE activity_sessions SET duration_seconds=?, updated_at=CURRENT_TIMESTAMP WHERE id=? AND end_time IS NULL',
+      [duration_seconds, sessionId]
+    );
+    const rows = await db.select<IActivitySession[]>('SELECT * FROM activity_sessions WHERE id = ?', [sessionId]);
+    return rows[0];
   },
 
   async deleteSession(sessionId: string): Promise<void> {
-    const response = await fetch(`${API_URL}/activity-sessions/${sessionId}`, {
-      method: 'DELETE',
-    });
-    if (!response.ok) throw new Error('Failed to delete session');
+    const db = await getDb();
+    const sessions = await db.select<IActivitySession[]>('SELECT * FROM activity_sessions WHERE id = ?', [sessionId]);
+    const session = sessions[0];
+    if (session?.end_time === null && session.is_task && session.task_id) {
+      await db.execute('UPDATE tasks SET isRunning=0 WHERE id=?', [session.task_id]);
+    }
+    await db.execute('DELETE FROM activity_sessions WHERE id = ?', [sessionId]);
   },
 
   async renameSession(sessionId: string, activity_name: string): Promise<IActivitySession> {
-    const response = await fetch(`${API_URL}/activity-sessions/${sessionId}/rename`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ activity_name }),
-    });
-    if (!response.ok) throw new Error('Failed to rename session');
-    return response.json();
+    const db = await getDb();
+    await db.execute(
+      'UPDATE activity_sessions SET activity_name=?, updated_at=CURRENT_TIMESTAMP WHERE id=?',
+      [activity_name, sessionId]
+    );
+    const rows = await db.select<IActivitySession[]>('SELECT * FROM activity_sessions WHERE id = ?', [sessionId]);
+    return rows[0];
   },
 
   async getTodayStats(): Promise<{ total_seconds: number; session_count: number }> {
-    const response = await fetch(`${API_URL}/activity-stats/today`);
-    if (!response.ok) throw new Error('Failed to fetch stats');
-    return response.json();
+    const db = await getDb();
+    const today = new Date().toISOString().split('T')[0];
+    const rows = await db.select<any[]>(
+      `SELECT COALESCE(SUM(duration_seconds), 0) as total_seconds, COUNT(*) as session_count
+       FROM activity_sessions WHERE date(start_time) = ?`,
+      [today]
+    );
+    return rows[0];
   },
 };

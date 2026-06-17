@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:3001/api';
+import { getDb } from './db';
 
 export interface INote {
   id: number;
@@ -8,46 +8,34 @@ export interface INote {
   updated_at: string;
 }
 
-function mapNote(note: any): INote {
-  return {
-    id: note.id,
-    title: note.title,
-    content: note.content,
-    created_at: note.created_at,
-    updated_at: note.updated_at,
-  };
-}
-
 export const noteService = {
   async getNotes(): Promise<INote[]> {
-    const res = await fetch(`${API_URL}/notes`);
-    if (!res.ok) throw new Error('Failed to fetch notes');
-    const notes = await res.json();
-    return notes.map(mapNote);
+    const db = await getDb();
+    return db.select<INote[]>('SELECT * FROM notes ORDER BY created_at DESC, id DESC');
   },
 
   async createNote(title: string, content: string): Promise<INote> {
-    const res = await fetch(`${API_URL}/notes`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, content }),
-    });
-    if (!res.ok) throw new Error('Failed to create note');
-    return mapNote(await res.json());
+    const db = await getDb();
+    const result = await db.execute(
+      'INSERT INTO notes (title, content) VALUES (?, ?)',
+      [title, content]
+    );
+    const rows = await db.select<INote[]>('SELECT * FROM notes WHERE id = ?', [result.lastInsertId]);
+    return rows[0];
   },
 
   async updateNote(id: number, title: string, content: string): Promise<INote> {
-    const res = await fetch(`${API_URL}/notes/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, content }),
-    });
-    if (!res.ok) throw new Error('Failed to update note');
-    return mapNote(await res.json());
+    const db = await getDb();
+    await db.execute(
+      'UPDATE notes SET title=?, content=?, updated_at=CURRENT_TIMESTAMP WHERE id=?',
+      [title, content, id]
+    );
+    const rows = await db.select<INote[]>('SELECT * FROM notes WHERE id = ?', [id]);
+    return rows[0];
   },
 
   async deleteNote(id: number): Promise<void> {
-    const res = await fetch(`${API_URL}/notes/${id}`, { method: 'DELETE' });
-    if (!res.ok) throw new Error('Failed to delete note');
+    const db = await getDb();
+    await db.execute('DELETE FROM notes WHERE id = ?', [id]);
   },
 };
