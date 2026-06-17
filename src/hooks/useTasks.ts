@@ -35,6 +35,17 @@ export const useTasks = () => {
     return () => window.removeEventListener('taskTimeUpdated', handler as EventListener);
   }, []);
 
+  useEffect(() => {
+    const handler = (e: CustomEvent) => {
+      const { taskId, isDone } = e.detail;
+      setTasks(prev =>
+        prev.map(t => t.id === taskId ? { ...t, isDone } : t)
+      );
+    };
+    window.addEventListener('taskToggled', handler as EventListener);
+    return () => window.removeEventListener('taskToggled', handler as EventListener);
+  }, []);
+
   const toggleTask = async (id: string) => {
     const task = tasks.find(t => t.id === id);
     if (!task) return;
