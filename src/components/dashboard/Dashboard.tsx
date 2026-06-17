@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import TaskForm from '../taskSystem/AddTaskForm';
 import { useNavigate } from 'react-router-dom';
 import { Flag, Calendar, Clock } from 'lucide-react';
 import type { ITask } from '../../services/taskService';
@@ -6,6 +7,7 @@ import { calendarService, type CalendarEvent } from '../../services/calendarServ
 import { useFocusTimer } from '../../hooks/useFocusTimer';
 import { PixelPlant, type PlantType } from '../focus/FocusTimer';
 import { useNotes } from '../../hooks/useNotes';
+import { type useActivityTracker } from '../../hooks/useActivityTracker';
 import './Dashboard.css';
 
 interface DashboardProps {
@@ -13,6 +15,8 @@ interface DashboardProps {
   onToggleTask: (id: string) => void;
   onDelete: (id: string) => void;
   onReorderTasks: (tasks: ITask[]) => void;
+  onAddTask: (title: string, deadline: string, description?: string, priority?: 'High' | 'Medium' | 'Low') => void;
+  activityTracker: ReturnType<typeof useActivityTracker>;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({
@@ -20,9 +24,12 @@ const Dashboard: React.FC<DashboardProps> = ({
   onToggleTask,
   onDelete,
   onReorderTasks,
+  onAddTask,
+  activityTracker,
 }) => {
   const navigate = useNavigate();
   const [priorityFilters, setPriorityFilters] = useState<('High' | 'Medium' | 'Low')[]>([]);
+  const [isAdding, setIsAdding] = useState(false);
 
   const handlePriorityFilter = (priority: 'High' | 'Medium' | 'Low') => {
     setPriorityFilters(prev => {
@@ -72,7 +79,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         <div className="dashboard-card task-list-card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#f6fe9a' }}>
-              Today's Task List
+              Tasks
             </h2>
             <div style={{ display: 'flex', gap: '8px' }}>
               <button
@@ -123,106 +130,97 @@ const Dashboard: React.FC<DashboardProps> = ({
             </div>
           </div>
 
-          <button
-            onClick={() => navigate('/tasks')}
-            style={{
-              background: '#f6fe9a',
-              color: '#1a1a1a',
-              border: 'none',
-              padding: '10px 16px',
-              borderRadius: '24px',
-              fontSize: '14px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              width: '100%',
-            }}
-          >
-            + Add Task
-          </button>
+          {isAdding ? (
+            <TaskForm
+              compact
+              onAdd={(title, deadline, description, priority) => {
+                onAddTask(title, deadline, description, priority);
+                setIsAdding(false);
+              }}
+              onCancel={() => setIsAdding(false)}
+            />
+          ) : (
+            <button
+              onClick={() => setIsAdding(true)}
+              style={{
+                background: '#f6fe9a',
+                color: '#1a1a1a',
+                border: 'none',
+                padding: '10px 16px',
+                borderRadius: '24px',
+                fontSize: '14px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                width: '100%',
+              }}
+            >
+              + Add Task
+            </button>
+          )}
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto', flex: 1, minHeight: 0 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', overflowY: 'auto', flex: 1, minHeight: 0 }}>
             {filteredTasks.length === 0 ? (
-              <p style={{ color: 'var(--color-text-secondary)', textAlign: 'left' }}>No tasks</p>
+              <p style={{ color: 'var(--color-text-secondary)', textAlign: 'left', padding: '8px 0' }}>No tasks</p>
             ) : (
               filteredTasks.map((task, idx) => {
                 const priorityColor = task.priority === 'High' ? '#ff6b6b' : task.priority === 'Medium' ? '#ffa500' : '#51cf66';
+                const flagColor = task.priority === 'High' ? 'var(--color-negative)' : task.priority === 'Medium' ? 'var(--color-secondary)' : 'var(--color-positive)';
                 return (
                   <div
                     key={task.id}
                     draggable
-                    onDragStart={(e) => {
-                      handleDragStart(e, idx);
-                      e.currentTarget.style.opacity = '0.5';
-                      e.currentTarget.style.transform = 'scale(0.97)';
-                    }}
-                    onDragEnd={(e) => {
-                      e.currentTarget.style.opacity = '1';
-                      e.currentTarget.style.transform = 'scale(1)';
-                    }}
+                    onDragStart={(e) => { handleDragStart(e, idx); e.currentTarget.style.opacity = '0.5'; }}
+                    onDragEnd={(e) => { e.currentTarget.style.opacity = '1'; }}
                     onDrop={(e) => handleDrop(e, idx)}
                     onDragOver={handleDragOver}
                     style={{
-                      background: 'rgba(255, 255, 255, 0.05)',
-                      padding: '12px 14px',
-                      borderRadius: '8px',
-                      border: '1px solid rgba(255, 255, 255, 0.08)',
                       display: 'flex',
-                      justifyContent: 'space-between',
                       alignItems: 'center',
-                      transition: 'all 0.2s ease',
-                      cursor: 'default',
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!e.currentTarget.draggable) return;
-                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
-                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
-                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                      gap: '10px',
+                      padding: '8px 4px',
+                      borderBottom: '1px solid rgba(255,255,255,0.05)',
+                      opacity: task.isDone ? 0.5 : 1,
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
-                      <input
-                        type="checkbox"
-                        checked={task.isDone}
-                        onChange={() => onToggleTask(task.id)}
-                        style={{ accentColor: '#f6fe9a', flexShrink: 0 }}
-                      />
-                      <span style={{
-                        fontSize: '15px',
+                    {/* Circular priority checkbox */}
+                    <div
+                      onClick={() => onToggleTask(task.id)}
+                      style={{
+                        width: '18px', height: '18px', borderRadius: '50%',
+                        border: `2px solid ${priorityColor}`,
+                        background: task.isDone ? priorityColor : 'transparent',
+                        flexShrink: 0, cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        transition: 'all 0.2s',
+                      }}
+                    >
+                      {task.isDone && (
+                        <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
+                          <path d="M1 3.5L3 5.5L8 1" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      )}
+                    </div>
+
+                    {/* Task info */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{
+                        fontSize: '13px', fontWeight: 500,
                         color: task.isDone ? 'var(--color-text-secondary)' : 'var(--color-text-primary)',
                         textDecoration: task.isDone ? 'line-through' : 'none',
+                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                         textAlign: 'left',
-                        wordBreak: 'break-word',
                       }}>
                         {task.title}
-                      </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                        <Calendar size={10} style={{ color: task.deadline ? flagColor : 'var(--color-text-secondary)', flexShrink: 0 }} />
+                        <span style={{ fontSize: '11px', color: task.deadline ? flagColor : 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>
+                          {task.deadline || 'No deadline'}
+                        </span>
+                        <Flag size={10} fill={flagColor} style={{ color: flagColor, flexShrink: 0 }} />
+                      </div>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0, marginLeft: '12px' }}>
-                      <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>
-                        {formatTime(task.timeSpent || 0)}
-                      </span>
-                      <span
-                        style={{
-                          fontSize: '10px',
-                          padding: '2px 8px',
-                          borderRadius: '8px',
-                          background: priorityColor,
-                          color: 'white',
-                          fontWeight: 600,
-                          lineHeight: '16px',
-                        }}
-                      >
-                        {task.priority}
-                      </span>
-                      <span
-                        style={{ cursor: 'grab', color: 'var(--color-text-secondary)', fontSize: '16px', userSelect: 'none', lineHeight: 1 }}
-                        title="Drag to reorder"
-                      >
-                        ⋮
-                      </span>
-                    </div>
+
                   </div>
                 );
               })

@@ -247,3 +247,66 @@
     justify-content: center;
   }
 }
+.task-form--compact {
+  gap: 8px;
+  padding: 10px 0;
+}
+
+.task-form--compact .task-input-title {
+  font-size: 13px;
+  padding: 5px 0;
+}
+
+.task-form--compact .task-form-row {
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.task-form--compact .task-date-wrapper,
+.task-form--compact .task-time-wrapper {
+  flex: 1;
+  min-width: 0;
+  height: 30px;
+  padding: 0 8px;
+  gap: 4px;
+}
+
+.task-form--compact .selected-date-label,
+.task-form--compact .task-time-colon {
+  font-size: 11px;
+}
+
+.task-form--compact .task-time-number {
+  font-size: 11px;
+  width: 32px;
+}
+
+.task-form--compact .form-actions {
+  margin-top: 2px;
+  gap: 6px;
+  align-items: stretch;
+}
+
+.task-form--compact .compact-priority-cell {
+  flex: 1;
+  height: 30px;
+  padding: 0 8px;
+  gap: 6px;
+  border-radius: 6px;
+}
+
+.task-form--compact .save-btn,
+.task-form--compact .cancel-btn {
+  padding: 0;
+  font-size: 11px;
+  border-radius: 5px;
+  height: 30px;
+}
+
+.task-form--compact .save-btn {
+  flex: 1;
+}
+
+.task-form--compact .cancel-btn {
+  flex: 1;
+}
