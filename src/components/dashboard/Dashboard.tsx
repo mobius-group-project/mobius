@@ -78,7 +78,7 @@ const Dashboard: React.FC<DashboardProps> = ({
       <div className="dashboard-grid">
         {/* Today's Task List */}
         <div className="dashboard-card task-list-card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
             <div style={{ display: 'flex', gap: '8px' }}>
               <button
                 onClick={() => handlePriorityFilter('High')}
@@ -505,24 +505,43 @@ const NotesCard: React.FC = () => {
   };
 
   const insertCheckbox = () => {
+    if (!editorRef.current) return;
+    editorRef.current.focus();
     const sel = window.getSelection();
-    if (!sel || !editorRef.current) return;
-    sel.deleteFromDocument();
+    if (!sel) return;
+
+    let range: Range;
+    if (sel.rangeCount > 0 && editorRef.current.contains(sel.anchorNode)) {
+      sel.deleteFromDocument();
+      range = sel.getRangeAt(0);
+    } else {
+      range = document.createRange();
+      range.selectNodeContents(editorRef.current);
+      range.collapse(false);
+    }
+
+    const wrapper = document.createElement('span');
+    wrapper.setAttribute('contenteditable', 'false');
     const cb = document.createElement('input');
     cb.type = 'checkbox';
-    const range = sel.getRangeAt(0);
-    range.insertNode(cb);
-    range.setStartAfter(cb);
-    range.collapse(true);
+    wrapper.appendChild(cb);
+    range.insertNode(wrapper);
+
+    const afterWrapper = document.createRange();
+    afterWrapper.setStartAfter(wrapper);
+    afterWrapper.collapse(true);
+    const textNode = document.createTextNode('​');
+    afterWrapper.insertNode(textNode);
+    afterWrapper.setStart(textNode, 1);
+    afterWrapper.collapse(true);
     sel.removeAllRanges();
-    sel.addRange(range);
-    editorRef.current.focus();
+    sel.addRange(afterWrapper);
   };
 
   const handleSave = async () => {
     const content = editorRef.current?.innerHTML || '';
     if (!title.trim() && !content.trim()) return;
-    await addNote(title, content);
+    await addNote(title.trim() || 'New note', content);
     setTitle('');
     if (editorRef.current) editorRef.current.innerHTML = '';
     setShowForm(false);
@@ -555,7 +574,7 @@ const NotesCard: React.FC = () => {
             value={title}
             onChange={e => setTitle(e.target.value)}
             placeholder="Note title..."
-            style={{ width: '100%', background: 'transparent', border: 'none', color: 'var(--color-text-primary)', fontSize: '14px', fontWeight: 600, outline: 'none', marginBottom: '6px' }}
+            style={{ width: '100%', boxSizing: 'border-box', background: 'transparent', border: 'none', color: 'var(--color-text-primary)', fontSize: '14px', fontWeight: 600, outline: 'none', marginBottom: '6px' }}
           />
           <div style={{ display: 'flex', gap: '4px', marginBottom: '6px' }}>
             <ToolBtn onClick={() => exec('bold')} label={<b>B</b>} />
@@ -569,7 +588,8 @@ const NotesCard: React.FC = () => {
             contentEditable
             suppressContentEditableWarning
             data-placeholder="Write your note..."
-            style={{ width: '100%', minHeight: '60px', background: 'rgba(0,0,0,0.2)', border: 'none', borderRadius: '4px', padding: '8px', color: 'var(--color-text-primary)', fontSize: '13px', outline: 'none', cursor: 'text' }}
+            className="note-editor"
+            style={{ width: '100%', boxSizing: 'border-box', minHeight: '60px', background: 'rgba(0,0,0,0.2)', border: 'none', borderRadius: '4px', padding: '8px', color: 'var(--color-text-primary)', fontSize: '13px', outline: 'none', cursor: 'text' }}
             onKeyDown={e => {
               if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); handleSave(); }
             }}
@@ -592,13 +612,13 @@ const NotesCard: React.FC = () => {
       )}
 
       <div style={{ flex: 1, overflow: 'auto', minHeight: '0' }}>
-        {loading ? (
+        {!showForm && loading ? (
           <p style={{ color: 'var(--color-text-secondary)', fontSize: '12px' }}>Loading...</p>
-        ) : notes.length === 0 ? (
+        ) : !showForm && notes.length === 0 ? (
           <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
             <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>No notes yet</div>
           </div>
-        ) : (
+        ) : !showForm ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {notes.map(note => (
               <div key={note.id} style={{ background: 'rgba(255,255,255,0.05)', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
@@ -612,12 +632,12 @@ const NotesCard: React.FC = () => {
                   </button>
                 </div>
                 {note.content && (
-                  <div style={{ fontSize: '13px', color: 'var(--color-text-primary)', lineHeight: '1.5', textAlign: 'left' }} dangerouslySetInnerHTML={{ __html: note.content }} />
+                  <div className="note-content" style={{ fontSize: '13px', color: 'var(--color-text-primary)', lineHeight: '1.5', textAlign: 'left' }} dangerouslySetInnerHTML={{ __html: note.content }} />
                 )}
               </div>
             ))}
           </div>
-        )}
+        ) : null}
       </div>
     </>
   );

@@ -134,6 +134,48 @@
   background: rgba(255, 255, 255, 0.2);
 }
 
+/* Custom note checkboxes */
+.note-editor input[type="checkbox"],
+.note-content input[type="checkbox"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  border-radius: 3px;
+  background: transparent;
+  cursor: pointer;
+  vertical-align: middle;
+  position: relative;
+  flex-shrink: 0;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  margin: 0 3px 1px 0;
+}
+
+.note-editor input[type="checkbox"]:hover,
+.note-content input[type="checkbox"]:hover {
+  border-color: #f6fe9a;
+}
+
+.note-editor input[type="checkbox"]:checked,
+.note-content input[type="checkbox"]:checked {
+  background: #f6fe9a;
+  border-color: #f6fe9a;
+}
+
+.note-editor input[type="checkbox"]:checked::after,
+.note-content input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 1px;
+  width: 7px;
+  height: 4px;
+  border-left: 1.5px solid #1a1a1a;
+  border-bottom: 1.5px solid #1a1a1a;
+  transform: rotate(-45deg);
+}
+
 /* Responsive Design */
 @media (max-width: 800px) {
   .dashboard-grid {
