@@ -22,4 +22,9 @@ export const focusPlantService = {
     const rows = await db.select<IFocusPlant[]>('SELECT * FROM focus_plants WHERE id = ?', [result.lastInsertId]);
     return rows[0];
   },
+
+  async deletePlant(id: number): Promise<void> {
+    const db = await getDb();
+    await db.execute('DELETE FROM focus_plants WHERE id = ?', [id]);
+  },
 };
