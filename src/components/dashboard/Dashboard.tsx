@@ -27,6 +27,12 @@ const Dashboard: React.FC<DashboardProps> = ({
   activityTracker,
 }) => {
   const [priorityFilters, setPriorityFilters] = useState<('High' | 'Medium' | 'Low')[]>([]);
+  const [calActiveColors, setCalActiveColors] = useState<Set<string>>(new Set());
+  const toggleCalColor = (color: string) => setCalActiveColors(prev => {
+    const next = new Set(prev);
+    if (next.has(color)) next.delete(color); else next.add(color);
+    return next;
+  });
   const [isAdding, setIsAdding] = useState(false);
 
   const handlePriorityFilter = (priority: 'High' | 'Medium' | 'Low') => {
@@ -219,10 +225,21 @@ const Dashboard: React.FC<DashboardProps> = ({
 
         {/* Weekly Calendar */}
         <div className="dashboard-card calendar-card">
-          <div className="calendar-month-label">
-            {new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' })}
+          <div className="calendar-month-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span>{new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' })}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              {CALENDAR_COLOR_OPTIONS.map(color => (
+                <button key={color} onClick={() => toggleCalColor(color)} style={{
+                  width: 12, height: 12, borderRadius: '50%', background: color, padding: 0, cursor: 'pointer',
+                  border: calActiveColors.has(color) ? '2px solid rgba(255,255,255,0.85)' : '2px solid transparent',
+                  opacity: calActiveColors.has(color) ? 1 : 0.45,
+                  transition: 'opacity 0.15s, border-color 0.15s, transform 0.12s',
+                  transform: calActiveColors.has(color) ? 'scale(1.2)' : 'scale(1)',
+                }} />
+              ))}
+            </div>
           </div>
-          <CalendarGrid weekOffset={0} compactHeader />
+          <CalendarGrid weekOffset={0} compactHeader externalActiveColors={calActiveColors} />
           <div style={{ display: 'flex', padding: '8px 0', flexShrink: 0, justifyContent: 'space-between' }}>
             <MiniMonthCalendar year={new Date(new Date().getFullYear(), new Date().getMonth() - 1).getFullYear()} month={(new Date().getMonth() + 11) % 12} />
             <MiniMonthCalendar year={new Date().getFullYear()} month={new Date().getMonth()} />
@@ -297,12 +314,25 @@ const MiniMonthCalendar: React.FC<{ year: number; month: number }> = ({ year, mo
 const HOUR_START = 8;
 const HOUR_END = 20;
 
+const CALENDAR_COLOR_OPTIONS = [
+  "#A7C7E7", "#FFB3BA", "#B5EAD7", "#FFDAC1", "#E2F0CB", "#C7CEE6",
+];
+
 const CalendarCard: React.FC = () => {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [activeColors, setActiveColors] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     calendarService.getEvents().then(setEvents).catch(() => {});
   }, []);
+
+  const toggleColor = (color: string) => {
+    setActiveColors(prev => {
+      const next = new Set(prev);
+      if (next.has(color)) next.delete(color); else next.add(color);
+      return next;
+    });
+  };
 
   const today = new Date();
   const todayStr = today.toISOString().split('T')[0];
@@ -322,15 +352,39 @@ const CalendarCard: React.FC = () => {
   );
 
   const getEventsForCell = (dateStr: string, hour: string) =>
-    events.filter(ev => ev.date === dateStr && ev.startTime?.startsWith(hour.substring(0, 2)));
+    events.filter(ev =>
+      ev.date === dateStr &&
+      ev.startTime?.startsWith(hour.substring(0, 2)) &&
+      (activeColors.size === 0 || activeColors.has(ev.color))
+    );
 
   const COL = '44px ' + Array(7).fill('1fr').join(' ');
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', fontFamily: 'var(--font-main)' }}>
-      {/* Month label */}
-      <div style={{ fontSize: '13px', fontWeight: 700, color: 'rgba(255,255,255,0.7)', padding: '12px 12px 6px', flexShrink: 0 }}>
-        {today.toLocaleString('en-US', { month: 'long', year: 'numeric' })}
+      {/* Month label + colour filters */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 12px 6px', flexShrink: 0 }}>
+        <span style={{ fontSize: '13px', fontWeight: 700, color: 'rgba(255,255,255,0.7)' }}>
+          {today.toLocaleString('en-US', { month: 'long', year: 'numeric' })}
+        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          {CALENDAR_COLOR_OPTIONS.map(color => (
+            <button
+              key={color}
+              onClick={() => toggleColor(color)}
+              style={{
+                width: 12, height: 12,
+                borderRadius: '50%',
+                background: color,
+                border: activeColors.has(color) ? '2px solid rgba(255,255,255,0.85)' : '2px solid transparent',
+                padding: 0, cursor: 'pointer',
+                opacity: activeColors.has(color) ? 1 : 0.45,
+                transition: 'opacity 0.15s, border-color 0.15s, transform 0.12s',
+                transform: activeColors.has(color) ? 'scale(1.2)' : 'scale(1)',
+              }}
+            />
+          ))}
+        </div>
       </div>
 
       {/* Header */}

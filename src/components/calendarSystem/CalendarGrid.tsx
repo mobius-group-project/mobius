@@ -9,6 +9,7 @@ interface CalendarGridProps {
   dayOffset?: number;
   view?: 'day' | 'week';
   compactHeader?: boolean;
+  externalActiveColors?: Set<string>;
 }
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -50,7 +51,7 @@ interface GhostEvent {
   title: string;
 }
 
-const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset, dayOffset = 0, view = 'week', compactHeader = false }) => {
+const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset, dayOffset = 0, view = 'week', compactHeader = false, externalActiveColors }) => {
   const today = new Date();
   const todayIndex = (today.getDay() + 6) % 7;
   const isCurrentWeek = weekOffset === 0 && view === 'week';
@@ -386,13 +387,15 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset, dayOffset = 0, 
     }
   };
 
+  const effectiveColors = externalActiveColors ?? activeColors;
+
   const getEventsForCell = (date: Date, slot: string) => {
     const dateStr = formatDate(date);
     const slotHour = slot.split(":")[0];
     return events.filter(ev =>
       ev.date === dateStr &&
       ev.startTime.split(":")[0] === slotHour &&
-      (activeColors.size === 0 || activeColors.has(ev.color))
+      (effectiveColors.size === 0 || effectiveColors.has(ev.color))
     );
   };
 
@@ -412,17 +415,19 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset, dayOffset = 0, 
 
   return (
     <div className="calendar-grid-wrapper">
-      <div className="calendar-color-filter">
-        {colorOptions.map(color => (
-          <button
-            key={color.value}
-            className={`color-filter-dot${activeColors.has(color.value) ? ' active' : ''}`}
-            style={{ backgroundColor: color.value }}
-            title={color.label}
-            onClick={() => toggleColor(color.value)}
-          />
-        ))}
-      </div>
+      {!compactHeader && (
+        <div className="calendar-color-filter">
+          {colorOptions.map(color => (
+            <button
+              key={color.value}
+              className={`color-filter-dot${activeColors.has(color.value) ? ' active' : ''}`}
+              style={{ backgroundColor: color.value }}
+              title={color.label}
+              onClick={() => toggleColor(color.value)}
+            />
+          ))}
+        </div>
+      )}
     <div className="calendar-grid">
       <div className="calendar-header" style={{ gridTemplateColumns: `80px repeat(${weekDates.length}, 1fr)` }}>
         <div className="calendar-header-empty" />
