@@ -421,7 +421,7 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ compact = false }) => {
   const [selectedMinutes, setSelectedMinutes] = useState(25);
   const [customInput, setCustomInput] = useState('');
   const [garden, setGarden] = useState<IFocusPlant[]>([]);
-  const [gardenPositions] = useState<Record<number, { x: number; y: number }>>(loadGardenPositions);
+  const [gardenPositions, setGardenPositions] = useState<Record<number, { x: number; y: number }>>(loadGardenPositions);
   const [topPlantId, setTopPlantId] = useState<number | null>(null);
   const [focusedGardenPlant, setFocusedGardenPlant] = useState<IFocusPlant | null>(null);
   const [justFinished, setJustFinished] = useState(false);
@@ -663,8 +663,11 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ compact = false }) => {
                   index={i}
                   initialPos={gardenPositions[p.id] ?? defaultPos(i)}
                   onDragEnd={(id, x, y) => {
-                    const all = loadGardenPositions();
-                    localStorage.setItem(GARDEN_POS_KEY, JSON.stringify({ ...all, [id]: { x, y } }));
+                    setGardenPositions(prev => {
+                      const updated = { ...prev, [id]: { x, y } };
+                      localStorage.setItem(GARDEN_POS_KEY, JSON.stringify(updated));
+                      return updated;
+                    });
                   }}
                   onPickUp={() => setTopPlantId(p.id)}
                   onRightClick={(e) => {
