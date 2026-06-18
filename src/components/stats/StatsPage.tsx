@@ -1,9 +1,21 @@
+/**
+ * Statistics page — shows aggregated activity data for a selected date range.
+ *
+ * Contains three sub-components defined locally (no other consumers):
+ *   - StatCard     — small summary metric card (total time, sessions, longest, avg)
+ *   - BarChartSVG  — custom SVG bar chart for daily activity, with hover tooltip
+ *   - DonutChartSVG — SVG donut chart for time breakdown by activity, with hover legend
+ *
+ * All data is fetched by useStats. The main component fills gaps in the daily series
+ * with zero-value entries so the bar chart always has a continuous x-axis across the range.
+ */
 import React, { useMemo } from 'react';
 import { useStats, type DatePreset } from '../../hooks/useStats';
 import './styles/StatsPage.css';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
+/** Formats a duration in seconds to "Xh Ym" or "Ym" for chart labels and card values. */
 const formatSeconds = (s: number): string => {
   const h = Math.floor(s / 3600);
   const m = Math.floor((s % 3600) / 60);
@@ -11,16 +23,23 @@ const formatSeconds = (s: number): string => {
   return `${m}m`;
 };
 
+/**
+ * Formats an ISO date string (YYYY-MM-DD) to a short locale string like "15 Jun".
+ * The 'T00:00:00' suffix forces local midnight parsing — without it, `new Date('2026-06-15')`
+ * is parsed as UTC midnight and can shift to the previous day in negative UTC offset timezones.
+ */
 const formatDate = (iso: string): string => {
   const d = new Date(iso + 'T00:00:00');
   return d.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
 };
 
+/** Colour palette cycled across bar chart bars, donut slices, and activity list dots. */
 const CHART_COLORS = [
   '#7c6af7', '#5bc4d1', '#f7a26a', '#5bd18a',
   '#f76a8a', '#a2d96a', '#f7d36a', '#6aaff7',
 ];
 
+/** Display labels for the preset date range buttons. */
 const PRESET_LABELS: Record<DatePreset, string> = {
   today: 'Today',
   '7d':  '7 days',
@@ -31,8 +50,17 @@ const PRESET_LABELS: Record<DatePreset, string> = {
 // ─── StatCard ─────────────────────────────────────────────────────────────────
 
 interface StatCardProps {
-  label: string; value: string; sub?: string; icon: string;
+  /** Emoji icon shown to the left of the metric. */
+  icon: string;
+  /** Primary numeric value displayed in large text. */
+  value: string;
+  /** Short descriptive label below the value. */
+  label: string;
+  /** Optional secondary line, used for per-day averages. */
+  sub?: string;
 }
+
+/** Small summary metric card used in the top row of the stats page. */
 const StatCard: React.FC<StatCardProps> = ({ label, value, sub, icon }) => (
   <div className="stat-card">
     <span className="stat-card__icon">{icon}</span>
@@ -47,8 +75,20 @@ const StatCard: React.FC<StatCardProps> = ({ label, value, sub, icon }) => (
 // ─── BarChart (SVG) ───────────────────────────────────────────────────────────
 
 interface BarChartProps {
+  /** One entry per calendar day; gaps must be pre-filled by the caller (see `filledDaily`). */
   data: { date: string; total_seconds: number; session_count: number }[];
 }
+
+/**
+ * Custom SVG bar chart for daily activity totals.
+ *
+ * SVG canvas is 700×180 with 52px left padding for y-axis labels.
+ * Y-axis ticks are at 0 / 25 / 50 / 75 / 100 % of the maximum value.
+ * X-axis labels are thinned by `labelStep` so they don't overlap: every
+ * label for ≤7 days, every 2nd for ≤14 days, every Nth otherwise.
+ * Hover tooltip is positioned via `clientX/Y` relative to the SVG bounding rect,
+ * not via SVG coordinates, so it floats freely above the chart.
+ */
 const BarChartSVG: React.FC<BarChartProps> = ({ data }) => {
   const W = 700, H = 180, PAD = { top: 10, right: 8, bottom: 32, left: 52 };
   const innerW = W - PAD.left - PAD.right;
@@ -58,13 +98,12 @@ const BarChartSVG: React.FC<BarChartProps> = ({ data }) => {
   const barW = Math.max(4, (innerW / data.length) * 0.6);
   const gap  = innerW / data.length;
 
-  // y-axis ticks
   const yTicks = [0, 0.25, 0.5, 0.75, 1].map(f => ({
     val: max * f,
     y: innerH - innerH * f,
   }));
 
-  // show every Nth label so they don't overlap
+  // Show every Nth x-axis label so they don't overlap at high day counts.
   const labelStep = data.length <= 7 ? 1 : data.length <= 14 ? 2 : Math.ceil(data.length / 7);
 
   const [hovered, setHovered] = React.useState<number | null>(null);
@@ -152,8 +191,20 @@ const BarChartSVG: React.FC<BarChartProps> = ({ data }) => {
 // ─── DonutChart (SVG) ─────────────────────────────────────────────────────────
 
 interface DonutProps {
+  /** Slices to render; values are in seconds. Already capped at top 5 + "Other" by the caller. */
   data: { name: string; value: number }[];
 }
+
+/**
+ * SVG donut chart for time breakdown by activity.
+ *
+ * Arc paths are computed from trigonometry: outer radius R=70, inner r=44, centre at (100,100).
+ * Slices start at angle -π/2 (12 o'clock) and sweep clockwise.
+ * The SVG `large-arc-flag` is set when a slice sweeps more than π (180°).
+ * Hovering a slice dims all others to 0.45 opacity and replaces the centre "total" label
+ * with the activity name (truncated to 11 chars) and its duration.
+ * The legend below the SVG is kept in sync with hover state.
+ */
 const DonutChartSVG: React.FC<DonutProps> = ({ data }) => {
   const R = 70, r = 44, CX = 100, CY = 100;
   const total = data.reduce((s, d) => s + d.value, 0) || 1;
@@ -239,6 +290,18 @@ const DonutChartSVG: React.FC<DonutProps> = ({ data }) => {
 
 // ─── main component ───────────────────────────────────────────────────────────
 
+/**
+ * Root stats page component — fetches data via useStats and renders the layout.
+ *
+ * Three derived values computed with useMemo:
+ *   - `filledDaily`  — iterates every calendar day in [dateRange.from, dateRange.to] and
+ *                       inserts a 0-second placeholder for any day missing from the DB result,
+ *                       so BarChartSVG always receives a contiguous series with no gaps.
+ *   - `pieData`      — takes the top 5 activities from topActivities; remaining ones are summed
+ *                       into a single "Other" slice passed to DonutChartSVG.
+ *   - `dayCount`     — number of calendar days in the selected range (minimum 1), used to
+ *                       compute the "avg / day" sub-values shown in the StatCards.
+ */
 const StatsPage: React.FC = () => {
   const {
     rangeStats, loading, error,
