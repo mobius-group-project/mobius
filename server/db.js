@@ -1,3 +1,4 @@
+// Legacy — this file belongs to the old Express.js browser build and is not used in the Tauri app.
 import Database from "better-sqlite3";
 import path from "path";
 import { fileURLToPath } from "url";
