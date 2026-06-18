@@ -1,4 +1,12 @@
 <!doctype html>
+<!--
+  HTML shell for the Tauri + Vite app.
+  Vite replaces the <script> tag at build time; Tauri serves this file as the webview content.
+
+  Two mount points:
+    #root      — React application tree (mounted in main.tsx)
+    #modal-root — Portal target for modal dialogs rendered outside the main React tree
+-->
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -8,7 +16,7 @@
   </head>
   <body>
     <div id="root"></div>
-    <div id="modal-root"></div> 
+    <div id="modal-root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

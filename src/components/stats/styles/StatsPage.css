@@ -1,3 +1,20 @@
+/**
+ * Styles for StatsPage and its local sub-components (StatCard, BarChartSVG, DonutChartSVG).
+ *
+ * Notable patterns:
+ *   - `.stat-cards` uses `repeat(auto-fit, minmax(160px, 1fr))` — the four summary cards
+ *     reflow into fewer columns on narrow viewports without any media queries.
+ *   - `.activity-list__item` is a 2-row CSS grid (auto + 4px). The first row holds
+ *     dot / name / pct / time; the second row holds the progress bar, which spans
+ *     `grid-column: 2 / -1` to fill all columns except the dot.
+ *   - `.stats-section--flex` uses `flex: 1 1 300px` so the activities list and donut chart
+ *     sit side-by-side above 600px and stack below it without a media query.
+ *   - `.chart-tooltip` is `position: absolute; pointer-events: none` — it floats over the
+ *     SVG without capturing mouse events that would interfere with bar hover detection.
+ *   - `.stats-loading__spinner` is a CSS border animation: all four sides use `--color-border`
+ *     except `border-top-color` which is the accent colour, creating the spinning arc effect.
+ */
+
 .stats-page {
   display: flex;
   flex-direction: column;

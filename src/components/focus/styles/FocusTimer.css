@@ -1,3 +1,17 @@
+/**
+ * Styles for the focus module — FocusTimer component and all its sub-elements.
+ *
+ * Class naming: all classes use the "ft-" prefix (Focus Timer) to avoid collisions.
+ * Modifier convention follows BEM: ft-block__element--modifier.
+ *
+ * Two layout modes:
+ *   - Default: two-column layout (plant picker left, timer centre) with garden below.
+ *   - Compact (.ft--compact): single-column card for the dashboard, overrides the default layout.
+ *
+ * Accent colour used throughout: #7c6af7 (purple).
+ */
+
+/* ── root container ───────────────────────────────────────────── */
 .ft {
   max-width: 900px;
   margin: 0 auto;
@@ -9,6 +23,7 @@
 }
 
 /* ── two-column main area ─────────────────────────────────────── */
+/* Contains .ft-sidebar (left) and .ft-center (right). */
 .ft-main {
   display: flex;
   gap: 40px;
@@ -16,7 +31,7 @@
   justify-content: center;
 }
 
-/* ── LEFT sidebar ─────────────────────────────────────────────── */
+/* ── LEFT sidebar — plant picker ──────────────────────────────── */
 .ft-sidebar {
   display: flex;
   flex-direction: column;
@@ -25,6 +40,7 @@
   width: 310px;
 }
 
+/* Small uppercase label above the picker grid ("PLANT"). */
 .ft-sidebar__label {
   font-size: 11px;
   font-weight: 500;
@@ -34,7 +50,7 @@
   margin: 0 0 4px;
 }
 
-/* ── RIGHT center ─────────────────────────────────────────────── */
+/* ── RIGHT centre — badge, plant, timer, controls ─────────────── */
 .ft-center {
   display: flex;
   flex-direction: column;
@@ -44,7 +60,8 @@
   flex-shrink: 0;
 }
 
-/* ── plant picker ─────────────────────────────────────────────── */
+/* ── plant picker grid ────────────────────────────────────────── */
+/* 3-column grid of plant type buttons shown on the left in full mode. */
 .ft-picker {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -64,11 +81,13 @@
   transition: border-color 0.15s, background 0.15s;
 }
 
+/* Plant picker is disabled while a session is running to prevent mid-session changes. */
 .ft-picker__item:disabled {
   opacity: 0.5;
   cursor: default;
 }
 
+/* Fixed-size container that centres each plant preview sprite. */
 .ft-picker__thumb {
   width: 90px;
   height: 100px;
@@ -98,12 +117,14 @@
 }
 
 /* ── duration presets ─────────────────────────────────────────── */
+/* Row of quick-select buttons (25 min, 40 min, 60 min). */
 .ft-presets {
   display: flex;
   flex-direction: row;
   gap: 8px;
 }
 
+/* border-radius: 999px produces a pill shape regardless of button width. */
 .ft-preset {
   padding: 7px 16px;
   border-radius: 999px;
@@ -127,6 +148,7 @@
 }
 
 /* ── plant display ────────────────────────────────────────────── */
+/* Centred container for the animated PixelPlant in the timer area. */
 .ft-plant-wrap {
   display: flex;
   align-items: center;
@@ -136,18 +158,20 @@
   flex-shrink: 0;
 }
 
+/* image-rendering: pixelated keeps pixel-art sprites crisp instead of blurred when scaled. */
 .ft-pixel-grid {
   display: grid;
   image-rendering: pixelated;
 }
 
+/* Each individual pixel cell. The colour transition animates pixel reveal during growth. */
 .ft-pixel {
   border-radius: 2px;
   transition: background 0.25s ease;
 }
 
-/* ── badges ───────────────────────────────────────────────────── */
-/* ── badge slot (outside plant wrap) ─────────────────────────── */
+/* ── status badge ─────────────────────────────────────────────── */
+/* Fixed-height slot above the plant so the layout doesn't jump when the badge appears. */
 .ft-badge-slot {
   height: 28px;
   display: flex;
@@ -162,6 +186,7 @@
   white-space: nowrap;
 }
 
+/* "🌱 Zasadzono!" — shown when a plant is successfully saved after session completion. */
 .ft-badge--success {
   background: rgba(76, 175, 80, 0.2);
   border: 1px solid rgba(76, 175, 80, 0.4);
@@ -174,6 +199,7 @@
   color: #ffb74d;
 }
 
+/* Growth message shown while the timer is running. */
 .ft-badge--running {
   background: rgba(124, 106, 247, 0.15);
   border: 1px solid rgba(124, 106, 247, 0.3);
@@ -182,7 +208,8 @@
   transition: opacity 0.4s ease;
 }
 
-/* ── presets row + custom input ──────────────────────────────── */
+/* ── custom duration input ────────────────────────────────────── */
+/* Pill-shaped wrapper combining the number input and the "min" label. */
 .ft-custom-input-wrap {
   display: flex;
   align-items: center;
@@ -205,9 +232,11 @@
   color: #fff;
   font-size: 13px;
   text-align: center;
+  /* Remove browser default number spinners (Firefox). */
   -moz-appearance: textfield;
 }
 
+/* Remove browser default number spinners (Chrome/Safari). */
 .ft-custom-input::-webkit-outer-spin-button,
 .ft-custom-input::-webkit-inner-spin-button {
   -webkit-appearance: none;
@@ -218,7 +247,8 @@
   color: rgba(255, 255, 255, 0.4);
 }
 
-/* ── timer ────────────────────────────────────────────────────── */
+/* ── countdown display ────────────────────────────────────────── */
+/* font-variant-numeric: tabular-nums prevents the layout from shifting as digits change width. */
 .ft-time {
   font-size: 3rem;
   font-weight: 700;
@@ -228,6 +258,7 @@
 }
 
 /* ── progress bar ─────────────────────────────────────────────── */
+/* overflow: hidden clips the fill div so it never visually exceeds 100% width. */
 .ft-progress-track {
   width: 100%;
   max-width: 320px;
@@ -237,6 +268,7 @@
   overflow: hidden;
 }
 
+/* transition: width 1s linear matches the 1-second tick interval for a smooth fill animation. */
 .ft-progress-fill {
   height: 100%;
   background: #7c6af7;
@@ -245,6 +277,7 @@
 }
 
 /* ── controls ─────────────────────────────────────────────────── */
+/* Row of action buttons: Start / Pause / Resume + Abandon / New session. */
 .ft-controls {
   display: flex;
   gap: 10px;
@@ -266,6 +299,7 @@
   transform: translateY(-1px);
 }
 
+/* Primary accent button — used for Start, Resume, New session. */
 .ft-btn--primary {
   border-color: #7c6af7;
   background: rgba(124, 106, 247, 0.18);
@@ -276,6 +310,7 @@
   background: rgba(124, 106, 247, 0.3);
 }
 
+/* Subtle destructive button — used for Abandon. */
 .ft-btn--ghost {
   border-color: rgba(255, 255, 255, 0.1);
   color: rgba(255, 255, 255, 0.45);
@@ -283,6 +318,7 @@
 }
 
 /* ── garden ───────────────────────────────────────────────────── */
+/* Full-width section below the timer showing the user's grown plants and decorations. */
 .ft-garden {
   width: 100%;
   margin-top: 8px;
@@ -297,6 +333,7 @@
   margin: 0 0 16px;
 }
 
+/* Absolute-positioned canvas for draggable plants and decorations. */
 .ft-garden__grid {
   position: relative;
   height: 430px;
@@ -310,6 +347,7 @@
   padding: 6px;
 }
 
+/* Fixed thumbnail area for each plant in the garden grid. */
 .ft-garden-plant__thumb {
   width: 88px;
   height: 90px;
@@ -319,6 +357,8 @@
   overflow: hidden;
 }
 
+/* ── plant info popup ─────────────────────────────────────────── */
+/* Absolutely positioned tooltip shown on right-click over a garden plant. */
 .ft-plant-popup {
   position: absolute;
   z-index: 50;
@@ -365,6 +405,7 @@
   color: rgba(255, 255, 255, 0.3);
 }
 
+/* Wrapper for the preset buttons row and the custom input, shown side-by-side. */
 .ft-presets-row {
   display: flex;
   align-items: center;
@@ -374,6 +415,12 @@
 }
 
 /* ── compact mode ─────────────────────────────────────────────── */
+/*
+ * Overrides for the dashboard card layout.
+ * .ft--compact resets the root container to fill its parent card rather than
+ * being centred at max-width, then .ft-compact-main and .ft-compact-gallery
+ * stack vertically inside it.
+ */
 .ft--compact {
   max-width: none;
   margin: 0;
@@ -382,6 +429,7 @@
   height: 100%;
 }
 
+/* Scrollable upper section: badge, plant preview, timer, progress bar, controls. */
 .ft-compact-main {
   flex: 1;
   display: flex;
@@ -389,15 +437,18 @@
   align-items: center;
   justify-content: flex-start;
   gap: 10px;
+  /* min-height: 0 allows this flex child to shrink below its content height inside a flex container. */
   min-height: 0;
   padding: 6px 0 12px;
 }
 
+/* Push the plant preview to the vertical centre of whatever space is available. */
 .ft-compact-main .ft-plant-wrap--compact {
   margin-top: auto;
   margin-bottom: auto;
 }
 
+/* Smaller countdown font for the compact card. */
 .ft-time--compact {
   font-size: 2.2rem;
 }
@@ -408,6 +459,7 @@
   border-radius: 14px;
 }
 
+/* Square icon-only button variant used for the compact ▶ start button. */
 .ft-btn--icon {
   width: 38px;
   height: 38px;
@@ -419,15 +471,18 @@
   border-radius: 50%;
 }
 
+/* Horizontally scrollable plant type picker at the bottom of the compact card. */
 .ft-compact-gallery {
   display: flex;
   gap: 4px;
   overflow-x: auto;
   padding: 6px 0;
   flex-shrink: 0;
+  /* scrollbar-width: none hides the scrollbar on Firefox while keeping scroll functionality. */
   scrollbar-width: none;
 }
 
+/* Hide scrollbar on Chrome/Safari. */
 .ft-compact-gallery::-webkit-scrollbar {
   display: none;
 }
@@ -455,6 +510,7 @@
   background: rgba(124, 106, 247, 0.12);
 }
 
+/* Plant picker is disabled while a session is running. */
 .ft-compact-gallery__item:disabled {
   opacity: 0.5;
   cursor: default;

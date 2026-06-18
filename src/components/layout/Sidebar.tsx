@@ -1,3 +1,14 @@
+/**
+ * Collapsible sidebar navigation — the only persistent layout chrome in the app.
+ *
+ * The sidebar is always present in the DOM but hidden off-screen via `translateX(-100%)`.
+ * When `isOpen` is true, `.sidebar--open` slides it into view. A semi-transparent backdrop
+ * is rendered behind it so clicking outside the panel calls `onClose`.
+ *
+ * `NAV_ITEMS` is a static array that defines the route order shown in the nav.
+ * The Dashboard link uses `end={true}` so it only activates on the exact `/` path,
+ * not on every route that starts with `/`.
+ */
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { Home, Timer, BarChart2, ListTodo, Clock, Calendar, X } from 'lucide-react';
@@ -43,7 +54,9 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 interface SidebarProps {
+  /** Whether the sidebar is currently visible. Controlled by the parent (App). */
   isOpen: boolean;
+  /** Called when the user clicks the close button or the backdrop. */
   onClose: () => void;
 }
 

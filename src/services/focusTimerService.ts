@@ -1,5 +1,14 @@
+/**
+ * CRUD service for focus_sessions.
+ * Called by useFocusTimer to persist and restore timer state across page reloads and app restarts.
+ */
 import { getDb } from './db';
 
+/**
+ * A row from the focus_sessions table.
+ * `is_completed` is stored as 0/1 integer (SQLite has no boolean type).
+ * `updated_at` is used by useFocusTimer to calculate elapsed time when restoring a running session from DB.
+ */
 export interface IFocusSession {
   id: number;
   total_seconds: number;
@@ -10,6 +19,7 @@ export interface IFocusSession {
 }
 
 export const focusTimerService = {
+  /** Returns the most recently active (running or paused) session, or null if there is none. */
   async getActiveSession(): Promise<IFocusSession | null> {
     const db = await getDb();
     const rows = await db.select<IFocusSession[]>(
@@ -18,6 +28,7 @@ export const focusTimerService = {
     return rows[0] ?? null;
   },
 
+  /** Inserts a new running session with the given duration and returns the created row. */
   async startSession(durationSeconds: number): Promise<IFocusSession> {
     const db = await getDb();
     const result = await db.execute(
@@ -29,6 +40,10 @@ export const focusTimerService = {
     return rows[0];
   },
 
+  /**
+   * Partially updates a session — omit a field to leave it unchanged.
+   * `ended_at` is set automatically when `state` transitions to `'finished'`.
+   */
   async updateSession(
     id: number,
     payload: { remaining_seconds?: number; state?: IFocusSession['state']; is_completed?: boolean }

@@ -1,3 +1,15 @@
+/**
+ * Main entry point for the focus module.
+ *
+ * Contains:
+ * - FocusTimer — the primary component rendered at /focus and embedded on the dashboard (compact mode)
+ * - PixelPlant — animated pixel-art plant that grows as the timer progresses
+ * - GardenPlant — static mini version of a plant used inside the draggable garden
+ * - PLANTS — pixel-art definitions for all 9 plant types
+ *
+ * All garden and decoration state (positions, z-indexes, deleted items) is persisted
+ * to localStorage so the user's layout is preserved across sessions.
+ */
 import React, { useState, useEffect, useRef } from 'react';
 import { useFocusTimer } from '../../hooks/useFocusTimer';
 import { focusPlantService, type IFocusPlant } from '../../services/focusPlantService';
@@ -7,48 +19,92 @@ import {
 } from './GardenDecorations';
 import './styles/FocusTimer.css';
 
-const DECO_POS_KEY     = 'mobius.gardenDecorations.v1';
-const DECO_DELETED_KEY = 'mobius.gardenDecorationsDeleted.v1';
-const DECO_ZINDEX_KEY  = 'mobius.gardenDecorationsZ.v1';
+// ─── localStorage keys ────────────────────────────────────────────────────────
 
+/** Stores the pixel positions of draggable decorations as Record<DecorationId, {x,y}>. */
+const DECO_POS_KEY     = 'mobius.gardenDecorations.v1';
+/** Stores the set of decoration IDs the user has removed as DecorationId[]. */
+const DECO_DELETED_KEY = 'mobius.gardenDecorationsDeleted.v1';
+/** Stores the z-index of each decoration as Record<DecorationId, number>. */
+const DECO_ZINDEX_KEY  = 'mobius.gardenDecorationsZ.v1';
+/** Stores the pixel positions of garden plants as Record<plantId, {x,y}>. */
+const GARDEN_POS_KEY = 'mobius.gardenPositions.v1';
+
+// ─── decoration defaults ──────────────────────────────────────────────────────
+
+/**
+ * Default z-index for each decoration.
+ * Fence sections are set high (15) so they render in front of plants by default,
+ * giving the appearance that plants grow inside the fenced area.
+ */
 const DECO_DEFAULT_Z: Record<DecorationId, number> = {
   house: 2, bed1: 1, bed2: 1, bed3: 1, bed4: 1, bed5: 1,
   fence1: 15, fence2: 15, fence3: 15, fence4: 15, fence5: 15,
 };
 
+// ─── localStorage loaders ─────────────────────────────────────────────────────
+
+/**
+ * Loads saved decoration positions from localStorage.
+ * Falls back to DECO_DEFAULT for any decoration not yet moved by the user.
+ */
 const loadDecoPositions = (): DecoPositions => {
   try { return { ...DECO_DEFAULT, ...JSON.parse(localStorage.getItem(DECO_POS_KEY) || '{}') }; }
   catch { return { ...DECO_DEFAULT }; }
 };
+
+/** Loads the set of decoration IDs the user has deleted. Returns an empty Set if nothing was deleted. */
 const loadDeletedDecos = (): Set<DecorationId> => {
   try { return new Set(JSON.parse(localStorage.getItem(DECO_DELETED_KEY) || '[]')); }
   catch { return new Set(); }
 };
+
+/**
+ * Loads saved z-indexes for decorations.
+ * Falls back to DECO_DEFAULT_Z for any decoration whose z-index hasn't been adjusted.
+ */
 const loadDecoZIndexes = (): Record<DecorationId, number> => {
   try { return { ...DECO_DEFAULT_Z, ...JSON.parse(localStorage.getItem(DECO_ZINDEX_KEY) || '{}') }; }
   catch { return { ...DECO_DEFAULT_Z }; }
 };
 
-const GARDEN_POS_KEY = 'mobius.gardenPositions.v1';
-
+/** Loads saved pixel positions for grown plants. Returns an empty object if no plants have been moved. */
 const loadGardenPositions = (): Record<number, { x: number; y: number }> => {
   try { return JSON.parse(localStorage.getItem(GARDEN_POS_KEY) || '{}'); } catch { return {}; }
 };
 
+/**
+ * Returns the default grid position for a plant at the given index.
+ * Plants are laid out in a 4-column grid with 120px horizontal and 130px vertical spacing.
+ */
 const defaultPos = (index: number) => ({
   x: (index % 4) * 120,
   y: Math.floor(index / 4) * 130,
 });
 
+// ─── DraggableGardenPlant ─────────────────────────────────────────────────────
+
+/** Props for the draggable plant wrapper in the garden canvas. */
 interface DraggableGardenPlantProps {
+  /** The plant data from the database. */
   plant: IFocusPlant;
+  /** Index in the garden array — used to calculate the default position if no saved position exists. */
   index: number;
+  /** Initial pixel position on the garden canvas. */
   initialPos: { x: number; y: number };
+  /** Called when the user finishes dragging. Receives the plant's DB id and new position. */
   onDragEnd: (id: number, x: number, y: number) => void;
+  /** Called on mousedown so the parent can bring this plant to the front (highest z-index). */
   onPickUp: () => void;
+  /** Called on right-click to open the plant info popup. */
   onRightClick: (e: React.MouseEvent) => void;
 }
 
+/**
+ * Renders a draggable plant sprite in the garden canvas.
+ * Uses the same global mousemove/mouseup pattern as DraggableDecoration so
+ * the drag continues even if the pointer leaves the element.
+ */
 const DraggableGardenPlant: React.FC<DraggableGardenPlantProps> = ({
   plant, initialPos, onDragEnd, onPickUp, onRightClick,
 }) => {
@@ -56,6 +112,7 @@ const DraggableGardenPlant: React.FC<DraggableGardenPlantProps> = ({
   const startMouse = useRef({ x: 0, y: 0 });
   const startPos = useRef({ x: 0, y: 0 });
 
+  /** Initiates a drag and notifies the parent to bring this plant to the front. */
   const onMouseDown = (e: React.MouseEvent) => {
     if (e.button !== 0) return;
     onPickUp();
@@ -102,15 +159,29 @@ const DraggableGardenPlant: React.FC<DraggableGardenPlantProps> = ({
 
 // ─── plant data ───────────────────────────────────────────────────────────────
 
+/** All available plant types the user can grow during a focus session. */
 export type PlantType = 'flower' | 'cactus' | 'mushroom' | 'krzak' | 'lotos' | 'bonsai' | 'rumianek' | 'sakura' | 'sunflower';
 
+/** Definition of a single plant's pixel-art sprite. */
 interface PlantDef {
+  /** Display name shown in the plant picker and info popup. */
   label: string;
+  /** Number of columns in the pixel grid. */
   cols: number;
+  /** Number of rows in the pixel grid. */
   rows: number;
+  /**
+   * Sparse pixel list as [col, row, cssColor] tuples.
+   * The order matters for PixelPlant: pixels earlier in the array appear first as the plant grows.
+   */
   pixels: [number, number, string][];
 }
 
+/**
+ * Pixel-art definitions for all 9 plant types.
+ * Each entry describes the full grown appearance; PixelPlant reveals pixels
+ * one-by-one as the timer progresses, creating a growth animation.
+ */
 const PLANTS: Record<PlantType, PlantDef> = {
   flower: {
     label: 'Tulip', cols: 11, rows: 13,
@@ -321,18 +392,39 @@ const PLANTS: Record<PlantType, PlantDef> = {
   },
 };
 
+/** Quick-select duration buttons shown in the idle state. */
 const PRESETS = [25, 40, 60];
 
 // ─── PixelPlant ───────────────────────────────────────────────────────────────
 
+/** Props for the animated pixel-art plant component. */
 interface PixelPlantProps {
+  /** Which plant to render. */
   type: PlantType;
+  /**
+   * How much of the plant to reveal, from 0 (nothing visible) to 1 (fully grown).
+   * Pixels are revealed in the order they appear in the PLANTS pixel array.
+   */
   progress: number;
+  /** Size of each pixel in CSS px. Ignored when maxWidth is set. Defaults to 14. */
   pixelSize?: number;
+  /** Gap between pixels in CSS px. Defaults to 2. */
   gap?: number;
-  maxWidth?: number; // normalizes pixelSize so all plants fit the same width
+  /**
+   * If provided, pixelSize is calculated automatically so the plant fits within
+   * this width in CSS px. Useful for making plants with different grid sizes appear
+   * at the same visual width (e.g. in the compact gallery).
+   */
+  maxWidth?: number;
 }
 
+/**
+ * Renders a pixel-art plant that grows pixel-by-pixel as `progress` increases from 0 to 1.
+ * Pixels not yet revealed are shown in a dark placeholder colour (#3a3a4a) rather than
+ * hidden, so the full plant silhouette is always visible — it just gradually brightens.
+ *
+ * @param props - See PixelPlantProps.
+ */
 export const PixelPlant: React.FC<PixelPlantProps> = ({
   type, progress, pixelSize = 14, gap = 2, maxWidth,
 }) => {
@@ -379,30 +471,18 @@ export const PixelPlant: React.FC<PixelPlantProps> = ({
   );
 };
 
-// ─── GardenPlant — mini version for the garden ───────────────────────────────
+// ─── GardenPlant ─────────────────────────────────────────────────────────────
 
+/**
+ * Static mini version of a plant used in the draggable garden canvas.
+ * Unlike PixelPlant it always renders the fully grown plant (progress = 1)
+ * and uses a fixed target width of 80px for consistent sizing in the garden.
+ */
 const GardenPlant: React.FC<{ type: PlantType; plantedAt: string }> = ({ type }) => {
   const plant = PLANTS[type];
 
   const grid: Record<string, string> = {};
   plant.pixels.forEach(([c, r, color]) => { grid[`${r},${c}`] = color; });
-
-  const cells: React.ReactNode[] = [];
-  for (let r = 0; r < plant.rows; r++) {
-    for (let c = 0; c < plant.cols; c++) {
-      const key = `${r},${c}`;
-      cells.push(
-        <div
-          key={key}
-          style={{
-            width: 5, height: 5,
-            background: grid[key] || 'transparent',
-            borderRadius: 1,
-          }}
-        />
-      );
-    }
-  }
 
   const GARDEN_W = 80;
   const gardenPx = Math.max(3, Math.floor((GARDEN_W - 1 * (plant.cols - 1)) / plant.cols));
@@ -432,14 +512,32 @@ const GardenPlant: React.FC<{ type: PlantType; plantedAt: string }> = ({ type })
   );
 };
 
-
 // ─── main component ───────────────────────────────────────────────────────────
 
+/** Props for the FocusTimer component. */
 interface FocusTimerProps {
+  /**
+   * When true, renders the compact layout for embedding on the dashboard.
+   * The timer state is shared with the full /focus page via localStorage —
+   * starting a session on the dashboard will show it as running when the user navigates to /focus.
+   */
   compact?: boolean;
 }
 
+/**
+ * Full focus module: plant picker, countdown timer, progress bar, controls, and draggable garden.
+ *
+ * In normal mode it shows a two-column layout (plant picker on the left, timer on the right)
+ * with the full draggable garden below. In compact mode it collapses to a single-column
+ * layout suitable for the dashboard card, with a horizontal plant gallery at the bottom.
+ *
+ * A plant is saved to the database when the timer finishes. The `plantSavedRef` guard
+ * prevents a double-save in the rare case onFinish is called while the component is
+ * in the middle of re-rendering.
+ */
 const FocusTimer: React.FC<FocusTimerProps> = ({ compact = false }) => {
+  // Initialise from localStorage so the selected plant is remembered across sessions
+  // and kept in sync between the dashboard and the full focus page.
   const [selectedPlant, setSelectedPlant] = useState<PlantType>(() => {
     const saved = localStorage.getItem('mobius.focusPlantType.v1') as PlantType | null;
     return saved && PLANTS[saved] ? saved : 'flower';
@@ -452,6 +550,7 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ compact = false }) => {
   const [deletedDecos,  setDeletedDecos]    = useState<Set<DecorationId>>(loadDeletedDecos);
   const [decoZIndexes,  setDecoZIndexes]    = useState<Record<DecorationId, number>>(loadDecoZIndexes);
 
+  /** Persists the new position of a moved decoration to localStorage. */
   const onDecoMove = (id: DecorationId, x: number, y: number) => {
     setDecoPositions(prev => {
       const updated = { ...prev, [id]: { x, y } };
@@ -460,6 +559,7 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ compact = false }) => {
     });
   };
 
+  /** Adjusts the z-index of a decoration by delta (+1 forward, -1 backward) and persists it. */
   const onDecoZ = (id: DecorationId, delta: number) => {
     setDecoZIndexes(prev => {
       const next = { ...prev, [id]: prev[id] + delta };
@@ -468,6 +568,7 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ compact = false }) => {
     });
   };
 
+  /** Marks a decoration as deleted and persists the updated set to localStorage. */
   const onDecoDelete = (id: DecorationId) => {
     setDeletedDecos(prev => {
       const next = new Set(prev);
@@ -476,15 +577,20 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ compact = false }) => {
       return next;
     });
   };
+
+  /** ID of the plant currently being dragged, used to temporarily raise its z-index above all others. */
   const [topPlantId, setTopPlantId] = useState<number | null>(null);
+  /** The plant whose info popup is currently open (right-click to open, click canvas to close). */
   const [focusedGardenPlant, setFocusedGardenPlant] = useState<IFocusPlant | null>(null);
+  // false on init so the "planted" badge doesn't show when restoring an already-finished session from a previous run.
   const [justFinished, setJustFinished] = useState(false);
+  /** Guards against saving the same plant twice if onFinish fires unexpectedly more than once. */
   const plantSavedRef = useRef(false);
 
   const { state, remainingSeconds, totalSeconds, progress, sessionId, start, pause, resume, reset } =
     useFocusTimer(selectedMinutes, {
       onFinish: () => {
-        // onFinish fires exactly once per session (deduped in useFocusTimer)
+        // onFinish fires exactly once per session (deduped in useFocusTimer).
         if (!plantSavedRef.current) {
           plantSavedRef.current = true;
           focusPlantService
@@ -496,11 +602,12 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ compact = false }) => {
       },
     });
 
-  // persist plant type for dashboard
+  // Persist the selected plant type so the dashboard compact view reads the same value.
   useEffect(() => {
     localStorage.setItem('mobius.focusPlantType.v1', selectedPlant);
   }, [selectedPlant]);
 
+  // Reset per-session flags when the timer returns to idle (after reset or a new session starts).
   useEffect(() => {
     if (state === 'idle') {
       plantSavedRef.current = false;
@@ -508,15 +615,20 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ compact = false }) => {
     }
   }, [state]);
 
+  /** Starts the timer with the currently selected duration. */
   const handleStart = (minutes: number) => {
     start(minutes);
   };
 
-  // load garden on mount
+  // Load the full plant garden from the database on mount.
   useEffect(() => {
     focusPlantService.getPlants().then(setGarden).catch(console.error);
   }, []);
 
+  /**
+   * Updates the custom duration input and reflects valid values (1–999 min) in selectedMinutes.
+   * Invalid input is stored in customInput but does not change the active duration.
+   */
   const handleCustomMinutes = (val: string) => {
     setCustomInput(val);
     const n = parseInt(val);
@@ -525,12 +637,17 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ compact = false }) => {
     }
   };
 
+  /** Formats a duration in seconds to MM:SS display format. */
   const formatTime = (s: number) => {
     const m = Math.floor(s / 60);
     const sec = s % 60;
     return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
   };
 
+  /**
+   * Returns a growth-themed status message based on how far through the session the user is.
+   * @param p - Progress fraction from 0 to 1.
+   */
   const getGrowthMessage = (p: number): string => {
     if (p < 0.15) return '🌱 Planting a seed...';
     if (p < 0.35) return '💧 Watering the plant...';
@@ -747,6 +864,7 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ compact = false }) => {
               </div>
             ))}
 
+            {/* Plant info popup — shown on right-click, closed by clicking the canvas background. */}
             {focusedGardenPlant && (() => {
               const pos = gardenPositions[focusedGardenPlant.id] ?? defaultPos(garden.findIndex(p => p.id === focusedGardenPlant.id));
               const mins = Math.round(focusedGardenPlant.session_duration / 60);

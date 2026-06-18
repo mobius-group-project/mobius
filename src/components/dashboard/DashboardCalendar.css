@@ -1,3 +1,13 @@
+/**
+ * Styles for the legacy DashboardCalendar component.
+ * This component is not currently rendered in the dashboard — the active calendar
+ * widget uses CalendarGrid instead. These styles are kept alongside the component.
+ *
+ * Grid layout: a 50px fixed time-label column followed by 7 equal day columns.
+ * Event text colour is determined by attribute selectors on the inline background-color
+ * style (e.g. [style*="#51cf66"]) to ensure readable contrast on coloured pills.
+ */
+
 /* Dashboard Calendar */
 .dashboard-calendar {
   display: flex;
@@ -80,6 +90,7 @@
 }
 
 /* Time Grid */
+/* overflow: hidden clips child cell borders to the rounded corners of the container. */
 .calendar-time-grid {
   display: flex;
   flex-direction: column;
@@ -163,7 +174,11 @@
   text-overflow: ellipsis;
 }
 
-/* Event Color Variations */
+/*
+ * Event Color Variations.
+ * These attribute selectors match the inline background-color set by JS and override the
+ * default dark text colour with white (or dark) to maintain contrast on coloured pill backgrounds.
+ */
 .calendar-event[style*="#51cf66"] {
   color: white;
 }

@@ -1,21 +1,44 @@
+/**
+ * Focused activity widget — legacy component, not currently rendered in the dashboard.
+ * The dashboard's focus card uses `<FocusTimer compact />` instead.
+ * This component shows a circular progress ring based on combined activity time,
+ * and provides a simple in-memory quick-note list.
+ */
 import React, { useState } from 'react';
 import './FocusedWidget.css';
 
+/** Props for the FocusedWidget component. */
 interface FocusedWidgetProps {
+  /** Activity tracker hook return value — typed as `any` because the shape is consumed loosely via optional chaining. */
   activityTracker: any;
 }
 
+/**
+ * Activity summary card with a circular progress ring and quick-note form.
+ * The ring represents total active time (focus sessions + activity) relative to a 24-hour goal.
+ * Quick notes are kept in local React state and are not persisted between sessions.
+ */
 const FocusedWidget: React.FC<FocusedWidgetProps> = ({ activityTracker }) => {
+  /** Current value of the note title input field. */
   const [note, setNote] = useState('');
+  /** In-memory list of saved quick notes — not persisted to storage. */
   const [notes, setNotes] = useState<string[]>([]);
+  /** Controls whether the note creation form is visible. */
   const [showNoteForm, setShowNoteForm] = useState(false);
 
+  /**
+   * Formats a duration in seconds to a human-readable "Xh Ym" string.
+   *
+   * @param seconds - Total elapsed seconds.
+   * @returns String such as "1h 30m".
+   */
   const formatTime = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     return `${hours}h ${minutes}m`;
   };
 
+  /** Appends the current note to the list if non-empty, then resets the form. */
   const handleAddNote = () => {
     if (note.trim()) {
       setNotes([...notes, note]);
@@ -24,11 +47,19 @@ const FocusedWidget: React.FC<FocusedWidgetProps> = ({ activityTracker }) => {
     }
   };
 
-  // Вычисляем процент заполнения окружности (23h 25m из 24h)
+  /** Combined focus + general activity time in seconds from the activity tracker. */
   const totalSeconds = (activityTracker?.focusSessionTime || 0) + (activityTracker?.totalActivityTime || 0);
-  const dailyGoal = 24 * 3600; // 24 часа как целевое значение
+  /** Daily goal is fixed at 24 hours so the ring represents a fraction of the full day. */
+  const dailyGoal = 24 * 3600;
   const percentage = Math.min((totalSeconds / dailyGoal) * 100, 100);
 
+  /**
+   * Computes SVG stroke-dasharray / stroke-dashoffset values for a circular progress ring.
+   * strokeDashoffset shrinks from the full circumference (0%) down to 0 (100%).
+   * The SVG circle is rotated -90° so the arc starts at the top (12 o'clock) instead of the right.
+   *
+   * @param percentage - Progress value from 0 to 100.
+   */
   const drawCircle = (percentage: number) => {
     const radius = 45;
     const circumference = 2 * Math.PI * radius;

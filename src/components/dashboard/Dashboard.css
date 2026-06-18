@@ -1,3 +1,18 @@
+/**
+ * Styles for the Dashboard component and its card grid.
+ *
+ * Layout: a 3-column, 3-row CSS grid.
+ *   Column 1 (task list) — spans all 3 rows.
+ *   Column 2 (calendar)  — spans all 3 rows.
+ *   Column 3 (focus + notes) — focus timer in row 1, notes in rows 2–3.
+ *
+ * Columns use fractional widths: 0.9fr / 1.4fr / 0.9fr so the calendar card
+ * is noticeably wider than the side columns.
+ *
+ * Also contains custom checkbox styles for the notes editor, overriding the
+ * browser default `-webkit-appearance` with a hand-drawn SVG-style checkmark.
+ */
+
 /* Main Dashboard Container */
 .dashboard {
   padding: 0;
@@ -20,6 +35,12 @@
 }
 
 /* Dashboard Grid Layout */
+/*
+ * 3×3 grid: column 3 is split vertically so the focus timer (tall) takes 1.6fr
+ * and the two notes rows share the remaining 0.8fr.
+ * overflow: hidden is required — without it, the CalendarGrid inside column 2
+ * would overflow the viewport and create a scrollbar on the body.
+ */
 .dashboard-grid {
   display: grid;
   grid-template-columns: 0.9fr 1.4fr 0.9fr;
@@ -32,6 +53,11 @@
 }
 
 /* Dashboard Cards */
+/*
+ * min-height: 0 is the standard fix for flex children that need to scroll:
+ * without it a flex child cannot shrink below its content height, so overflow-y: auto
+ * has no room to activate and the child overflows instead of scrolling.
+ */
 .dashboard-card {
   background: transparent;
   border: none;
@@ -74,6 +100,11 @@
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
+/*
+ * These overrides force the CalendarGrid's internal sub-grid to use a 44px fixed time-label
+ * column followed by 7 equal day columns, matching the column layout used by CalendarCard.
+ * The !important is necessary because CalendarGrid sets these via inline styles.
+ */
 .calendar-card .calendar-header {
   padding-top: 6px;
   grid-template-columns: 44px repeat(7, 1fr) !important;
@@ -136,6 +167,10 @@
 }
 
 /* Custom note checkboxes */
+/*
+ * -webkit-appearance: none removes the browser-native checkbox so we can style it
+ * from scratch. The checkmark is drawn with a rotated L-shaped border in ::after.
+ */
 .note-editor input[type="checkbox"],
 .note-content input[type="checkbox"] {
   -webkit-appearance: none;

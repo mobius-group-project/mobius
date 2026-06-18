@@ -1,3 +1,15 @@
+/**
+ * Styles for the Sidebar layout component.
+ *
+ * The sidebar is always in the DOM at position: fixed, left: 0.
+ * It starts off-screen via `transform: translateX(-100%)` and slides in
+ * when `.sidebar--open` is added — no display toggling, so the transition always runs.
+ * `.sidebar__backdrop` sits at z-index 199 and the sidebar itself at 200,
+ * keeping both above all page content but below modals (ConfirmDialog at z-index 99999).
+ * The active nav link uses `rgba(246, 254, 154, 0.12)` — a translucent tint of the
+ * primary yellow (#F6FE9A) so the highlight is visible without flooding the dark panel.
+ */
+
 .sidebar {
   width: 220px;
   padding: 24px 20px;

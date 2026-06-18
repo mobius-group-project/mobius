@@ -1,3 +1,14 @@
+/**
+ * Activity tracker UI — full-page view rendered at /tracker.
+ *
+ * Displays a stopwatch timer, a text input for naming the current activity,
+ * and a list of completed sessions for today. Session state and persistence
+ * are managed entirely by useActivityTracker, which is instantiated in App
+ * and passed in as a prop so the timer survives route changes.
+ *
+ * Inline rename: double-clicking a session name switches it to a text input.
+ * Delete: clicking the ✕ button opens a ConfirmDialog before the session is removed.
+ */
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BarChart2 } from 'lucide-react';
@@ -6,21 +17,37 @@ import { formatDurationCompact, formatDurationDetailed } from '../../components/
 import ConfirmDialog from '../../components/ConfirmDialog';
 import './styles/ActivityTracker.css';
 
+/** Props for the ActivityTracker component. */
 interface ActivityTrackerProps {
+  /** Shared tracker instance from App — contains all session state and control functions. */
   activityTracker: ReturnType<typeof useActivityTracker>;
+  /**
+   * When set, the tracker starts in task-linked mode: the text input is replaced by
+   * a task badge and the session is linked to the task ID in the database.
+   */
   preselectedTask?: { id: string; title: string } | null;
+  /** Optional callback fired when a running session is stopped. Receives the session with final duration. */
   onSessionComplete?: (session: any) => void;
 }
 
-const ActivityTracker: React.FC<ActivityTrackerProps> = ({ 
+/**
+ * Renders the activity tracker interface.
+ * All timer logic is delegated to the `activityTracker` prop — this component
+ * only manages local UI state for the text input and inline rename flow.
+ */
+const ActivityTracker: React.FC<ActivityTrackerProps> = ({
   activityTracker,
-  preselectedTask = null, 
-  onSessionComplete 
+  preselectedTask = null,
+  onSessionComplete
 }) => {
   const navigate = useNavigate();
+  /** Current value of the free-text activity name input. Cleared after start. */
   const [activityInput, setActivityInput] = useState('');
+  /** ID of the session currently being renamed inline, or null when not renaming. */
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
+  /** Draft name value while inline rename is active. */
   const [editingName, setEditingName] = useState('');
+  /** ID of the session pending deletion (shows the ConfirmDialog), or null. */
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   
   const {
@@ -43,6 +70,11 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({
     deleteSession,
   } = activityTracker;
 
+  /**
+   * Starts a session using either the preselected task or the free-text input.
+   * Passes `is_task=true` and the task ID when a task is preselected so the tracker
+   * links elapsed time back to tasks.time_spent on stop.
+   */
   const handleStart = () => {
     if (preselectedTask) {
       startTracking(preselectedTask.title, true, preselectedTask.id);
@@ -55,6 +87,7 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({
     }
   };
 
+  /** Stops the running session and notifies the parent via onSessionComplete if provided. */
   const handleStop = () => {
     stopTracking();
     if (currentSession && onSessionComplete) {
@@ -65,11 +98,13 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({
     }
   };
 
+  /** Enters inline rename mode for a session on double-click. */
   const handleDoubleClick = (session: ActivitySession) => {
     setEditingSessionId(session.id);
     setEditingName(session.activityName);
   };
 
+  /** Submits the rename if the new name is non-empty, then exits rename mode. */
   const handleRenameSubmit = (sessionId: string) => {
     if (editingName.trim()) {
       renameSession(sessionId, editingName.trim());
@@ -78,6 +113,7 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({
     setEditingName('');
   };
 
+  /** Submits on Enter, cancels on Escape. */
   const handleRenameKeyDown = (e: React.KeyboardEvent, sessionId: string) => {
     if (e.key === 'Enter') {
       handleRenameSubmit(sessionId);
@@ -87,6 +123,7 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({
     }
   };
 
+  /** Confirmed deletion handler — called when the user clicks "Delete" in the ConfirmDialog. */
   const handleDeleteConfirm = () => {
     if (deleteConfirmId) {
       deleteSession(deleteConfirmId);

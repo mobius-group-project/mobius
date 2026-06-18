@@ -1,7 +1,16 @@
+/**
+ * SQLite database singleton for the Tauri desktop app.
+ * All data access goes through `getDb()` — the `server/` folder is a legacy browser build and is not used here.
+ * Schema is created and migrated automatically on first open; migrations are additive (ALTER TABLE only).
+ */
 import Database from '@tauri-apps/plugin-sql';
 
 let db: Database | null = null;
 
+/**
+ * Returns the shared SQLite database instance, initialising it on the first call.
+ * Uses Tauri's SQL plugin to open `mobius.db` in the app data directory.
+ */
 export async function getDb(): Promise<Database> {
   if (db) return db;
   db = await Database.load('sqlite:mobius.db');
@@ -9,12 +18,15 @@ export async function getDb(): Promise<Database> {
   return db;
 }
 
+/** Creates all tables and runs additive column migrations on an existing DB file. */
 async function initSchema(db: Database): Promise<void> {
+  // Project grouping for tasks.
   await db.execute(`CREATE TABLE IF NOT EXISTS projects (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL
   )`);
 
+  // Individual to-do items with priority, deadline, time tracking, and drag order.
   await db.execute(`CREATE TABLE IF NOT EXISTS tasks (
     id TEXT PRIMARY KEY,
     title TEXT NOT NULL,
@@ -30,6 +42,7 @@ async function initSchema(db: Database): Promise<void> {
     FOREIGN KEY (project_id) REFERENCES projects(id)
   )`);
 
+  // Text comments attached to a task.
   await db.execute(`CREATE TABLE IF NOT EXISTS comments (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     task_id TEXT NOT NULL,
@@ -38,6 +51,7 @@ async function initSchema(db: Database): Promise<void> {
     FOREIGN KEY (task_id) REFERENCES tasks(id)
   )`);
 
+  // Focus timer sessions. remaining_seconds + updated_at let the timer survive a page reload (see useFocusTimer restore logic).
   await db.execute(`CREATE TABLE IF NOT EXISTS focus_sessions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     task_id TEXT,
@@ -52,6 +66,7 @@ async function initSchema(db: Database): Promise<void> {
     FOREIGN KEY (task_id) REFERENCES tasks(id)
   )`);
 
+  // Plants grown by completing focus sessions — the garden.
   await db.execute(`CREATE TABLE IF NOT EXISTS focus_plants (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     plant_type TEXT NOT NULL,
@@ -59,6 +74,7 @@ async function initSchema(db: Database): Promise<void> {
     planted_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`);
 
+  // Free-form text notes.
   await db.execute(`CREATE TABLE IF NOT EXISTS notes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     title TEXT NOT NULL DEFAULT '',
@@ -67,6 +83,7 @@ async function initSchema(db: Database): Promise<void> {
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`);
 
+  // Activity tracker sessions (named activities or linked tasks with start/end times).
   await db.execute(`CREATE TABLE IF NOT EXISTS activity_sessions (
     id TEXT PRIMARY KEY,
     activity_name TEXT NOT NULL,
@@ -80,6 +97,7 @@ async function initSchema(db: Database): Promise<void> {
     FOREIGN KEY (task_id) REFERENCES tasks(id)
   )`);
 
+  // Calendar events with optional recurrence, reminders, and task linkage.
   await db.execute(`CREATE TABLE IF NOT EXISTS calendar_events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     title TEXT NOT NULL,
@@ -99,6 +117,8 @@ async function initSchema(db: Database): Promise<void> {
     FOREIGN KEY (task_id) REFERENCES tasks(id)
   )`);
 
+  // Columns added after the initial release. Each statement is run on every launch;
+  // the try/catch silently skips it if the column already exists in an older DB file.
   const migrations = [
     `ALTER TABLE tasks ADD COLUMN time_spent INTEGER DEFAULT 0`,
     `ALTER TABLE tasks ADD COLUMN order_index INTEGER DEFAULT 0`,

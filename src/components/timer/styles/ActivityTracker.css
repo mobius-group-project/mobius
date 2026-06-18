@@ -1,3 +1,18 @@
+/**
+ * Styles for the ActivityTracker component (/tracker route).
+ *
+ * Notable patterns:
+ *   - `.timer-time` uses -webkit-background-clip: text + -webkit-text-fill-color: transparent
+ *     to render the clock digits with a gradient fill instead of a flat colour.
+ *   - `font-size: clamp(40px, 11vw, 72px)` makes the timer font fluid between viewport widths.
+ *   - `.continue-session-btn` and `.delete-session-btn` start at opacity: 0 and are revealed
+ *     only when their parent `.session-item` is hovered, keeping the list visually clean.
+ *   - `.toast-notification` uses `pointer-events: none` so it never blocks clicks on the page.
+ *   - The toast animation chains two keyframes: slideUp (0–0.3s) then fadeOut (2.7–3s),
+ *     leaving the element visible for ~2.4 seconds in between.
+ *   - `.sessions-list` needs `min-height: 0` to scroll inside a flex container.
+ */
+
 .activity-tracker {
   max-width: 700px;
   margin: 0 auto;

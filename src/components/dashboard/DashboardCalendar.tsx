@@ -1,16 +1,32 @@
+/**
+ * Standalone weekly calendar widget — legacy component, not currently rendered in the dashboard.
+ * The dashboard embeds CalendarGrid directly instead of this component.
+ *
+ * Events are fetched from a REST endpoint (/api/events), which predates the app's
+ * migration to SQLite via Tauri. This component is kept for reference.
+ */
 import React, { useEffect, useState } from 'react';
 import './DashboardCalendar.css';
 
+/** Shape of a calendar event as returned by the /api/events endpoint. */
 interface CalendarEvent {
   id: number;
   title: string;
+  /** ISO date string (YYYY-MM-DD). */
   date: string;
+  /** 24-hour time string (HH:MM). */
   start_time: string;
+  /** 24-hour time string (HH:MM). */
   end_time: string;
+  /** CSS colour string for the event pill. */
   color: string;
   is_all_day: boolean;
 }
 
+/**
+ * Weekly calendar showing time slots from 08:00 to 16:00 with event pills.
+ * All-day events are excluded from the time-grid view.
+ */
 const DashboardCalendar: React.FC = () => {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,6 +47,10 @@ const DashboardCalendar: React.FC = () => {
     fetchEvents();
   }, []);
 
+  /**
+   * Returns an array of 7 day descriptors for the current week starting on Monday.
+   * `today.getDay() - 1` gives the offset from Monday (Sunday wraps to 6 via `+ 1` correction).
+   */
   const getWeekDays = () => {
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const today = new Date();
@@ -48,10 +68,21 @@ const DashboardCalendar: React.FC = () => {
     });
   };
 
+  /**
+   * Returns 9 hourly time slot labels starting at 08:00 (08:00–16:00).
+   * The range is hardcoded to cover a typical working day.
+   */
   const getTimeSlots = () => {
     return Array.from({ length: 9 }, (_, i) => `${String(i + 8).padStart(2, '0')}:00`);
   };
 
+  /**
+   * Returns events that fall in the given date and hour slot.
+   * Matches by exact start hour; all-day events are excluded since they have no specific hour.
+   *
+   * @param date - ISO date string (YYYY-MM-DD).
+   * @param hour - Integer hour (0–23).
+   */
   const getEventsForTime = (date: string, hour: number) => {
     return events.filter((event) => {
       if (event.date !== date) return false;
