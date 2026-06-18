@@ -1,3 +1,6 @@
+> **Legacy** — this file describes the old Express.js + SQLite browser build (`server/` folder).
+> The Tauri desktop app does not use this server. All data access goes through `src/services/` via `@tauri-apps/plugin-sql` (see `src/services/db.ts`).
+
 ### 1. Backend (Express.js + SQLite)
 
 - Port: 3001
