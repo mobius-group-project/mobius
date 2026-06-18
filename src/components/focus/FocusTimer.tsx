@@ -9,6 +9,12 @@ import './styles/FocusTimer.css';
 
 const DECO_POS_KEY     = 'mobius.gardenDecorations.v1';
 const DECO_DELETED_KEY = 'mobius.gardenDecorationsDeleted.v1';
+const DECO_ZINDEX_KEY  = 'mobius.gardenDecorationsZ.v1';
+
+const DECO_DEFAULT_Z: Record<DecorationId, number> = {
+  house: 2, bed1: 1, bed2: 1, bed3: 1, bed4: 1, bed5: 1,
+  fence1: 15, fence2: 15, fence3: 15, fence4: 15, fence5: 15,
+};
 
 const loadDecoPositions = (): DecoPositions => {
   try { return { ...DECO_DEFAULT, ...JSON.parse(localStorage.getItem(DECO_POS_KEY) || '{}') }; }
@@ -17,6 +23,10 @@ const loadDecoPositions = (): DecoPositions => {
 const loadDeletedDecos = (): Set<DecorationId> => {
   try { return new Set(JSON.parse(localStorage.getItem(DECO_DELETED_KEY) || '[]')); }
   catch { return new Set(); }
+};
+const loadDecoZIndexes = (): Record<DecorationId, number> => {
+  try { return { ...DECO_DEFAULT_Z, ...JSON.parse(localStorage.getItem(DECO_ZINDEX_KEY) || '{}') }; }
+  catch { return { ...DECO_DEFAULT_Z }; }
 };
 
 const GARDEN_POS_KEY = 'mobius.gardenPositions.v1';
@@ -438,14 +448,23 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ compact = false }) => {
   const [customInput, setCustomInput] = useState('');
   const [garden, setGarden] = useState<IFocusPlant[]>([]);
   const [gardenPositions, setGardenPositions] = useState<Record<number, { x: number; y: number }>>(loadGardenPositions);
-  const [decoPositions, setDecoPositions] = useState<DecoPositions>(loadDecoPositions);
-  const [deletedDecos, setDeletedDecos]   = useState<Set<DecorationId>>(loadDeletedDecos);
+  const [decoPositions, setDecoPositions]   = useState<DecoPositions>(loadDecoPositions);
+  const [deletedDecos,  setDeletedDecos]    = useState<Set<DecorationId>>(loadDeletedDecos);
+  const [decoZIndexes,  setDecoZIndexes]    = useState<Record<DecorationId, number>>(loadDecoZIndexes);
 
   const onDecoMove = (id: DecorationId, x: number, y: number) => {
     setDecoPositions(prev => {
       const updated = { ...prev, [id]: { x, y } };
       localStorage.setItem(DECO_POS_KEY, JSON.stringify(updated));
       return updated;
+    });
+  };
+
+  const onDecoZ = (id: DecorationId, delta: number) => {
+    setDecoZIndexes(prev => {
+      const next = { ...prev, [id]: prev[id] + delta };
+      localStorage.setItem(DECO_ZINDEX_KEY, JSON.stringify(next));
+      return next;
     });
   };
 
@@ -692,22 +711,16 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ compact = false }) => {
           <h3 className="ft-garden__title">Garden ({garden.length})</h3>
           <div className="ft-garden__grid" onClick={() => setFocusedGardenPlant(null)}>
             {/* decorations — beds + house behind plants */}
-            {(['house', 'bed1', 'bed2', 'bed3', 'bed4', 'bed5'] as DecorationId[])
+            {(['house', 'bed1', 'bed2', 'bed3', 'bed4', 'bed5',
+               'fence1', 'fence2', 'fence3', 'fence4', 'fence5'] as DecorationId[])
               .filter(id => !deletedDecos.has(id))
               .map(id => (
                 <DraggableDecoration key={id} id={id} initialPos={decoPositions[id]}
-                  zIndex={0} onDragEnd={onDecoMove} onDelete={onDecoDelete}>
-                  {id === 'house' ? <HouseSprite /> : <BedSprite />}
-                </DraggableDecoration>
-              ))}
-
-            {/* fence sections — in front of plants */}
-            {(['fence1', 'fence2', 'fence3', 'fence4', 'fence5'] as DecorationId[])
-              .filter(id => !deletedDecos.has(id))
-              .map(id => (
-                <DraggableDecoration key={id} id={id} initialPos={decoPositions[id]}
-                  zIndex={15} onDragEnd={onDecoMove} onDelete={onDecoDelete}>
-                  <FenceSectionSprite />
+                  zIndex={decoZIndexes[id]} onDragEnd={onDecoMove}
+                  onDelete={onDecoDelete} onZChange={onDecoZ}>
+                  {id === 'house' ? <HouseSprite />
+                    : id.startsWith('fence') ? <FenceSectionSprite />
+                    : <BedSprite />}
                 </DraggableDecoration>
               ))}
 
@@ -755,7 +768,7 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ compact = false }) => {
                       setFocusedGardenPlant(null);
                     }}
                   >
-                    Remove from garden
+                    Uproot
                   </button>
                 </div>
               );

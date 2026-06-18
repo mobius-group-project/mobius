@@ -47,17 +47,32 @@ interface DraggableDecoProps {
   zIndex?: number;
   onDragEnd: (id: DecorationId, x: number, y: number) => void;
   onDelete: (id: DecorationId) => void;
+  onZChange: (id: DecorationId, delta: number) => void;
   children: React.ReactNode;
 }
 
 export const DraggableDecoration: React.FC<DraggableDecoProps> = ({
-  id, initialPos, zIndex = 0, onDragEnd, onDelete, children,
+  id, initialPos, zIndex = 0, onDragEnd, onDelete, onZChange, children,
 }) => {
   const [pos, setPos] = useState(initialPos);
-  const [showDelete, setShowDelete] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const [flash, setFlash] = useState<'up' | 'down' | null>(null);
+  const wrapRef    = useRef<HTMLDivElement>(null);
   const startMouse = useRef({ x: 0, y: 0 });
   const startPos   = useRef({ x: 0, y: 0 });
   const moved      = useRef(false);
+
+  // close popup on outside click
+  React.useEffect(() => {
+    if (!showMenu) return;
+    const handler = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+        setShowMenu(false);
+      }
+    };
+    window.addEventListener('mousedown', handler, true);
+    return () => window.removeEventListener('mousedown', handler, true);
+  }, [showMenu]);
 
   const onMouseDown = (e: React.MouseEvent) => {
     if (e.button !== 0) return;
@@ -89,25 +104,49 @@ export const DraggableDecoration: React.FC<DraggableDecoProps> = ({
   const onContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setShowDelete(v => !v);
+    setShowMenu(v => !v);
+  };
+
+  const handleZ = (delta: number) => {
+    onZChange(id, delta);
+    setFlash(delta > 0 ? 'up' : 'down');
+    setTimeout(() => setFlash(null), 300);
+  };
+
+  const zBtnBase: React.CSSProperties = {
+    border: '1px solid rgba(255,255,255,0.18)',
+    color: '#fff', borderRadius: 6, fontSize: 11, padding: '2px 7px', cursor: 'pointer',
+    transition: 'background 0.15s',
   };
 
   return (
     <div
+      ref={wrapRef}
       onMouseDown={onMouseDown}
       onContextMenu={onContextMenu}
       style={{ position: 'absolute', left: pos.x, top: pos.y, cursor: 'grab', userSelect: 'none', zIndex }}
     >
       {children}
-      {showDelete && (
+      {showMenu && (
         <div style={{
-          position: 'absolute', top: -32, left: '50%', transform: 'translateX(-50%)',
+          position: 'absolute', top: -44, left: '50%', transform: 'translateX(-50%)',
           background: 'var(--color-card-background, #1f2027)',
           border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8,
-          padding: '4px 10px', zIndex: 99, whiteSpace: 'nowrap',
+          padding: '4px 6px', zIndex: 99, whiteSpace: 'nowrap',
+          display: 'flex', gap: 4, alignItems: 'center',
         }}>
           <button
-            onMouseDown={e => { e.stopPropagation(); onDelete(id); setShowDelete(false); }}
+            onMouseDown={e => { e.stopPropagation(); handleZ(1); }}
+            style={{ ...zBtnBase, background: flash === 'up' ? 'rgba(246,254,154,0.35)' : 'rgba(255,255,255,0.07)' }}
+            title="Bring forward"
+          >↑</button>
+          <button
+            onMouseDown={e => { e.stopPropagation(); handleZ(-1); }}
+            style={{ ...zBtnBase, background: flash === 'down' ? 'rgba(246,254,154,0.35)' : 'rgba(255,255,255,0.07)' }}
+            title="Send backward"
+          >↓</button>
+          <button
+            onMouseDown={e => { e.stopPropagation(); onDelete(id); setShowMenu(false); }}
             style={{
               background: 'rgba(255,71,71,0.15)', border: '1px solid rgba(255,71,71,0.35)',
               color: '#ff6b6b', borderRadius: 6, fontSize: 11, padding: '2px 8px', cursor: 'pointer',
