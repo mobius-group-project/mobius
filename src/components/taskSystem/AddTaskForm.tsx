@@ -2,12 +2,24 @@ import React, { useState } from 'react';
 import { Calendar, Flag, Clock } from 'lucide-react';
 import './styles/AddTaskForm.css';
 
+/**
+ * Props for the {@link TaskForm} component.
+ */
 interface Props {
+  /** Called when the user submits a valid task. Receives title, deadline, optional description and priority. */
   onAdd: (title: string, deadline: string, description?: string, priority?: 'High' | 'Medium' | 'Low') => void;
+  /** Called when the user cancels creating a task. */
   onCancel: () => void;
+  /** If true renders a smaller variant for use inline (e.g., inside the TaskList header). */
   compact?: boolean;
 }
 
+/**
+ * Form component for creating a new task.
+ *
+ * Provides inputs for title, description, deadline date/time, and priority.
+ * Calls `onAdd` on submit and `onCancel` when the user cancels.
+ */
 const TaskForm: React.FC<Props> = ({ onAdd, onCancel, compact = false }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -16,6 +28,7 @@ const TaskForm: React.FC<Props> = ({ onAdd, onCancel, compact = false }) => {
   const [deadlineMinute, setDeadlineMinute] = useState('');
   const [priority, setPriority] = useState<'High' | 'Medium' | 'Low' | null>(null);
 
+  /** Validates and submits the form, formatting the deadline and resetting state. */
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
@@ -37,6 +50,7 @@ const TaskForm: React.FC<Props> = ({ onAdd, onCancel, compact = false }) => {
     setPriority(null);
   };
 
+  /** Toggles a priority value on/off. */
   const handlePriorityClick = (value: 'High' | 'Medium' | 'Low') => {
     if (priority === value) {
       setPriority(null);
@@ -47,12 +61,14 @@ const TaskForm: React.FC<Props> = ({ onAdd, onCancel, compact = false }) => {
 
   const today = new Date().toISOString().split('T')[0];
 
+  /** Formats a "YYYY-MM-DD" string to "DD.MM" for compact display. */
   const formatDate = (dateString: string) => {
     if (!dateString) return 'Date';
     const [_year, month, day] = dateString.split('-');
     return `${day}.${month}`;
   };
 
+  /** Ensures minutes default to "00" when an hour is entered without minutes. */
   const handleHourChange = (val: string) => {
     setDeadlineHour(val);
     if (val && !deadlineMinute) setDeadlineMinute('00');

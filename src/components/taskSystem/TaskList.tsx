@@ -17,18 +17,34 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { type useActivityTracker } from '../../hooks/useActivityTracker';
 
+/**
+ * Props for the {@link TaskList} component.
+ */
 interface Props {
+  /** All tasks to display. */
   tasks: ITask[];
+  /** Called when a task's checkbox is toggled. */
   onToggleTask: (id: string) => void;
+  /** Called when a new task is submitted via the form. */
   onAddTask: (title: string, deadline: string, description?: string, priority?: 'High' | 'Medium' | 'Low') => void;
+  /** Called when a task is deleted. */
   onDelete: (id: string) => void;
+  /** Called when a task is updated via inline edit. */
   onUpdateTask: (task: ITask) => void;
+  /** Called when a comment is added. */
   onAddComment: (taskId: string, comment: string) => void | Promise<void>;
+  /** Called when a comment is deleted. */
   onDeleteComment: (taskId: string, commentId: number) => void | Promise<void>;
+  /** Called with the reordered task array after a drag-and-drop operation. */
   onReorderTasks: (tasks: ITask[]) => void;
+  /** The activity tracker hook return value for per-task time control. */
   activityTracker: ReturnType<typeof useActivityTracker>;
 }
 
+/**
+ * Wraps a {@link TaskItem} with dnd-kit sortable functionality.
+ * Renders the item inside a div that provides drag-and-drop context.
+ */
 const SortableTaskItem = ({ 
   task, 
   onToggle, 
@@ -77,6 +93,11 @@ const SortableTaskItem = ({
   );
 };
 
+/**
+ * Task list component with drag-and-drop reordering via dnd-kit.
+ *
+ * Contains an inline add-task form and renders each task as a {@link SortableTaskItem}.
+ */
 const TaskList: React.FC<Props> = ({ 
   tasks, 
   onToggleTask, 
@@ -90,11 +111,13 @@ const TaskList: React.FC<Props> = ({
 }) => {
   const [isAdding, setIsAdding] = useState(false);
 
+  /** Wraps the add callback to close the form after submission. */
   const handleAdd = (title: string, deadline: string, description?: string, priority?: 'High' | 'Medium' | 'Low') => {
     onAddTask(title, deadline, description, priority);
     setIsAdding(false);
   };
 
+  /** Handles the end of a drag event, reordering tasks via {@link onReorderTasks}. */
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (active.id !== over?.id) {
