@@ -1,14 +1,33 @@
+/**
+ * Hook for tracking named activity sessions with SQLite persistence.
+ *
+ * Design decisions:
+ *   - `sessions` holds only completed sessions (end_time IS NOT NULL); the active session
+ *     lives in `currentSession` separately.
+ *   - Progress is saved to the DB every 10 seconds, but only when `seconds` has changed
+ *     since the last save — `lastSavedSeconds` ref tracks this to skip no-op writes.
+ *   - `isInitialized` ref prevents the initial load from running twice in React StrictMode
+ *     (where effects fire twice on mount in development).
+ *   - `stopTracking` checks whether a completed session with the same name already exists and
+ *     merges into it instead of creating a duplicate record.
+ *   - `executeStartTracking` closes any orphaned active DB session before inserting a new one,
+ *     guarding against a stuck session left by a previous crash.
+ */
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { activityTrackerService } from '../services/activityTrackerService';
 import { getDb } from '../services/db';
 
+/** Possible states of the activity tracker. */
 export type TrackerState = 'idle' | 'running' | 'paused';
+/** Severity level for transient toast notifications. */
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
 
+/** A camelCase view of an activity_sessions row as used in UI state. */
 export interface ActivitySession {
   id: string;
   activityName: string;
   startTime: Date | null;
+  /** Null while the session is still running. */
   endTime: Date | null;
   durationSeconds: number;
   isTask?: boolean;
@@ -16,12 +35,14 @@ export interface ActivitySession {
   createdAt: Date;
 }
 
+/** A transient notification shown in the tracker UI. Auto-dismissed after 3 seconds. */
 export interface ToastMessage {
   id: number;
   type: ToastType;
   message: string;
 }
 
+/** Pending state when the user tries to start a duplicate activity name. */
 export interface DuplicateConfirmation {
   existingSession: ActivitySession;
   newActivityName: string;
@@ -29,24 +50,43 @@ export interface DuplicateConfirmation {
   taskId?: string;
 }
 
+/** Return type of useActivityTracker. */
 interface UseActivityTrackerReturn {
+  /** Current tracker state. */
   state: TrackerState;
+  /** The running session, or null when idle. */
   currentSession: ActivitySession | null;
+  /** Completed sessions loaded from the DB. Does not include the active session. */
   sessions: ActivitySession[];
+  /** Elapsed seconds for the current session, incremented each tick. */
   seconds: number;
+  /** Active toast notifications. */
   toasts: ToastMessage[];
+  /** Set when the user starts a session with a name matching a completed one — triggers a confirmation dialog. */
   duplicateConfirmation: DuplicateConfirmation | null;
+  /** Validates the name and starts a new session, closing any orphaned active session first. */
   startTracking: (activityName: string, isTask?: boolean, taskId?: string) => Promise<void>;
+  /** Resumes a previously completed session by starting a new one under the same name. */
   continueSession: (session: ActivitySession) => Promise<void>;
+  /** Stops the running session; merges into an existing same-name record if one exists. */
   stopTracking: () => Promise<void>;
+  /** Discards the active session entirely without saving its time. */
   resetTracking: () => Promise<void>;
+  /** Returns the current elapsed time as an HH:MM:SS string. */
   getFormattedTime: () => string;
+  /** Returns the total tracked seconds across all completed sessions that started today. */
   getTotalTimeToday: () => number;
+  /** Manually dismisses a toast by ID. */
   removeToast: (id: number) => void;
+  /** Clears the pending duplicate confirmation (confirm path). */
   confirmDuplicateCreate: () => void;
+  /** Clears the pending duplicate confirmation (cancel path). */
   cancelDuplicateCreate: () => void;
+  /** Renames a session; rejects if the new name is already taken. */
   renameSession: (sessionId: string, newName: string) => Promise<void>;
+  /** Deletes a session; if it is the currently active session, resets the tracker without going through stopTracking. */
   deleteSession: (sessionId: string) => Promise<void>;
+  /** Reloads all sessions from the DB and restores any active session. */
   loadSessionsFromDB: () => Promise<void>;
 }
 
@@ -58,10 +98,14 @@ export const useActivityTracker = (): UseActivityTrackerReturn => {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [duplicateConfirmation, setDuplicateConfirmation] = useState<DuplicateConfirmation | null>(null);
   const intervalRef = useRef<number | null>(null);
+  /** Auto-incrementing counter for unique toast IDs. */
   const toastIdRef = useRef(0);
+  /** Last seconds value written to the DB — used to skip no-op updateSession calls. */
   const lastSavedSeconds = useRef(0);
+  /** Guards against double-loading in React StrictMode where effects run twice on mount. */
   const isInitialized = useRef(false);
 
+  /** Adds a toast notification and schedules its auto-removal after 3 seconds. */
   const addToast = useCallback((type: ToastType, message: string) => {
     const id = toastIdRef.current++;
     setToasts(prev => [...prev, { id, type, message }]);
@@ -74,6 +118,7 @@ export const useActivityTracker = (): UseActivityTrackerReturn => {
     setToasts(prev => prev.filter(t => t.id !== id));
   }, []);
 
+  /** Reloads completed sessions from the DB into `sessions` state. Active session is excluded. */
   const refreshSessions = useCallback(async () => {
     try {
       const dbSessions = await activityTrackerService.getSessions();
@@ -138,6 +183,7 @@ export const useActivityTracker = (): UseActivityTrackerReturn => {
     }
   }, [loadSessionsFromDB]);
 
+  /* Persist session progress every 10 seconds while running, but only when elapsed time changed. */
   useEffect(() => {
     if (state === 'running' && currentSession) {
       const interval = setInterval(async () => {
@@ -184,6 +230,10 @@ export const useActivityTracker = (): UseActivityTrackerReturn => {
       .reduce((total, s) => total + s.durationSeconds, 0);
   }, [sessions]);
 
+  /**
+   * Returns a name that doesn't collide with existing session names.
+   * Appends "(1)", "(2)" etc. until a unique name is found.
+   */
   const getUniqueActivityName = useCallback((
     baseName: string,
     existingSessions: ActivitySession[],
@@ -199,14 +249,16 @@ export const useActivityTracker = (): UseActivityTrackerReturn => {
     return newName;
   }, []);
 
-  // ИСПРАВЛЕНИЕ 1: перед стартом всегда закрываем любую активную сессию в БД
+  /**
+   * Internal start implementation. Always closes any orphaned active session in the DB
+   * before inserting the new one, so we can never end up with two active sessions.
+   */
   const executeStartTracking = useCallback(async (
     activityName: string,
     isTask: boolean = false,
     taskId?: string
   ) => {
     try {
-      // Проверяем не осталась ли в БД незакрытая сессия
       const existingActive = await activityTrackerService.getActiveSession();
       if (existingActive) {
         await activityTrackerService.stopSession(existingActive.id, existingActive.duration_seconds);
@@ -253,8 +305,6 @@ export const useActivityTracker = (): UseActivityTrackerReturn => {
     setDuplicateConfirmation(null);
   }, []);
 
-  // ИСПРАВЛЕНИЕ 2: continueSession напрямую через executeStartTracking
-  // executeStartTracking сам закроет любую активную сессию в БД
   const continueSession = useCallback(async (session: ActivitySession) => {
     await executeStartTracking(session.activityName, session.isTask || false, session.taskId);
   }, [executeStartTracking]);
@@ -346,7 +396,7 @@ export const useActivityTracker = (): UseActivityTrackerReturn => {
 
   const deleteSession = useCallback(async (sessionId: string) => {
     if (currentSession?.id === sessionId) {
-      // Удаляем из БД напрямую, без stopTracking чтобы не было двойного удаления
+      // Delete directly from the DB without calling stopTracking to avoid a double-delete.
       try {
         await activityTrackerService.deleteSession(sessionId);
       } catch (error) {
