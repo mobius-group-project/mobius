@@ -5,9 +5,10 @@ import './styles/AddTaskForm.css';
 interface Props {
   onAdd: (title: string, deadline: string, description?: string, priority?: 'High' | 'Medium' | 'Low') => void;
   onCancel: () => void;
+  compact?: boolean;
 }
 
-const TaskForm: React.FC<Props> = ({ onAdd, onCancel }) => {
+const TaskForm: React.FC<Props> = ({ onAdd, onCancel, compact = false }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [deadlineDate, setDeadlineDate] = useState('');
@@ -58,21 +59,21 @@ const TaskForm: React.FC<Props> = ({ onAdd, onCancel }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="task-form">
-      <input 
+    <form onSubmit={handleSubmit} className={`task-form${compact ? ' task-form--compact' : ''}`}>
+      <input
         autoFocus
         className="task-input-title"
         placeholder="What needs to be done?"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
       />
-      
+
       <textarea
         className="task-input-description"
         placeholder="Add a description (optional)"
         value={description}
         onChange={(e) => setDescription(e.target.value)}
-        rows={3}
+        rows={compact ? 2 : 3}
       />
       
       <div className="task-form-row">
@@ -123,37 +124,36 @@ const TaskForm: React.FC<Props> = ({ onAdd, onCancel }) => {
             style={{ color: deadlineMinute ? 'var(--color-primary)' : '#888' }}
           />
         </div>
-        
-        <div className="task-priority-buttons">
-          <button
-            type="button"
-            className={`priority-flag ${priority === 'High' ? 'active' : ''}`}
-            onClick={() => handlePriorityClick('High')}
-            title="High priority"
-          >
-            <Flag size={16} fill={priority === 'High' ? 'var(--priority-high)' : 'none'} color="var(--priority-high)" />
-          </button>
-          <button
-            type="button"
-            className={`priority-flag ${priority === 'Medium' ? 'active' : ''}`}
-            onClick={() => handlePriorityClick('Medium')}
-            title="Medium priority"
-          >
-            <Flag size={16} fill={priority === 'Medium' ? 'var(--priority-medium)' : 'none'} color="var(--priority-medium)" />
-          </button>
-          <button
-            type="button"
-            className={`priority-flag ${priority === 'Low' ? 'active' : ''}`}
-            onClick={() => handlePriorityClick('Low')}
-            title="Low priority"
-          >
-            <Flag size={16} fill={priority === 'Low' ? 'var(--priority-low)' : 'none'} color="var(--priority-low)" />
-          </button>
-        </div>
 
+        {!compact && (
+          <div className="task-priority-buttons">
+            <button type="button" className={`priority-flag ${priority === 'High' ? 'active' : ''}`} onClick={() => handlePriorityClick('High')} title="High priority">
+              <Flag size={16} fill={priority === 'High' ? 'var(--priority-high)' : 'none'} color="var(--priority-high)" />
+            </button>
+            <button type="button" className={`priority-flag ${priority === 'Medium' ? 'active' : ''}`} onClick={() => handlePriorityClick('Medium')} title="Medium priority">
+              <Flag size={16} fill={priority === 'Medium' ? 'var(--priority-medium)' : 'none'} color="var(--priority-medium)" />
+            </button>
+            <button type="button" className={`priority-flag ${priority === 'Low' ? 'active' : ''}`} onClick={() => handlePriorityClick('Low')} title="Low priority">
+              <Flag size={16} fill={priority === 'Low' ? 'var(--priority-low)' : 'none'} color="var(--priority-low)" />
+            </button>
+          </div>
+        )}
       </div>
-      
+
       <div className="form-actions">
+        {compact && (
+          <div className="task-priority-buttons compact-priority-cell">
+            <button type="button" className={`priority-flag ${priority === 'High' ? 'active' : ''}`} onClick={() => handlePriorityClick('High')} title="High priority">
+              <Flag size={14} fill={priority === 'High' ? 'var(--priority-high)' : 'none'} color="var(--priority-high)" />
+            </button>
+            <button type="button" className={`priority-flag ${priority === 'Medium' ? 'active' : ''}`} onClick={() => handlePriorityClick('Medium')} title="Medium priority">
+              <Flag size={14} fill={priority === 'Medium' ? 'var(--priority-medium)' : 'none'} color="var(--priority-medium)" />
+            </button>
+            <button type="button" className={`priority-flag ${priority === 'Low' ? 'active' : ''}`} onClick={() => handlePriorityClick('Low')} title="Low priority">
+              <Flag size={14} fill={priority === 'Low' ? 'var(--priority-low)' : 'none'} color="var(--priority-low)" />
+            </button>
+          </div>
+        )}
         <button type="submit" className="save-btn">Add</button>
         <button type="button" onClick={onCancel} className="cancel-btn">Cancel</button>
       </div>

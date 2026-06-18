@@ -8,6 +8,7 @@ interface CalendarGridProps {
   weekOffset: number;
   dayOffset?: number;
   view?: 'day' | 'week';
+  compactHeader?: boolean;
 }
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -49,7 +50,7 @@ interface GhostEvent {
   title: string;
 }
 
-const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset, dayOffset = 0, view = 'week' }) => {
+const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset, dayOffset = 0, view = 'week', compactHeader = false }) => {
   const today = new Date();
   const todayIndex = (today.getDay() + 6) % 7;
   const isCurrentWeek = weekOffset === 0 && view === 'week';
@@ -402,8 +403,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset, dayOffset = 0, 
         {displayDays.map((day, index) => {
           const isHighlight = view === 'day' ? isToday : (isCurrentWeek && index === todayIndex);
           return (
-            <div key={index} className={"calendar-header-cell" + (isHighlight ? " is-today" : "")}>
-              <div className="day-name">{day}</div>
+            <div key={index} className={"calendar-header-cell" + (isHighlight ? " is-today" : "") + (compactHeader ? " compact" : "")}>
+              <div className="day-name">{compactHeader ? day[0] : day}</div>
               <div className={"day-number" + (isHighlight ? " today-number" : "")}>
                 {weekDates[index].getDate()}
               </div>

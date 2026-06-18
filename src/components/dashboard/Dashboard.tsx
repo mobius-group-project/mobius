@@ -1,11 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Flag, Calendar, Clock } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import TaskForm from '../taskSystem/AddTaskForm';
+import { Flag, Calendar } from 'lucide-react';
 import type { ITask } from '../../services/taskService';
 import { calendarService, type CalendarEvent } from '../../services/calendarService';
-import { useFocusTimer } from '../../hooks/useFocusTimer';
-import { PixelPlant, type PlantType } from '../focus/FocusTimer';
+import FocusTimer from '../focus/FocusTimer';
 import { useNotes } from '../../hooks/useNotes';
+import { type useActivityTracker } from '../../hooks/useActivityTracker';
+import CalendarGrid from '../calendarSystem/CalendarGrid';
 import './Dashboard.css';
 
 interface DashboardProps {
@@ -13,6 +14,8 @@ interface DashboardProps {
   onToggleTask: (id: string) => void;
   onDelete: (id: string) => void;
   onReorderTasks: (tasks: ITask[]) => void;
+  onAddTask: (title: string, deadline: string, description?: string, priority?: 'High' | 'Medium' | 'Low') => void;
+  activityTracker: ReturnType<typeof useActivityTracker>;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({
@@ -20,9 +23,11 @@ const Dashboard: React.FC<DashboardProps> = ({
   onToggleTask,
   onDelete,
   onReorderTasks,
+  onAddTask,
+  activityTracker,
 }) => {
-  const navigate = useNavigate();
   const [priorityFilters, setPriorityFilters] = useState<('High' | 'Medium' | 'Low')[]>([]);
+  const [isAdding, setIsAdding] = useState(false);
 
   const handlePriorityFilter = (priority: 'High' | 'Medium' | 'Low') => {
     setPriorityFilters(prev => {
@@ -55,26 +60,16 @@ const Dashboard: React.FC<DashboardProps> = ({
     e.preventDefault();
   };
 
-  const formatTime = (seconds: number) => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-  };
-
   const filteredTasks = priorityFilters.length === 0
     ? tasks
     : tasks.filter(task => priorityFilters.includes(task.priority));
 
   return (
     <div className="dashboard">
-      <h1 className="dashboard-title">Dashboard</h1>
       <div className="dashboard-grid">
         {/* Today's Task List */}
         <div className="dashboard-card task-list-card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#f6fe9a' }}>
-              Today's Task List
-            </h2>
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
             <div style={{ display: 'flex', gap: '8px' }}>
               <button
                 onClick={() => handlePriorityFilter('High')}
@@ -124,106 +119,97 @@ const Dashboard: React.FC<DashboardProps> = ({
             </div>
           </div>
 
-          <button
-            onClick={() => navigate('/tasks')}
-            style={{
-              background: '#f6fe9a',
-              color: '#1a1a1a',
-              border: 'none',
-              padding: '10px 16px',
-              borderRadius: '24px',
-              fontSize: '14px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              width: '100%',
-            }}
-          >
-            + Add Task
-          </button>
+          {isAdding ? (
+            <TaskForm
+              compact
+              onAdd={(title, deadline, description, priority) => {
+                onAddTask(title, deadline, description, priority);
+                setIsAdding(false);
+              }}
+              onCancel={() => setIsAdding(false)}
+            />
+          ) : (
+            <button
+              onClick={() => setIsAdding(true)}
+              style={{
+                background: '#f6fe9a',
+                color: '#1a1a1a',
+                border: 'none',
+                padding: '10px 16px',
+                borderRadius: '24px',
+                fontSize: '14px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                width: '100%',
+              }}
+            >
+              + Add Task
+            </button>
+          )}
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto', flex: 1, minHeight: 0 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', overflowY: 'auto', flex: 1, minHeight: 0 }}>
             {filteredTasks.length === 0 ? (
-              <p style={{ color: 'var(--color-text-secondary)', textAlign: 'left' }}>No tasks</p>
+              <p style={{ color: 'var(--color-text-secondary)', textAlign: 'left', padding: '8px 0' }}>No tasks</p>
             ) : (
               filteredTasks.map((task, idx) => {
                 const priorityColor = task.priority === 'High' ? '#ff6b6b' : task.priority === 'Medium' ? '#ffa500' : '#51cf66';
+                const flagColor = task.priority === 'High' ? 'var(--color-negative)' : task.priority === 'Medium' ? 'var(--color-secondary)' : 'var(--color-positive)';
                 return (
                   <div
                     key={task.id}
                     draggable
-                    onDragStart={(e) => {
-                      handleDragStart(e, idx);
-                      e.currentTarget.style.opacity = '0.5';
-                      e.currentTarget.style.transform = 'scale(0.97)';
-                    }}
-                    onDragEnd={(e) => {
-                      e.currentTarget.style.opacity = '1';
-                      e.currentTarget.style.transform = 'scale(1)';
-                    }}
+                    onDragStart={(e) => { handleDragStart(e, idx); e.currentTarget.style.opacity = '0.5'; }}
+                    onDragEnd={(e) => { e.currentTarget.style.opacity = '1'; }}
                     onDrop={(e) => handleDrop(e, idx)}
                     onDragOver={handleDragOver}
                     style={{
-                      background: 'rgba(255, 255, 255, 0.05)',
-                      padding: '12px 14px',
-                      borderRadius: '8px',
-                      border: '1px solid rgba(255, 255, 255, 0.08)',
                       display: 'flex',
-                      justifyContent: 'space-between',
                       alignItems: 'center',
-                      transition: 'all 0.2s ease',
-                      cursor: 'default',
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!e.currentTarget.draggable) return;
-                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
-                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
-                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                      gap: '10px',
+                      padding: '8px 4px',
+                      borderBottom: '1px solid rgba(255,255,255,0.05)',
+                      opacity: task.isDone ? 0.5 : 1,
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
-                      <input
-                        type="checkbox"
-                        checked={task.isDone}
-                        onChange={() => onToggleTask(task.id)}
-                        style={{ accentColor: '#f6fe9a', flexShrink: 0 }}
-                      />
-                      <span style={{
-                        fontSize: '15px',
+                    {/* Circular priority checkbox */}
+                    <div
+                      onClick={() => onToggleTask(task.id)}
+                      style={{
+                        width: '18px', height: '18px', borderRadius: '50%',
+                        border: `2px solid ${priorityColor}`,
+                        background: task.isDone ? priorityColor : 'transparent',
+                        flexShrink: 0, cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        transition: 'all 0.2s',
+                      }}
+                    >
+                      {task.isDone && (
+                        <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
+                          <path d="M1 3.5L3 5.5L8 1" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      )}
+                    </div>
+
+                    {/* Task info */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{
+                        fontSize: '13px', fontWeight: 500,
                         color: task.isDone ? 'var(--color-text-secondary)' : 'var(--color-text-primary)',
                         textDecoration: task.isDone ? 'line-through' : 'none',
+                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                         textAlign: 'left',
-                        wordBreak: 'break-word',
                       }}>
                         {task.title}
-                      </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                        <Calendar size={10} style={{ color: task.deadline ? flagColor : 'var(--color-text-secondary)', flexShrink: 0 }} />
+                        <span style={{ fontSize: '11px', color: task.deadline ? flagColor : 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>
+                          {task.deadline || 'No deadline'}
+                        </span>
+                        <Flag size={10} fill={flagColor} style={{ color: flagColor, flexShrink: 0 }} />
+                      </div>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0, marginLeft: '12px' }}>
-                      <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>
-                        {formatTime(task.timeSpent || 0)}
-                      </span>
-                      <span
-                        style={{
-                          fontSize: '10px',
-                          padding: '2px 8px',
-                          borderRadius: '8px',
-                          background: priorityColor,
-                          color: 'white',
-                          fontWeight: 600,
-                          lineHeight: '16px',
-                        }}
-                      >
-                        {task.priority}
-                      </span>
-                      <span
-                        style={{ cursor: 'grab', color: 'var(--color-text-secondary)', fontSize: '16px', userSelect: 'none', lineHeight: 1 }}
-                        title="Drag to reorder"
-                      >
-                        ⋮
-                      </span>
-                    </div>
+
                   </div>
                 );
               })
@@ -233,12 +219,20 @@ const Dashboard: React.FC<DashboardProps> = ({
 
         {/* Weekly Calendar */}
         <div className="dashboard-card calendar-card">
-          <CalendarCard />
+          <div className="calendar-month-label">
+            {new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' })}
+          </div>
+          <CalendarGrid weekOffset={0} compactHeader />
+          <div style={{ display: 'flex', padding: '8px 0', flexShrink: 0, justifyContent: 'space-between' }}>
+            <MiniMonthCalendar year={new Date(new Date().getFullYear(), new Date().getMonth() - 1).getFullYear()} month={(new Date().getMonth() + 11) % 12} />
+            <MiniMonthCalendar year={new Date().getFullYear()} month={new Date().getMonth()} />
+            <MiniMonthCalendar year={new Date(new Date().getFullYear(), new Date().getMonth() + 1).getFullYear()} month={(new Date().getMonth() + 1) % 12} />
+          </div>
         </div>
 
-        {/* Focused Widget */}
+        {/* Focus Timer Widget */}
         <div className="dashboard-card focused-card">
-          <FocusedCard />
+          <FocusTimer compact />
         </div>
 
         {/* Notes Card */}
@@ -250,110 +244,141 @@ const Dashboard: React.FC<DashboardProps> = ({
   );
 };
 
+// Mini Month Calendar Component
+const MINI_CELL = 15;
+const MINI_GAP = 2;
+
+const MiniMonthCalendar: React.FC<{ year: number; month: number }> = ({ year, month }) => {
+  const today = new Date();
+  const monthName = new Date(year, month, 1).toLocaleString('en-US', { month: 'long' });
+  const firstDow = (new Date(year, month, 1).getDay() + 6) % 7;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const prevMonthDays = new Date(year, month, 0).getDate();
+
+  type Cell = { day: number; current: boolean };
+  const cells: Cell[] = [];
+  for (let i = firstDow - 1; i >= 0; i--) cells.push({ day: prevMonthDays - i, current: false });
+  for (let d = 1; d <= daysInMonth; d++) cells.push({ day: d, current: true });
+  const remaining = 42 - cells.length;
+  for (let d = 1; d <= remaining; d++) cells.push({ day: d, current: false });
+
+  const isToday = (d: number) =>
+    d === today.getDate() && month === today.getMonth() && year === today.getFullYear();
+
+  const gridWidth = MINI_CELL * 7 + MINI_GAP * 6;
+
+  return (
+    <div style={{ width: `${gridWidth}px`, flexShrink: 0 }}>
+      <div style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.85)', marginBottom: '5px' }}>
+        {monthName}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: `repeat(7, ${MINI_CELL}px)`, gap: `${MINI_GAP}px` }}>
+        {['M','T','W','T','F','S','S'].map((d, i) => (
+          <div key={i} style={{ width: MINI_CELL, height: MINI_CELL, fontSize: '9px', fontWeight: 700, color: '#f6fe9a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{d}</div>
+        ))}
+        {cells.map((cell, i) => (
+          <div key={i} style={{
+            width: MINI_CELL, height: MINI_CELL,
+            fontSize: '9px', borderRadius: '50%',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: cell.current && isToday(cell.day) ? '#f6fe9a' : 'transparent',
+            color: cell.current && isToday(cell.day) ? '#000'
+              : cell.current ? 'rgba(255,255,255,0.8)'
+              : 'rgba(255,255,255,0.2)',
+            fontWeight: cell.current && isToday(cell.day) ? 700 : 400,
+          }}>{cell.day}</div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 // Calendar Card Component
+const HOUR_START = 8;
+const HOUR_END = 20;
+
 const CalendarCard: React.FC = () => {
-  const navigate = useNavigate();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
 
   useEffect(() => {
     calendarService.getEvents().then(setEvents).catch(() => {});
   }, []);
 
-  const getWeekDays = () => {
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const today = new Date();
-    const weekStart = new Date(today);
-    weekStart.setDate(today.getDate() - today.getDay() + 1);
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
 
-    return days.map((day, index) => {
-      const date = new Date(weekStart);
-      date.setDate(weekStart.getDate() + index);
-      return {
-        name: day,
-        date: date.getDate(),
-        dateStr: date.toISOString().split('T')[0],
-      };
-    });
-  };
+  const weekDays = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(today);
+    d.setDate(today.getDate() - ((today.getDay() + 6) % 7) + i);
+    return {
+      letter: ['M','T','W','T','F','S','S'][i],
+      date: d.getDate(),
+      dateStr: d.toISOString().split('T')[0],
+    };
+  });
 
-  const weekDays = getWeekDays();
-  const hours = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}:00`);
+  const hours = Array.from({ length: HOUR_END - HOUR_START }, (_, i) =>
+    `${String(i + HOUR_START).padStart(2, '0')}:00`
+  );
 
-  const getEventsForCell = (dateStr: string, hour: string) => {
-    return events.filter((ev: CalendarEvent) =>
-      ev.date === dateStr && ev.startTime && ev.startTime.startsWith(hour.substring(0, 2))
-    );
-  };
+  const getEventsForCell = (dateStr: string, hour: string) =>
+    events.filter(ev => ev.date === dateStr && ev.startTime?.startsWith(hour.substring(0, 2)));
+
+  const COL = '44px ' + Array(7).fill('1fr').join(' ');
 
   return (
-    <>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#f6fe9a' }}>
-          Weekly Calendar
-        </h2>
-        <button
-          onClick={() => navigate('/calendar')}
-          style={{ background: 'none', border: 'none', color: 'var(--color-text-primary)', cursor: 'pointer', padding: '4px', borderRadius: '4px', display: 'flex', alignItems: 'center' }}
-          title="Open Calendar"
-        >
-          <Calendar size={18} />
-        </button>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', fontFamily: 'var(--font-main)' }}>
+      {/* Month label */}
+      <div style={{ fontSize: '13px', fontWeight: 700, color: 'rgba(255,255,255,0.7)', padding: '12px 12px 6px', flexShrink: 0 }}>
+        {today.toLocaleString('en-US', { month: 'long', year: 'numeric' })}
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 0, flex: 1, minHeight: 0 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '45px ' + Array(7).fill('1fr').join(' '), gap: '0', fontSize: '11px', borderRadius: '6px 6px 0 0', background: 'rgba(0, 0, 0, 0.2)', flexShrink: 0 }}>
-          <div></div>
-          {weekDays.map((day, idx) => (
-            <div key={idx} style={{ textAlign: 'center', padding: '6px 2px', background: 'rgba(255, 255, 255, 0.05)', borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
-              <div style={{ fontSize: '10px', fontWeight: 600, color: 'var(--color-text-secondary)' }}>{day.name}</div>
-              <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-primary)' }}>{day.date}</div>
+      {/* Header */}
+      <div style={{ display: 'grid', gridTemplateColumns: COL, flexShrink: 0, borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.02)' }}>
+        <div />
+        {weekDays.map((d, i) => {
+          const isToday = d.dateStr === todayStr;
+          return (
+            <div key={i} style={{ textAlign: 'center', padding: '6px 2px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+              <span style={{ fontSize: '10px', fontWeight: 600, color: isToday ? 'var(--color-primary)' : 'rgba(255,255,255,0.4)' }}>{d.letter}</span>
+              <span style={{
+                fontSize: '13px', fontWeight: 700,
+                color: isToday ? '#000' : 'rgba(255,255,255,0.85)',
+                background: isToday ? 'var(--color-primary)' : 'transparent',
+                borderRadius: '50%', width: '22px', height: '22px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>{d.date}</span>
             </div>
-          ))}
-        </div>
+          );
+        })}
+      </div>
 
-        <div style={{ overflowY: 'auto', maxHeight: '430px', display: 'grid', gridTemplateColumns: '45px ' + Array(7).fill('1fr').join(' '), gap: '0', fontSize: '11px', borderRadius: '0 0 6px 6px', background: 'rgba(0, 0, 0, 0.2)' }}>
-          {hours.map((hour) => (
+      {/* Body */}
+      <div style={{ overflowY: 'auto', flex: 1, minHeight: 0 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: COL }}>
+          {hours.map(hour => (
             <React.Fragment key={hour}>
-              <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)', textAlign: 'right', padding: '8px 6px', background: 'rgba(0, 0, 0, 0.3)', fontWeight: 600, borderRight: '1px solid rgba(255, 255, 255, 0.05)', position: 'sticky', left: 0 }}>
+              <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.3)', textAlign: 'right', padding: '4px 6px 0', borderRight: '1px solid rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                 {hour}
               </div>
-              {weekDays.map((day, dayIdx) => {
-                const cellEvents = getEventsForCell(day.dateStr, hour);
+              {weekDays.map((d, di) => {
+                const cellEvents = getEventsForCell(d.dateStr, hour);
+                const isToday = d.dateStr === todayStr;
                 return (
-                  <div
-                    key={`${hour}-${dayIdx}`}
-                    style={{
-                      minHeight: '28px',
-                      background: 'rgba(255, 255, 255, 0.01)',
-                      border: '1px solid rgba(255, 255, 255, 0.05)',
-                      borderRight: dayIdx === 6 ? 'none' : '1px solid rgba(255, 255, 255, 0.05)',
-                      transition: 'background 0.2s',
-                      position: 'relative',
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'}
-                    onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.01)'}
-                  >
-                    {cellEvents.map((ev: CalendarEvent) => (
-                      <div
-                        key={ev.id}
-                        title={ev.title}
-                        style={{
-                          position: 'absolute',
-                          inset: '1px',
-                          background: ev.color || '#a7c7e7',
-                          borderRadius: '3px',
-                          padding: '1px 4px',
-                          fontSize: '9px',
-                          fontWeight: 600,
-                          color: '#1a1a1a',
-                          overflow: 'hidden',
-                          whiteSpace: 'nowrap',
-                          textOverflow: 'ellipsis',
-                          zIndex: 1,
-                        }}
-                      >
-                        {ev.title}
-                      </div>
+                  <div key={di} style={{
+                    height: '36px', position: 'relative',
+                    borderRight: di < 6 ? '1px solid rgba(255,255,255,0.04)' : 'none',
+                    borderBottom: '1px solid rgba(255,255,255,0.04)',
+                    background: isToday ? 'rgba(255,255,255,0.02)' : 'transparent',
+                  }}>
+                    {cellEvents.map(ev => (
+                      <div key={ev.id} title={ev.title} style={{
+                        position: 'absolute', inset: '2px',
+                        background: ev.color || '#a7c7e7',
+                        borderRadius: '3px', padding: '1px 4px',
+                        fontSize: '9px', fontWeight: 600, color: '#1a1a1a',
+                        overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis',
+                      }}>{ev.title}</div>
                     ))}
                   </div>
                 );
@@ -361,104 +386,6 @@ const CalendarCard: React.FC = () => {
             </React.Fragment>
           ))}
         </div>
-      </div>
-    </>
-  );
-};
-
-// Focused Card Component
-const FocusedCard: React.FC = () => {
-  const navigate = useNavigate();
-  const { state, remainingSeconds, totalSeconds, progress } = useFocusTimer(25);
-  const [plantType, setPlantType] = useState<PlantType>('flower');
-
-  useEffect(() => {
-    const saved = localStorage.getItem('mobius.focusPlantType.v1') as PlantType | null;
-    if (saved) setPlantType(saved);
-  }, []);
-
-  const isActive = state === 'running' || state === 'paused';
-
-  const formatTimer = (s: number) => {
-    const m = Math.floor(s / 60);
-    const sec = s % 60;
-    return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
-  };
-
-  // sad face pixel art: 9x9 grid, same style as plants
-  const sadPixels: [number, number, string][] = [
-    [3,1,'#3a3a4a'],[4,1,'#3a3a4a'],[5,1,'#3a3a4a'],
-    [2,2,'#3a3a4a'],[3,2,'#ffe0bd'],[4,2,'#ffe0bd'],[5,2,'#ffe0bd'],[6,2,'#3a3a4a'],
-    [1,3,'#3a3a4a'],[2,3,'#ffe0bd'],[3,3,'#ffe0bd'],[4,3,'#ffe0bd'],[5,3,'#ffe0bd'],[6,3,'#ffe0bd'],[7,3,'#3a3a4a'],
-    [1,4,'#3a3a4a'],[2,4,'#ffe0bd'],[3,4,'#212121'],[4,4,'#ffe0bd'],[5,4,'#212121'],[6,4,'#ffe0bd'],[7,4,'#3a3a4a'],
-    [1,5,'#3a3a4a'],[2,5,'#ffe0bd'],[3,5,'#ffe0bd'],[4,5,'#ffe0bd'],[5,5,'#ffe0bd'],[6,5,'#ffe0bd'],[7,5,'#3a3a4a'],
-    [1,6,'#3a3a4a'],[2,6,'#ffe0bd'],[3,6,'#3a3a4a'],[4,6,'#3a3a4a'],[5,6,'#3a3a4a'],[6,6,'#ffe0bd'],[7,6,'#3a3a4a'],
-    [2,7,'#3a3a4a'],[3,7,'#ffe0bd'],[4,7,'#ffe0bd'],[5,7,'#ffe0bd'],[6,7,'#3a3a4a'],
-    [3,8,'#3a3a4a'],[4,8,'#3a3a4a'],[5,8,'#3a3a4a'],
-  ];
-
-  const SadFace: React.FC = () => {
-    const cols = 9, rows = 9, cellSize = 22, gap = 2;
-    const grid: Record<string, string> = {};
-    sadPixels.forEach(([c, r, color]) => { grid[`${r},${c}`] = color; });
-    const cells: React.ReactNode[] = [];
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        const color = grid[`${r},${c}`];
-        cells.push(
-          <div key={`${r},${c}`} style={{
-            width: cellSize, height: cellSize,
-            background: color ?? 'transparent',
-          }} />
-        );
-      }
-    }
-    return (
-      <div style={{
-        display: 'grid', gridTemplateColumns: `repeat(${cols}, ${cellSize}px)`, gap: `${gap}px`,
-        background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '8px',
-      }}>
-        {cells}
-      </div>
-    );
-  };
-
-  return (
-    <div
-      onClick={() => navigate('/focus')}
-      style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', height: '100%' }}
-    >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#f6fe9a' }}>
-          Focused
-        </h2>
-        <Clock size={18} color="var(--color-text-primary)" />
-      </div>
-
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: '8px', minHeight: 0 }}>
-        {isActive ? (
-          <>
-            <PixelPlant type={plantType} progress={progress} pixelSize={14} gap={2} />
-            <div style={{ fontSize: '28px', fontWeight: 700, color: '#f6fe9a', fontVariantNumeric: 'tabular-nums' }}>
-              {formatTimer(remainingSeconds)}
-            </div>
-            <div style={{
-              width: '80%', height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden',
-            }}>
-              <div style={{ width: `${progress * 100}%`, height: '100%', background: '#9fff5c', borderRadius: '2px', transition: 'width 1s linear' }} />
-            </div>
-            <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>
-              {state === 'paused' ? 'Paused' : 'Focusing'}
-            </span>
-          </>
-        ) : (
-          <>
-            <SadFace />
-            <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
-              No active focus
-            </span>
-          </>
-        )}
       </div>
     </div>
   );
@@ -477,24 +404,43 @@ const NotesCard: React.FC = () => {
   };
 
   const insertCheckbox = () => {
+    if (!editorRef.current) return;
+    editorRef.current.focus();
     const sel = window.getSelection();
-    if (!sel || !editorRef.current) return;
-    sel.deleteFromDocument();
+    if (!sel) return;
+
+    let range: Range;
+    if (sel.rangeCount > 0 && editorRef.current.contains(sel.anchorNode)) {
+      sel.deleteFromDocument();
+      range = sel.getRangeAt(0);
+    } else {
+      range = document.createRange();
+      range.selectNodeContents(editorRef.current);
+      range.collapse(false);
+    }
+
+    const wrapper = document.createElement('span');
+    wrapper.setAttribute('contenteditable', 'false');
     const cb = document.createElement('input');
     cb.type = 'checkbox';
-    const range = sel.getRangeAt(0);
-    range.insertNode(cb);
-    range.setStartAfter(cb);
-    range.collapse(true);
+    wrapper.appendChild(cb);
+    range.insertNode(wrapper);
+
+    const afterWrapper = document.createRange();
+    afterWrapper.setStartAfter(wrapper);
+    afterWrapper.collapse(true);
+    const textNode = document.createTextNode('​');
+    afterWrapper.insertNode(textNode);
+    afterWrapper.setStart(textNode, 1);
+    afterWrapper.collapse(true);
     sel.removeAllRanges();
-    sel.addRange(range);
-    editorRef.current.focus();
+    sel.addRange(afterWrapper);
   };
 
   const handleSave = async () => {
     const content = editorRef.current?.innerHTML || '';
     if (!title.trim() && !content.trim()) return;
-    await addNote(title, content);
+    await addNote(title.trim() || 'New note', content);
     setTitle('');
     if (editorRef.current) editorRef.current.innerHTML = '';
     setShowForm(false);
@@ -512,12 +458,10 @@ const NotesCard: React.FC = () => {
   return (
     <>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#f6fe9a' }}>
-          Notes
-        </h2>
+        <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#f6fe9a' }}>Notes</h2>
         <button
           onClick={() => setShowForm(prev => !prev)}
-          style={{ background: '#f6fe9a', border: 'none', width: '32px', height: '32px', borderRadius: '50%', cursor: 'pointer', fontSize: '18px', color: '#1a1a1a' }}
+          style={{ background: '#f6fe9a', border: 'none', width: '28px', height: '28px', borderRadius: '50%', cursor: 'pointer', fontSize: '18px', color: '#1a1a1a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
         >
           +
         </button>
@@ -529,7 +473,7 @@ const NotesCard: React.FC = () => {
             value={title}
             onChange={e => setTitle(e.target.value)}
             placeholder="Note title..."
-            style={{ width: '100%', background: 'transparent', border: 'none', color: 'var(--color-text-primary)', fontSize: '14px', fontWeight: 600, outline: 'none', marginBottom: '6px' }}
+            style={{ width: '100%', boxSizing: 'border-box', background: 'transparent', border: 'none', color: 'var(--color-text-primary)', fontSize: '14px', fontWeight: 600, outline: 'none', marginBottom: '6px' }}
           />
           <div style={{ display: 'flex', gap: '4px', marginBottom: '6px' }}>
             <ToolBtn onClick={() => exec('bold')} label={<b>B</b>} />
@@ -543,7 +487,8 @@ const NotesCard: React.FC = () => {
             contentEditable
             suppressContentEditableWarning
             data-placeholder="Write your note..."
-            style={{ width: '100%', minHeight: '60px', background: 'rgba(0,0,0,0.2)', border: 'none', borderRadius: '4px', padding: '8px', color: 'var(--color-text-primary)', fontSize: '13px', outline: 'none', cursor: 'text' }}
+            className="note-editor"
+            style={{ width: '100%', boxSizing: 'border-box', minHeight: '60px', background: 'rgba(0,0,0,0.2)', border: 'none', borderRadius: '4px', padding: '8px', color: 'var(--color-text-primary)', fontSize: '13px', outline: 'none', cursor: 'text' }}
             onKeyDown={e => {
               if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); handleSave(); }
             }}
@@ -566,13 +511,13 @@ const NotesCard: React.FC = () => {
       )}
 
       <div style={{ flex: 1, overflow: 'auto', minHeight: '0' }}>
-        {loading ? (
+        {!showForm && loading ? (
           <p style={{ color: 'var(--color-text-secondary)', fontSize: '12px' }}>Loading...</p>
-        ) : notes.length === 0 ? (
+        ) : !showForm && notes.length === 0 ? (
           <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
             <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>No notes yet</div>
           </div>
-        ) : (
+        ) : !showForm ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {notes.map(note => (
               <div key={note.id} style={{ background: 'rgba(255,255,255,0.05)', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
@@ -586,12 +531,12 @@ const NotesCard: React.FC = () => {
                   </button>
                 </div>
                 {note.content && (
-                  <div style={{ fontSize: '13px', color: 'var(--color-text-primary)', lineHeight: '1.5', textAlign: 'left' }} dangerouslySetInnerHTML={{ __html: note.content }} />
+                  <div className="note-content" style={{ fontSize: '13px', color: 'var(--color-text-primary)', lineHeight: '1.5', textAlign: 'left' }} dangerouslySetInnerHTML={{ __html: note.content }} />
                 )}
               </div>
             ))}
           </div>
-        )}
+        ) : null}
       </div>
     </>
   );

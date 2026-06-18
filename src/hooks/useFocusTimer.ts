@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { focusTimerService } from '../services/focusTimerService';
 
+// Module-level: ensures onFinish fires exactly once per session across all instances
+const finishedSessionIds = new Set<number>();
+
 export type TimerState = 'idle' | 'running' | 'paused' | 'finished';
 
 interface UseFocusTimerOptions {
@@ -13,6 +16,7 @@ interface UseFocusTimerResult {
   remainingSeconds: number;
   totalSeconds: number;
   progress: number; // 0..1
+  sessionId: number | null;
   start: (durationMinutes: number) => void;
   pause: () => void;
   resume: () => void;
@@ -294,8 +298,11 @@ export function useFocusTimer(
           });
         }
 
-        if (onFinishRef.current) {
-          onFinishRef.current();
+        // Guard: only fire onFinish once per session (sessionId-based dedup)
+        const alreadyFinished = sessionId !== null && finishedSessionIds.has(sessionId);
+        if (!alreadyFinished) {
+          if (sessionId !== null) finishedSessionIds.add(sessionId);
+          if (onFinishRef.current) onFinishRef.current();
         }
       }
     };
@@ -319,6 +326,7 @@ export function useFocusTimer(
     remainingSeconds,
     totalSeconds,
     progress,
+    sessionId,
     start,
     pause,
     resume,

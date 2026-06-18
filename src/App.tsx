@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Sidebar from './components/layout/Sidebar';
 import TaskList from './components/taskSystem/TaskList';
@@ -15,13 +15,17 @@ const DashboardPage: React.FC<{
   onToggleTask: ReturnType<typeof useTasks>['toggleTask'];
   onDelete: ReturnType<typeof useTasks>['deleteTask'];
   onReorderTasks: ReturnType<typeof useTasks>['reorderTasks'];
-}> = ({ tasks, onToggleTask, onDelete, onReorderTasks }) => {
+  onAddTask: ReturnType<typeof useTasks>['addTask'];
+  activityTracker: ReturnType<typeof useActivityTracker>;
+}> = ({ tasks, onToggleTask, onDelete, onReorderTasks, onAddTask, activityTracker }) => {
   return (
     <Dashboard
       tasks={tasks}
       onToggleTask={onToggleTask}
       onDelete={onDelete}
       onReorderTasks={onReorderTasks}
+      onAddTask={onAddTask}
+      activityTracker={activityTracker}
     />
   );
 };
@@ -70,7 +74,6 @@ const TasksPage: React.FC<{
 const FocusPage: React.FC = () => {
   return (
     <div className="route-view">
-      <h1 className="route-title">Focus</h1>
       <FocusTimer />
     </div>
   );
@@ -78,19 +81,9 @@ const FocusPage: React.FC = () => {
 
 const StatsPageRoute: React.FC = () => (
   <div className="route-view">
-    <h1 className="route-title">Statystyki</h1>
     <StatsPage />
   </div>
 );
-
-const SettingsPage: React.FC = () => {
-  return (
-    <div className="route-view">
-      <h1 className="route-title">Ustawienia</h1>
-      <p>Konfiguracja aplikacji pojawi się tutaj w przyszłości.</p>
-    </div>
-  );
-};
 
 const TrackerPage: React.FC<{ activityTracker: ReturnType<typeof useActivityTracker> }> = ({ activityTracker }) => {
   return (
@@ -103,6 +96,7 @@ const TrackerPage: React.FC<{ activityTracker: ReturnType<typeof useActivityTrac
 function App() {
   const tracker = useActivityTracker();
   const { tasks, loading, error, toggleTask, addTask, deleteTask, updateTask, reorderTasks, addComment, deleteComment } = useTasks();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
     <div
@@ -113,15 +107,42 @@ function App() {
         color: '#ffffff',
       }}
     >
-      <Sidebar />
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <main
         style={{
           flex: 1,
-          padding: '32px 40px',
+          padding: '32px 40px 32px 70px',
           overflow: 'hidden',
         }}
       >
+        <button
+          onClick={() => setSidebarOpen(true)}
+          style={{
+            position: 'fixed',
+            top: '16px',
+            left: '16px',
+            background: 'var(--color-card-background)',
+            border: '1px solid var(--color-border)',
+            borderRadius: '10px',
+            color: 'var(--color-primary)',
+            cursor: 'pointer',
+            padding: '8px 12px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '16px',
+            lineHeight: 1,
+            zIndex: 100,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+            transition: 'background 0.15s ease, box-shadow 0.15s ease',
+          }}
+          onMouseEnter={e => (e.currentTarget.style.background = '#2a2b34')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'var(--color-card-background)')}
+          aria-label="Open menu"
+        >
+          ☰
+        </button>
         <Routes>
           <Route path="/" element={
             <DashboardPage
@@ -129,6 +150,8 @@ function App() {
               onToggleTask={toggleTask}
               onDelete={deleteTask}
               onReorderTasks={reorderTasks}
+              onAddTask={addTask}
+              activityTracker={tracker}
             />
           } />
           <Route path="/tasks" element={
@@ -149,7 +172,6 @@ function App() {
           <Route path="/focus" element={<FocusPage />} />
           <Route path="/tracker" element={<TrackerPage activityTracker={tracker} />} />
           <Route path="/stats" element={<StatsPageRoute />} />
-          <Route path="/settings" element={<SettingsPage />} />
           <Route path="/calendar" element={<CalendarPage />} />
         </Routes>
       </main>
