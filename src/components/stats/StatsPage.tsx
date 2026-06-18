@@ -13,7 +13,7 @@ const formatSeconds = (s: number): string => {
 
 const formatDate = (iso: string): string => {
   const d = new Date(iso + 'T00:00:00');
-  return d.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
+  return d.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
 };
 
 const CHART_COLORS = [
@@ -22,10 +22,10 @@ const CHART_COLORS = [
 ];
 
 const PRESET_LABELS: Record<DatePreset, string> = {
-  today: 'Dziś',
-  '7d':  '7 dni',
-  '30d': '30 dni',
-  custom: 'Własny',
+  today: 'Today',
+  '7d':  '7 days',
+  '30d': '30 days',
+  custom: 'Custom',
 };
 
 // ─── StatCard ─────────────────────────────────────────────────────────────────
@@ -142,7 +142,7 @@ const BarChartSVG: React.FC<BarChartProps> = ({ data }) => {
         }}>
           <div className="chart-tooltip__label">{formatDate(data[hovered].date)}</div>
           <div className="chart-tooltip__value">{formatSeconds(data[hovered].total_seconds)}</div>
-          <div className="chart-tooltip__sub">{data[hovered].session_count} sesji</div>
+          <div className="chart-tooltip__sub">{data[hovered].session_count} sessions</div>
         </div>
       )}
     </div>
@@ -214,7 +214,7 @@ const DonutChartSVG: React.FC<DonutProps> = ({ data }) => {
         ) : (
           <text x={CX} y={CY + 5} textAnchor="middle"
             fill="var(--color-text-secondary,#aaa)" fontSize={11}>
-            łącznie
+            total
           </text>
         )}
       </svg>
@@ -266,7 +266,7 @@ const StatsPage: React.FC = () => {
     const rest  = rangeStats.topActivities.slice(5);
     const restTotal = rest.reduce((s, a) => s + a.total_seconds, 0);
     const data = top5.map(a => ({ name: a.activity_name, value: a.total_seconds }));
-    if (restTotal > 0) data.push({ name: 'Inne', value: restTotal });
+    if (restTotal > 0) data.push({ name: 'Other', value: restTotal });
     return data;
   }, [rangeStats]);
 
@@ -310,7 +310,7 @@ const StatsPage: React.FC = () => {
       {loading && (
         <div className="stats-loading">
           <span className="stats-loading__spinner" />
-          Ładowanie statystyk…
+          Loading statistics…
         </div>
       )}
       {error && <div className="stats-error">{error}</div>}
@@ -319,15 +319,15 @@ const StatsPage: React.FC = () => {
         <>
           {/* ── summary cards ────────────────────────────────────── */}
           <div className="stat-cards">
-            <StatCard icon="⏱️" label="Łączny czas"
+            <StatCard icon="⏱️" label="Total time"
               value={formatSeconds(summary!.total_seconds)}
-              sub={`śr. ${formatSeconds(Math.round(summary!.total_seconds / dayCount))} / dzień`} />
-            <StatCard icon="🗂️" label="Liczba sesji"
+              sub={`avg. ${formatSeconds(Math.round(summary!.total_seconds / dayCount))} / day`} />
+            <StatCard icon="🗂️" label="Sessions"
               value={String(summary!.session_count)}
-              sub={`śr. ${(summary!.session_count / dayCount).toFixed(1)} / dzień`} />
-            <StatCard icon="🏆" label="Najdłuższa sesja"
+              sub={`avg. ${(summary!.session_count / dayCount).toFixed(1)} / day`} />
+            <StatCard icon="🏆" label="Longest session"
               value={formatSeconds(summary!.longest_session)} />
-            <StatCard icon="📊" label="Śr. długość sesji"
+            <StatCard icon="📊" label="Avg. session length"
               value={summary!.session_count > 0
                 ? formatSeconds(Math.round(summary!.avg_session)) : '—'} />
           </div>
@@ -335,7 +335,7 @@ const StatsPage: React.FC = () => {
           {/* ── bar chart ─────────────────────────────────────────── */}
           {filledDaily.length > 1 && (
             <div className="stats-section">
-              <h3 className="stats-section__title">Aktywność dzienna</h3>
+              <h3 className="stats-section__title">Daily activity</h3>
               <BarChartSVG data={filledDaily} />
             </div>
           )}
@@ -343,9 +343,9 @@ const StatsPage: React.FC = () => {
           {/* ── activities + donut ────────────────────────────────── */}
           <div className="stats-two-col">
             <div className="stats-section stats-section--flex">
-              <h3 className="stats-section__title">Top aktywności</h3>
+              <h3 className="stats-section__title">Top activities</h3>
               {rangeStats.topActivities.length === 0
-                ? <p className="stats-empty">Brak danych w tym okresie.</p>
+                ? <p className="stats-empty">No data for this period.</p>
                 : (
                   <ul className="activity-list">
                     {rangeStats.topActivities.map((a, i) => {
@@ -371,7 +371,7 @@ const StatsPage: React.FC = () => {
 
             {pieData.length > 0 && (
               <div className="stats-section stats-section--flex">
-                <h3 className="stats-section__title">Podział czasu</h3>
+                <h3 className="stats-section__title">Time breakdown</h3>
                 <DonutChartSVG data={pieData} />
               </div>
             )}
@@ -382,7 +382,7 @@ const StatsPage: React.FC = () => {
       {!loading && rangeStats && summary!.session_count === 0 && (
         <div className="stats-empty-state">
           <span>📭</span>
-          <p>Brak sesji w wybranym okresie.</p>
+          <p>No sessions in the selected period.</p>
         </div>
       )}
     </div>
