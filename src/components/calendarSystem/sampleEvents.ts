@@ -1,5 +1,6 @@
 import type { CalendarEvent } from "./eventTypes";
 
+/** Static sample events used for development/testing purposes. */
 export const sampleEvents: CalendarEvent[] = [
   { id: 1, title: "Plan 1", date: "2026-05-14", 
     startTime: "9:45", endTime: "11:20", color: "#FFB347" },

@@ -4,17 +4,26 @@ import { calendarService, type CalendarEvent } from "../../services/calendarServ
 import { taskService, type ITask } from "../../services/taskService";
 import "./CalendarGrid.css";
 
+/**
+ * Props for the {@link CalendarGrid} component.
+ */
 interface CalendarGridProps {
+  /** Number of weeks offset from the current week (0 = this week). */
   weekOffset: number;
+  /** Number of days offset from today (used when view="day"). */
   dayOffset?: number;
+  /** Calendar view mode: "day" or "week". */
   view?: 'day' | 'week';
+  /** If true renders a compact header (single-letter day names). */
   compactHeader?: boolean;
+  /** Optional set of colour hex values to filter events by; when empty all colours are shown. */
   externalActiveColors?: Set<string>;
 }
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const ROW_HEIGHT = 68;
 
+/** Generates time-slot strings (e.g. "00:00", "01:00", ...) for the grid rows. */
 function generateTimeSlots(stepMinutes: number = 60) {
   const slots: string[] = [];
   for (let h = 0; h < 24; h++) {
@@ -26,23 +35,28 @@ function generateTimeSlots(stepMinutes: number = 60) {
 }
 
 const timeSlots = generateTimeSlots(60);
+/** Formats a Date to "YYYY-MM-DD". */
 const formatDate = (d: Date) => d.toISOString().split("T")[0];
 
+/** Calculates the duration in minutes between two "HH:MM" time strings. */
 const getDurationInMinutes = (start: string, end: string) => {
   const [sh, sm] = start.split(":").map(Number);
   const [eh, em] = end.split(":").map(Number);
   return (eh * 60 + em) - (sh * 60 + sm);
 };
 
+/** Converts a total minutes value (0–1439) to a "HH:MM" string. */
 const minutesToTime = (minutes: number): string =>
   `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
 
+/** Tracks an active drag-creation interaction on the grid. */
 interface DragState {
   dayIndex: number;
   startMinutes: number;
   currentMinutes: number;
 }
 
+/** Represents an event being created via drag-and-drop before it is persisted. */
 interface GhostEvent {
   dayIndex: number;
   date: Date;
@@ -51,6 +65,17 @@ interface GhostEvent {
   title: string;
 }
 
+/**
+ * Full-featured weekly/daily calendar grid with:
+ * - Time-slot rows (24 h)
+ * - Drag-to-create new events
+ * - Inline rename for ghost events
+ * - Recurring event expansion
+ * - Task deadline visualisation inside cells
+ * - Colour filter toolbar
+ * - Context menu (edit/delete)
+ * - Current-time indicator line
+ */
 const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset, dayOffset = 0, view = 'week', compactHeader = false, externalActiveColors }) => {
   const today = new Date();
   const todayIndex = (today.getDay() + 6) % 7;
@@ -83,6 +108,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset, dayOffset = 0, 
 
   const [activeColors, setActiveColors] = useState<Set<string>>(new Set());
 
+  /** Toggles a colour on/off in the filter set. */
   const toggleColor = (color: string) => {
     setActiveColors(prev => {
       const next = new Set(prev);
@@ -112,6 +138,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset, dayOffset = 0, 
     reminderMinutes: 0
   });
 
+  /** Scrolls the grid body to roughly the current hour on mount. */
   useEffect(() => {
     if (!bodyRef.current || !firstRowRef.current) return;
     const now = new Date();
@@ -120,8 +147,10 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset, dayOffset = 0, 
     bodyRef.current.scrollTo({ top: Math.max(target, 0), behavior: "smooth" });
   }, []);
 
+  /** Loads events and tasks on initial mount. */
   useEffect(() => { loadEvents(); loadTasks(); }, []);
 
+  /** Fetches all calendar events from the database. */
   const loadEvents = async () => {
     try {
       setEvents(await calendarService.getEvents());
@@ -130,6 +159,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset, dayOffset = 0, 
     }
   };
 
+  /** Fetches all tasks and filters for those with deadlines. */
   const loadTasks = async () => {
     try {
       const all = await taskService.getTasks();
@@ -139,6 +169,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset, dayOffset = 0, 
     }
   };
 
+  /** Returns tasks whose deadline falls within the given date and hour slot. */
   const getTasksForCell = (date: Date, slot: string) => {
     const dateStr = formatDate(date);
     const slotHour = slot.split(':')[0];
@@ -148,6 +179,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset, dayOffset = 0, 
     });
   };
 
+  /** Shows a task preview popup positioned near the click. */
   const handleTaskClick = (e: React.MouseEvent, task: ITask) => {
     e.stopPropagation();
     const popupW = 280;
@@ -159,6 +191,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset, dayOffset = 0, 
     setTaskPreview({ task, x, y });
   };
 
+  /** Toggles a task's completion from the calendar and dispatches a custom event. */
   const handleToggleTaskDone = async () => {
     if (!taskPreview) return;
     const updated = { ...taskPreview.task, isDone: !taskPreview.task.isDone };
@@ -168,6 +201,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset, dayOffset = 0, 
     await loadTasks();
   };
 
+  /** Maps a priority label to a hex colour. */
   const priorityColor = (priority: string) => {
     switch (priority) {
       case 'High': return '#FF6B6B';
@@ -177,6 +211,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset, dayOffset = 0, 
     }
   };
 
+  /** Updates the current-time indicator line every minute. */
   useEffect(() => {
     if (!firstRowRef.current) return;
     const update = () => {
@@ -189,6 +224,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset, dayOffset = 0, 
     return () => clearInterval(interval);
   }, []);
 
+  /** Converts a client Y coordinate to minutes from midnight, with optional 15-min snapping. */
   const getMinutesFromClientY = (clientY: number, snap: 'floor' | 'round' = 'floor'): number => {
     if (!bodyRef.current || !firstRowRef.current) return 0;
     const bodyRect = bodyRef.current.getBoundingClientRect();
@@ -199,6 +235,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset, dayOffset = 0, 
     return Math.max(0, Math.min(23 * 60 + 45, snapped));
   };
 
+  /** Computes column widths and left offsets for the current body width. */
   const getColumnLayout = () => {
     const bodyWidth = bodyRef.current?.clientWidth ?? 640;
     const colWidth = (bodyWidth - 80) / 7;
@@ -207,6 +244,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset, dayOffset = 0, 
 
   const dragStartClient = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
+  /** Initiates a drag-to-create interaction on a cell. */
   const handleCellMouseDown = (dayIndex: number, e: React.MouseEvent) => {
     if (e.button !== 0) return;
     e.preventDefault();
@@ -217,6 +255,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset, dayOffset = 0, 
     setDragState({ dayIndex, startMinutes, currentMinutes: startMinutes });
   };
 
+  /** Updates the drag preview as the mouse moves (min 15 min duration). */
   const handleBodyMouseMove = (e: React.MouseEvent) => {
     if (!dragState) return;
     const current = getMinutesFromClientY(e.clientY, 'round');
@@ -225,6 +264,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset, dayOffset = 0, 
       setDragState({ ...dragState, currentMinutes });
   };
 
+  /** Ends the drag interaction: click (< 25 px) opens the create popup; drag creates a ghost event. */
   const handleBodyMouseUp = (e: React.MouseEvent) => {
     if (!dragState) return;
     const dy = e.clientY - dragStartClient.current.y;
@@ -262,6 +302,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset, dayOffset = 0, 
     setTimeout(() => ghostInputRef.current?.focus(), 50);
   };
 
+  /** Persists the ghost event and reloads the event list. */
   const createEventFromGhost = async () => {
     if (!ghostEvent) return;
     try {
@@ -281,6 +322,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset, dayOffset = 0, 
     }
   };
 
+  /** Opens the full popup editor with the current ghost event data pre-filled. */
   const openMoreOptions = () => {
     if (!ghostEvent || !bodyRef.current) return;
     const bodyRect = bodyRef.current.getBoundingClientRect();
@@ -307,6 +349,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset, dayOffset = 0, 
     setPopupPosition({ x, y, date: ghostEvent.date, time: minutesToTime(ghostEvent.startMinutes) });
   };
 
+  /** Saves the event from the popup form (creates or updates). */
   const saveEvent = async () => {
     if (!popupPosition) return;
     try {
@@ -338,12 +381,14 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset, dayOffset = 0, 
     }
   };
 
+  /** Opens the context menu for an event on right-click. */
   const handleContextMenu = (e: React.MouseEvent, ev: CalendarEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setContextMenu({ x: e.clientX, y: e.clientY, event: ev });
   };
 
+  /** Fills the popup form with the context-menu event's data for editing. */
   const handleEditEvent = () => {
     if (!contextMenu) return;
     const ev = contextMenu.event;
@@ -375,6 +420,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset, dayOffset = 0, 
     setContextMenu(null);
   };
 
+  /** Deletes the event targeted by the context menu. */
   const handleDeleteEvent = async () => {
     if (!contextMenu) return;
     const realId = contextMenu.event.originalEventId ?? contextMenu.event.id;
@@ -389,6 +435,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset, dayOffset = 0, 
 
   const effectiveColors = externalActiveColors ?? activeColors;
 
+  /** Returns events matching the given date and hour slot, filtered by active colours. */
   const getEventsForCell = (date: Date, slot: string) => {
     const dateStr = formatDate(date);
     const slotHour = slot.split(":")[0];
@@ -399,6 +446,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset, dayOffset = 0, 
     );
   };
 
+  /** Checks if an event ID corresponds to a recurring copy (compound ID > 6 digits). */
   const isRecurringCopy = (eventId: number, originalDate: string, currentDate: string) =>
     eventId.toString().length > 6 && currentDate !== originalDate;
 
