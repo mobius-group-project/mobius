@@ -143,7 +143,9 @@ function App() {
         style={{
           flex: 1,
           padding: '32px 40px 32px 70px',
+          minWidth: 0,
           overflow: 'hidden',
+          boxSizing: 'border-box',
         }}
       >
         <button
