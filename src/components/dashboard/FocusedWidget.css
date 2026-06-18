@@ -1,3 +1,13 @@
+/**
+ * Styles for the legacy FocusedWidget component.
+ * This component is not currently rendered in the dashboard — kept alongside the component file.
+ *
+ * The circular progress ring is an SVG element; `.focused-time` is positioned absolutely
+ * inside the same relative container so the time label appears centred inside the ring.
+ * `filter: drop-shadow` is used instead of `box-shadow` because drop-shadow follows the
+ * SVG stroke shape rather than the rectangular bounding box.
+ */
+
 /* Focused Widget */
 .focused-widget {
   display: flex;
@@ -55,6 +65,7 @@
   filter: drop-shadow(0 0 10px rgba(212, 255, 92, 0.1));
 }
 
+/* Animates the ring fill smoothly when the JS-computed stroke-dashoffset changes. */
 .focused-circle-progress {
   transition: stroke-dashoffset 0.5s ease;
 }
@@ -148,6 +159,7 @@
   background: rgba(255, 255, 255, 0.1);
 }
 
+/* font-family: inherit overrides the browser default monospace font applied to <textarea>. */
 .note-input-body {
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -228,6 +240,7 @@
   border-radius: 2px;
 }
 
+/* white-space: pre-wrap preserves newlines from the textarea body input. */
 .note-item {
   background: rgba(212, 255, 92, 0.1);
   border-left: 3px solid #d4ff5c;
