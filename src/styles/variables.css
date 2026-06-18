@@ -1,7 +1,23 @@
+/**
+ * Global design tokens for the Mobius app.
+ * All component stylesheets reference these variables — never hard-code colours or
+ * font names in component CSS, use these custom properties instead.
+ *
+ * Colour palette:
+ *   --color-primary    (#F6FE9A) — yellow-green accent, used for CTAs and highlights
+ *   --color-secondary  (#FF9D47) — orange, used for medium-priority indicators
+ *   --color-positive   (#5FBF8F) — green, used for low-priority and success states
+ *   --color-negative   (#FF4747) — red, used for high-priority and error states
+ *
+ * Priority aliases map directly to semantic colours so task components
+ * can use --priority-high / --priority-medium / --priority-low instead of raw values.
+ *
+ * Typography: Almarai is loaded from Google Fonts (weights 300, 400, 700, 800).
+ */
 @import url('https://fonts.googleapis.com/css2?family=Almarai:wght@300;400;700;800&display=swap');
 
 :root {
-  /* Colors */
+  /* ── Colours ──────────────────────────────────────────── */
   --color-background: #16171D;
   --color-card-background: #1f2027;
   --color-primary: #F6FE9A;
@@ -9,16 +25,17 @@
   --color-secondary-2: #6090BE;
   --color-positive: #5FBF8F;
   --color-negative: #FF4747;
-  
+
   --color-text-primary: #ffffff;
   --color-text-secondary: #a0aec0;
   --color-border: rgba(255, 255, 255, 0.08);
 
-  --priority-high: var(--color-negative);   
-  --priority-medium: var(--color-secondary); 
+  /* Semantic aliases for task priority colours. */
+  --priority-high: var(--color-negative);
+  --priority-medium: var(--color-secondary);
   --priority-low: var(--color-positive);
 
-  /* Typography */
+  /* ── Typography ───────────────────────────────────────── */
   --font-main: 'Almarai', sans-serif;
   --h1-size: 2.5rem;
   --h2-size: 2rem;

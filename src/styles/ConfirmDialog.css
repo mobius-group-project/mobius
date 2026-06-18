@@ -1,3 +1,13 @@
+/**
+ * Styles for the global confirmation dialog (used for destructive actions like deleting a task).
+ * The dialog is rendered into #modal-root via a React portal so it always appears above all other UI.
+ *
+ * z-index: 99999 ensures the overlay sits above the sidebar (z-index ~100) and any other stacking contexts.
+ * pointer-events: all on both the overlay and the dialog is required because portal content
+ * can inherit pointer-events: none from ancestor elements in some stacking contexts.
+ */
+
+/* Full-screen semi-transparent backdrop that blocks interaction with the page below. */
 .confirm-overlay {
   position: fixed;
   top: 0;
