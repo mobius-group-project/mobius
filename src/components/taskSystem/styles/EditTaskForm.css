@@ -1,9 +1,29 @@
+/**
+ * Styles for EditTaskForm — inline edit form that replaces a TaskItem row.
+ *
+ * Notable patterns:
+ *   - Mirrors AddTaskForm layout with `edit-` prefixed class names to avoid conflicts
+ *     when both forms could theoretically be mounted simultaneously.
+ *   - `.edit-task-date-picker` and `.edit-task-time-picker` use the same overlay trick
+ *     as AddTaskForm: `position:absolute`, `opacity:0`, full-size over the visible label.
+ *   - Deadline parsed from "YYYY-MM-DD HH:MM" on mount: date half → date input,
+ *     time half → hour/minute number inputs.
+ */
+
+/* ==================== */
+/*   FORM CONTAINER     */
+/* ==================== */
+
 .edit-task-form {
   display: flex;
   flex-direction: column;
   gap: 10px;
   width: 100%;
 }
+
+/* ==================== */
+/*    TEXT INPUTS       */
+/* ==================== */
 
 .edit-task-input-title {
   background: transparent;
@@ -38,6 +58,10 @@
 .edit-task-input-description:focus {
   border-color: var(--color-primary);
 }
+
+/* ==================== */
+/* DATE & TIME PICKERS  */
+/* ==================== */
 
 .edit-task-form-row {
   display: flex;
@@ -116,6 +140,10 @@
   cursor: pointer;
 }
 
+/* ==================== */
+/*      PRIORITY        */
+/* ==================== */
+
 .edit-task-priority-buttons {
   flex: 0;
   gap: 6px;
@@ -156,6 +184,10 @@
   color: var(--color-primary);
 }
 
+/* ==================== */
+/*    FORM ACTIONS      */
+/* ==================== */
+
 .edit-task-actions {
   display: flex;
   gap: 12px;
@@ -194,6 +226,10 @@
   border-color: var(--color-negative);
   color: var(--color-negative);
 }
+
+/* ==================== */
+/*     RESPONSIVE       */
+/* ==================== */
 
 @media (max-width: 600px) {
   .edit-task-form-row {

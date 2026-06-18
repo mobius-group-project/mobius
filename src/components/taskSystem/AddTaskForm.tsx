@@ -1,3 +1,12 @@
+/**
+ * Form for creating a new task.
+ *
+ * The deadline is composed from a hidden `<input type="date">` overlaid at opacity:0
+ * over a visible label — clicking the visible row opens the native date picker.
+ * The same overlay pattern is used for the time inputs.
+ * A `compact` prop renders a smaller variant suitable for use inside TaskList's header area.
+ * Priority selection is a toggle: clicking the active flag again clears the selection.
+ */
 import React, { useState } from 'react';
 import { Calendar, Flag, Clock } from 'lucide-react';
 import './styles/AddTaskForm.css';

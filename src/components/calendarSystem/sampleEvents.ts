@@ -1,3 +1,4 @@
+/** Static sample events for development and testing — not used in production. */
 import type { CalendarEvent } from "./eventTypes";
 
 /** Static sample events used for development/testing purposes. */

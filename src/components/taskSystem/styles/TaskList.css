@@ -1,8 +1,22 @@
+/**
+ * Styles for the TaskList component and its drag-and-drop wrapper.
+ *
+ * Notable patterns:
+ *   - `.task-item-empty` renders ghost placeholder rows when the list is empty,
+ *     keeping the layout from collapsing to zero height.
+ *   - `.draggable-task-wrapper` resets cursor to grab/grabbing; nested buttons and
+ *     checkboxes override back to `pointer` so they remain clickable during drag.
+ */
+
+/* ==================== */
+/*     LIST CONTAINER   */
+/* ==================== */
+
 .task-list {
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-width: 400px; 
+  max-width: 400px;
   margin: 0 auto;
 }
 
@@ -21,6 +35,10 @@
 .task-item-empty:hover {
   background: rgba(255, 255, 255, 0.02);
 }
+
+/* ==================== */
+/*     ADD BUTTON       */
+/* ==================== */
 
 .tasklist-add-header {
   margin-bottom: 8px;
@@ -58,6 +76,10 @@
   cursor: default;
 }
 
+/* ==================== */
+/*     DRAG HANDLE      */
+/* ==================== */
+
 .drag-handle {
   cursor: grab;
   padding: 8px;
@@ -80,6 +102,10 @@
 .drag-handle:active {
   cursor: grabbing;
 }
+
+/* ==================== */
+/* DRAGGABLE WRAPPER    */
+/* ==================== */
 
 .draggable-task-wrapper {
   cursor: grab;

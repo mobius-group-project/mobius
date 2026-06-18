@@ -1,3 +1,19 @@
+/**
+ * Full-featured weekly/daily calendar grid component.
+ *
+ * Key behaviours:
+ *   - Drag-to-create: mousedown → mousemove shows a drag preview; mouseup < 25 px opens the
+ *     popup form, mouseup ≥ 25 px creates a ghost event with an inline rename input.
+ *   - Ghost event: rendered as an absolutely-positioned overlay; Enter persists it, Escape discards it,
+ *     "More" opens the full popup form pre-filled with the ghost data.
+ *   - Recurring events are expanded client-side by calendarService.getEvents(); virtual occurrence IDs
+ *     are longer than 6 digits — `isRecurringCopy` detects them to show the 🔄 icon and dashed border.
+ *   - Task deadlines are fetched separately and rendered as striped chips inside their hour cell.
+ *   - Colour filter toolbar (hidden in compactHeader mode): clicking a dot toggles it; when any dot
+ *     is active only events of those colours are shown. `externalActiveColors` lets a parent override.
+ *   - Current-time indicator line is updated every minute via setInterval.
+ *   - On mount the grid body auto-scrolls to centre the current hour.
+ */
 import React, { useEffect, useRef, useState } from "react";
 import { Calendar, Flag, MapPin } from "lucide-react";
 import { calendarService, type CalendarEvent } from "../../services/calendarService";

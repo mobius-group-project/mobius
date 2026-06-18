@@ -1,3 +1,11 @@
+/**
+ * CRUD service for tasks and their comments.
+ *
+ * `deleteTask` cascades manually: nullifies task_id in activity_sessions and
+ * calendar_events, then deletes comments, then deletes the task row — SQLite
+ * foreign keys are not enforced by default so this is done in application code.
+ * `getTasks` fetches all comments in one query and groups them by task to avoid N+1.
+ */
 import { getDb } from './db';
 
 /**

@@ -1,4 +1,10 @@
 /**
+ * Shared type definitions for the calendar system.
+ * The full CalendarEvent interface (with recurrence, reminders, etc.) lives in calendarService.ts;
+ * this file defines the minimal shape used by the legacy CalendarGrid display logic.
+ */
+
+/**
  * Represents a calendar event with scheduling information.
  *
  * @property id        - Unique event identifier.

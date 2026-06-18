@@ -1,3 +1,22 @@
+/**
+ * Styles for TaskItem — a single task row with checkbox, info, actions, and comments panel.
+ *
+ * Notable patterns:
+ *   - `.drag-handle-area` covers the full item at z-index 1; `.task-checkbox`,
+ *     buttons, and footer sit at z-index 2 so clicks reach them over the drag layer.
+ *   - Edit, delete, and comment buttons start at opacity:0 / visibility:hidden and are
+ *     revealed only on `.task-item:hover`, keeping the list visually clean.
+ *   - `.comment-task-btn.has-comments` forces opacity:1 with `!important` so the badge
+ *     stays visible even when the row is not hovered.
+ *   - `.task-comments` is `position:fixed` centered in the viewport — it renders in the
+ *     task DOM tree but escapes the scroll container via fixed positioning.
+ *   - `.comment-item::before` draws a CSS triangle tail on the comment bubble.
+ */
+
+/* ==================== */
+/*      TASK ITEM       */
+/* ==================== */
+
 .task-item {
   display: flex;
   align-items: flex-start;
@@ -7,6 +26,10 @@
   transition: background-color 0.2s ease;
   position: relative;
 }
+
+/* ==================== */
+/*  CHECKBOX & PRIORITY */
+/* ==================== */
 
 .task-checkbox {
   appearance: none; 
@@ -61,6 +84,10 @@
   border-width: 0 2px 2px 0; 
   transform: rotate(45deg) translate(-1px, -1px);
 }
+
+/* ==================== */
+/*      TASK INFO       */
+/* ==================== */
 
 .task-info {
   display: flex;
@@ -119,6 +146,10 @@
   opacity: 0.3;
 }
 
+/* ==================== */
+/*     TASK FOOTER      */
+/* ==================== */
+
 .task-footer {
   display: flex;
   justify-content: space-between; 
@@ -160,6 +191,10 @@
   opacity: 0.5;
   color: #666;
 }
+
+/* ==================== */
+/*   HEADER & ACTIONS   */
+/* ==================== */
 
 .task-meta-left {
   display: flex;
@@ -306,6 +341,10 @@
   padding: 0 4px;
 }
 
+/* ==================== */
+/*     DRAG LAYER       */
+/* ==================== */
+
 .drag-handle-area {
   position: absolute;
   left: 0;
@@ -328,6 +367,10 @@
   position: relative;
   z-index: 2;
 }
+
+/* ==================== */
+/*   COMMENTS PANEL     */
+/* ==================== */
 
 .task-comments {
   position: fixed;

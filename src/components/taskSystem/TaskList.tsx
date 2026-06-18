@@ -1,3 +1,11 @@
+/**
+ * Task list page component with drag-and-drop reordering.
+ *
+ * Uses dnd-kit (DndContext + SortableContext) for drag-and-drop.
+ * SortableTaskItem is a local wrapper that adds dnd-kit sortable props to TaskItem;
+ * it has no other consumers and is defined here to keep the drag logic contained.
+ * The "Add task" button toggles an inline AddTaskForm in place of itself.
+ */
 import React, { useState } from 'react';
 import TaskItem, { type ITask } from './TaskItem';
 import TaskForm from './AddTaskForm';

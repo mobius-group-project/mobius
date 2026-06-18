@@ -1,3 +1,21 @@
+/**
+ * Styles for AddTaskForm — the inline form for creating a new task.
+ *
+ * Notable patterns:
+ *   - `.task-date-picker` sits `position:absolute` over the label at `opacity:0`;
+ *     the entire wrapper is clickable and the native date picker opens transparently.
+ *     The `::webkit-calendar-picker-indicator` pseudo-element is also expanded to full
+ *     wrapper size and set to `opacity:0` to prevent the default browser icon from showing.
+ *   - `.task-form--compact` is a BEM modifier applied when the `compact` prop is true
+ *     (e.g. on the dashboard), shrinking font sizes, heights, and padding.
+ *   - Priority flags act as a toggle: clicking the already-active flag deselects priority
+ *     (resets to Low); `.priority-flag.active` shows a subtle highlight background.
+ */
+
+/* ==================== */
+/*   FORM CONTAINER     */
+/* ==================== */
+
 .task-form {
   display: flex;
   flex-direction: column;
@@ -6,6 +24,10 @@
   border-top: 1px solid rgba(255, 255, 255, 0.05);
   animation: fadeIn 0.3s ease;
 }
+
+/* ==================== */
+/*    TEXT INPUTS       */
+/* ==================== */
 
 .task-input-title {
   background: transparent;
@@ -49,6 +71,10 @@
 .task-input-description::placeholder {
   color: #666;
 }
+
+/* ==================== */
+/* DATE & TIME PICKERS  */
+/* ==================== */
 
 .task-form-row {
   display: flex;
@@ -156,6 +182,10 @@
   cursor: pointer;
 }
 
+/* ==================== */
+/*      PRIORITY        */
+/* ==================== */
+
 .task-priority-buttons {
   flex: 1.5;
   gap: 10px;
@@ -181,6 +211,10 @@
   background: rgba(255, 255, 255, 0.1);
   border-radius: 4px;
 }
+
+/* ==================== */
+/*    FORM ACTIONS      */
+/* ==================== */
 
 .task-attachment-btn:hover {
   background: rgba(255, 255, 255, 0.1);
@@ -227,6 +261,10 @@
   color: var(--color-negative);
 }
 
+/* ==================== */
+/* ANIMATIONS & RESPONSIVE */
+/* ==================== */
+
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(-5px); }
   to { opacity: 1; transform: translateY(0); }
@@ -247,6 +285,10 @@
     justify-content: center;
   }
 }
+/* ==================== */
+/*    COMPACT MODE      */
+/* ==================== */
+
 .task-form--compact {
   gap: 8px;
   padding: 10px 0;

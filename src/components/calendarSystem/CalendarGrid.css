@@ -1,3 +1,23 @@
+/**
+ * Styles for CalendarGrid and all its overlays (event popup, task preview, context menu).
+ *
+ * Notable patterns:
+ *   - `.calendar-grid-wrapper` is a flex row: the colour-filter column on the left + the grid on the right.
+ *   - `.calendar-body` uses `position: relative` so event chips, the drag preview, ghost event,
+ *     and the current-time line can all be positioned absolutely inside it.
+ *   - `.calendar-task-deadline` uses a repeating-linear-gradient diagonal stripe to distinguish
+ *     task deadline chips from regular calendar events.
+ *   - `.drag-preview` and `.ghost-event` use `z-index: 20/19` to float above events (z-index: 5).
+ *   - `.popup-backdrop` / `.context-backdrop` cover the full viewport at z-index 999/1001 to
+ *     catch outside clicks without blocking the popup itself (z-index 1000/1002).
+ *   - `.year-mini-weekdays` uses `!important` to override `.month-weekdays` column widths
+ *     because MiniMonth reuses the same `.month-weekdays` class at a smaller scale.
+ */
+
+/* ==================== */
+/*    COLOR FILTER      */
+/* ==================== */
+
 .calendar-grid-wrapper {
   display: flex;
   flex-direction: row;
@@ -37,6 +57,10 @@
   border-color: rgba(255, 255, 255, 0.85);
   transform: scale(1.15);
 }
+
+/* ==================== */
+/*    GRID STRUCTURE    */
+/* ==================== */
 
 .calendar-grid {
   display: flex;
@@ -87,9 +111,14 @@
   user-select: none;
 }
 
+/* Disable cell pointer events during drag so mousemove fires on the body, not child cells. */
 .calendar-body.is-dragging .calendar-cell {
   pointer-events: none;
 }
+
+/* ==================== */
+/*   DRAG INTERACTION   */
+/* ==================== */
 
 .drag-preview {
   position: absolute;
@@ -110,6 +139,10 @@
   color: #fff;
   white-space: nowrap;
 }
+
+/* ==================== */
+/*     GHOST EVENT      */
+/* ==================== */
 
 .ghost-backdrop {
   position: fixed;
@@ -173,6 +206,10 @@
 .ghost-more-btn:hover {
   background: rgba(22, 23, 29, 0.2);
 }
+
+/* ==================== */
+/*   TIME ROWS & CELLS  */
+/* ==================== */
 
 .calendar-row {
   display: grid;
@@ -256,6 +293,10 @@
   margin-left: 0;
 }
 
+/* ==================== */
+/*  CURRENT TIME LINE   */
+/* ==================== */
+
 .current-time-line {
   position: absolute;
   left: 60px;
@@ -275,6 +316,10 @@
   background: var(--color-primary);
   border-radius: 50%;
 }
+
+/* ==================== */
+/*     NAVIGATION       */
+/* ==================== */
 
 .calendar-nav {
   display: flex;
@@ -326,6 +371,103 @@
   font-family: var(--font-main);
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 16px;
+}
+
+.calendar-nav-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.8);
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-family: var(--font-main);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.calendar-nav-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.calendar-nav-btn.is-active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #000;
+  font-weight: 700;
+}
+
+/* ==================== */
+/*   CALENDAR EVENTS    */
+/* ==================== */
+
+.calendar-event {
+  position: absolute;
+  top: 0;
+  left: 2px;
+  right: 2px;
+  min-height: 20px;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #000;
+  z-index: 5;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+/* Task deadline chips sit at z-index 6 — one above regular events (z-index 5). */
+/* The diagonal stripe distinguishes them visually from calendar events. */
+.calendar-task-deadline {
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  height: 20px;
+  border-radius: 4px;
+  padding: 0 6px;
+  z-index: 6;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  cursor: default;
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 4px,
+    rgba(0, 0, 0, 0.12) 4px,
+    rgba(0, 0, 0, 0.12) 5px
+  );
+}
+
+.calendar-task-deadline-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: #16171D;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.calendar-event-title {
+  font-weight: 600;
+  margin-bottom: 2px;
+  font-size: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.calendar-event-location {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  font-size: 9px;
+  opacity: 0.8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ==================== */
@@ -447,6 +589,7 @@
   align-self: flex-start;
 }
 
+/* !important overrides .month-weekdays column widths — MiniMonth reuses that class at a smaller scale. */
 .year-mini-weekdays {
   grid-template-columns: repeat(7, 22px) !important;
   gap: 2px !important;
@@ -491,98 +634,9 @@
   font-weight: 700;
 }
 
-.calendar-nav-btn {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.8);
-  border-radius: 8px;
-  padding: 6px 14px;
-  font-size: 13px;
-  font-family: var(--font-main);
-  cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
-}
-
-.calendar-nav-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.15);
-}
-
-.calendar-nav-btn.is-active {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
-  color: #000;
-  font-weight: 700;
-}
-
-.calendar-event {
-  position: absolute;
-  top: 0;
-  left: 2px;
-  right: 2px;
-  min-height: 20px;
-  border-radius: 4px;
-  padding: 2px 6px;
-  font-size: 11px;
-  font-weight: 600;
-  color: #000;
-  z-index: 5;
-  overflow: hidden;
-  cursor: pointer;
-}
-
-.calendar-task-deadline {
-  position: absolute;
-  left: 2px;
-  right: 2px;
-  height: 20px;
-  border-radius: 4px;
-  padding: 0 6px;
-  z-index: 6;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  cursor: default;
-  background-image: repeating-linear-gradient(
-    45deg,
-    transparent,
-    transparent 4px,
-    rgba(0, 0, 0, 0.12) 4px,
-    rgba(0, 0, 0, 0.12) 5px
-  );
-}
-
-.calendar-task-deadline-title {
-  font-size: 10px;
-  font-weight: 700;
-  color: #16171D;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.calendar-event-title {
-  font-weight: 600;
-  margin-bottom: 2px;
-  font-size: 10px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.calendar-event-location {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  font-size: 9px;
-  opacity: 0.8;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* ========== POPUP STYLES ========== */
+/* ==================== */
+/*    EVENT POPUP       */
+/* ==================== */
 
 .popup-backdrop {
   position: fixed;
@@ -812,6 +866,10 @@
   opacity: 0.9;
 }
 
+/* ==================== */
+/*   TASK PREVIEW       */
+/* ==================== */
+
 .task-preview-popup {
   background: #1e2029;
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -904,16 +962,9 @@
   color: var(--color-primary);
 }
 
-@keyframes popupFadeIn {
-  from {
-    opacity: 0;
-    transform: translateX(-6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
+/* ==================== */
+/*    CONTEXT MENU      */
+/* ==================== */
 
 .context-backdrop {
   position: fixed;
@@ -958,4 +1009,19 @@
 
 .context-menu-item--danger:hover {
   background: rgba(255, 90, 90, 0.1);
+}
+
+/* ==================== */
+/*     ANIMATIONS       */
+/* ==================== */
+
+@keyframes popupFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }

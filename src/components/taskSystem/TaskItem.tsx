@@ -1,3 +1,17 @@
+/**
+ * Single task row — renders the checkbox, title, description, deadline, priority flag,
+ * inline time tracker controls, action buttons, and the comments panel.
+ *
+ * Notable patterns:
+ *   - `.drag-handle-area` covers the full item at z-index 1; interactive elements
+ *     (checkbox, buttons, footer) are lifted to z-index 2 so clicks reach them first.
+ *   - `displaySeconds` is computed live: adds the active timer's `seconds` to
+ *     `task.timeSpent` only when this specific task is the one being tracked,
+ *     so the displayed value ticks in real time without a DB write per tick.
+ *   - Edit/delete/comment buttons are hidden (opacity:0) until the row is hovered.
+ *   - The comments panel is a fixed-position modal that renders inside the task DOM tree
+ *     but uses `position:fixed` so it escapes the scroll container.
+ */
 import React, { useState } from 'react';
 import { Calendar, Play, Pause, Flag, Trash2, Pencil, MessageSquare } from 'lucide-react';
 import './styles/TaskItem.css';

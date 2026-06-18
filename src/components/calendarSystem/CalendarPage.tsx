@@ -1,3 +1,15 @@
+/**
+ * Top-level calendar page (/calendar route).
+ *
+ * Supports four views switchable from the toolbar:
+ *   - Day   — single-day grid via CalendarGrid
+ *   - Week  — seven-day grid via CalendarGrid
+ *   - Month — MonthView: 42-cell grid (always 6 weeks, Monday-first) with task deadline dots
+ *   - Year  — YearView: 12 MiniMonth grids, clicking a day switches to day view at that date
+ *
+ * `offset` is view-relative: days in day view, weeks in week view, months in month view, years in year view.
+ * MonthView and YearView are defined as local sub-components — they have no other consumers.
+ */
 import React, { useState, useEffect } from "react";
 import CalendarGrid from "../calendarSystem/CalendarGrid";
 import { taskService, type ITask } from "../../services/taskService";

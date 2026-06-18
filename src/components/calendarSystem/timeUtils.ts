@@ -1,3 +1,5 @@
+/** Utility functions for parsing and calculating "HH:MM" time strings. */
+
 /**
  * Extracts the hour component from a "HH:MM" time string.
  * @param time - Time in "HH:MM" format.

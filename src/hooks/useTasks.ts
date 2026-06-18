@@ -1,3 +1,14 @@
+/**
+ * Hook managing the full lifecycle of tasks with optimistic UI updates.
+ *
+ * All mutating operations (toggle, add, delete, update, reorder, comments) apply the
+ * change to local state immediately and roll back on DB failure.
+ * Listens for two custom window events fired by other parts of the app:
+ *   - `taskTimeUpdated` — emitted by the activity tracker when a session stops,
+ *     updates the displayed time_spent without a full refetch.
+ *   - `taskToggled`     — emitted by the calendar when a task is checked from the
+ *     task preview popup, keeping the task list in sync.
+ */
 import { useState, useEffect, useCallback } from 'react';
 import { taskService } from '../services/taskService';
 export type { ITask } from '../services/taskService';

@@ -1,3 +1,8 @@
+/**
+ * Inline edit form for an existing task — mirrors AddTaskForm but pre-fills all
+ * inputs from the provided `task` prop. Parses the "YYYY-MM-DD HH:MM" deadline
+ * string into separate date, hour, and minute fields on mount.
+ */
 import React, { useState } from 'react';
 import { Calendar, Flag, Clock } from 'lucide-react';
 import type { ITask } from './TaskItem';
