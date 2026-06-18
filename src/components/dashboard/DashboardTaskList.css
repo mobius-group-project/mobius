@@ -1,3 +1,15 @@
+/**
+ * Styles for the legacy DashboardTaskList component.
+ * This component is not currently rendered in the dashboard — kept alongside the component file.
+ *
+ * Notable patterns:
+ *   - `.task-checkbox` uses `accent-color` to tint the native browser checkbox without a custom element.
+ *   - `.task-item-left` and `.task-info` both set `min-width: 0` so text-overflow: ellipsis
+ *     on the title/description works inside a flex container (flex children do not shrink below
+ *     content width by default).
+ *   - `.task-items` is fixed at max-height: 400px and scrolls internally.
+ */
+
 /* Dashboard Task List */
 .dashboard-task-list {
   display: flex;
