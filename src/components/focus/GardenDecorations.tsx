@@ -1,16 +1,40 @@
+/**
+ * Garden decoration system for the focus module.
+ *
+ * Provides pixel-art sprites (house, garden beds, fence sections) that the user
+ * can freely drag around the garden canvas. Each decoration's position, z-index,
+ * and visibility (deleted or not) are persisted to localStorage and restored on mount.
+ *
+ * Also exports PixelSprite — the low-level primitive used by both decorations and
+ * the plant sprites in FocusTimer.tsx.
+ */
 import React, { useState, useRef } from 'react';
 
 // ─── types ────────────────────────────────────────────────────────────────────
+
+/**
+ * Compact representation of a pixel-art image.
+ * Each tuple is [col, row, cssColor] — only colored pixels are listed;
+ * everything else is transparent. This avoids storing the full grid.
+ */
 type SparsePixels = [number, number, string][];
 
+/** Unique identifier for every decoration that can appear in the garden. */
 export type DecorationId =
   | 'house'
   | 'bed1' | 'bed2' | 'bed3' | 'bed4' | 'bed5'
   | 'fence1' | 'fence2' | 'fence3' | 'fence4' | 'fence5';
 
+/** Absolute pixel position of a decoration within the garden canvas. */
 export type DecoPos = { x: number; y: number };
+
+/** A position entry for every possible decoration. */
 export type DecoPositions = Record<DecorationId, DecoPos>;
 
+/**
+ * Initial positions for all decorations when the user opens the garden for the first time.
+ * The house sits top-right; beds and fence form a row along the bottom of the canvas.
+ */
 export const DECO_DEFAULT: DecoPositions = {
   house:  { x: 680, y: 12 },
   bed1:   { x: 20,  y: 285 }, bed2: { x: 140, y: 285 }, bed3: { x: 260, y: 285 },
@@ -21,12 +45,30 @@ export const DECO_DEFAULT: DecoPositions = {
 };
 
 // ─── pixel sprite ─────────────────────────────────────────────────────────────
+
+/**
+ * Converts a sparse pixel list to a flat col×row array suitable for grid rendering.
+ * Unspecified cells are set to null, which the renderer treats as transparent.
+ *
+ * @param cols - Number of columns in the grid.
+ * @param rows - Number of rows in the grid.
+ * @param pixels - Sparse list of colored pixels as [col, row, color] tuples.
+ * @returns Flat array of length cols×rows where each entry is a CSS color or null.
+ */
 function makeGrid(cols: number, rows: number, pixels: SparsePixels): (string | null)[] {
   const g = new Array(cols * rows).fill(null);
   for (const [x, y, c] of pixels) g[y * cols + x] = c;
   return g;
 }
 
+/**
+ * Renders a pixel-art sprite as a CSS grid of colored divs.
+ *
+ * @param cols - Number of pixel columns.
+ * @param rows - Number of pixel rows.
+ * @param px - Size of each pixel in CSS pixels.
+ * @param pixels - Sparse pixel data (see SparsePixels).
+ */
 export function PixelSprite({ cols, rows, px, pixels }: {
   cols: number; rows: number; px: number; pixels: SparsePixels;
 }) {
@@ -41,16 +83,36 @@ export function PixelSprite({ cols, rows, px, pixels }: {
 }
 
 // ─── draggable decoration ─────────────────────────────────────────────────────
+
+/** Props for DraggableDecoration. */
 interface DraggableDecoProps {
+  /** Identifies which decoration this is — used to call back with the correct ID. */
   id: DecorationId;
+  /** Starting position on the garden canvas in pixels. */
   initialPos: DecoPos;
+  /** CSS z-index controlling layer order relative to other decorations and plants. */
   zIndex?: number;
+  /** Called when the user finishes dragging. Receives the new absolute position. */
   onDragEnd: (id: DecorationId, x: number, y: number) => void;
+  /** Called when the user clicks "Remove" in the context menu. */
   onDelete: (id: DecorationId) => void;
+  /** Called when the user clicks ↑ or ↓ in the context menu. delta is +1 or -1. */
   onZChange: (id: DecorationId, delta: number) => void;
+  /** The sprite component to render inside the draggable wrapper. */
   children: React.ReactNode;
 }
 
+/**
+ * Wraps a decoration sprite with drag-to-reposition behaviour and a right-click context menu.
+ *
+ * Dragging is implemented with global mousemove/mouseup listeners attached on mousedown
+ * so the pointer can move freely outside the element without losing the drag.
+ * The `moved` ref distinguishes a real drag from a plain click — onDragEnd is only
+ * called if the pointer moved more than 3px, avoiding unnecessary state updates.
+ *
+ * The context menu lets the user adjust layer order (z-index) or remove the decoration.
+ * It closes automatically when the user clicks anywhere outside the element.
+ */
 export const DraggableDecoration: React.FC<DraggableDecoProps> = ({
   id, initialPos, zIndex = 0, onDragEnd, onDelete, onZChange, children,
 }) => {
@@ -60,9 +122,10 @@ export const DraggableDecoration: React.FC<DraggableDecoProps> = ({
   const wrapRef    = useRef<HTMLDivElement>(null);
   const startMouse = useRef({ x: 0, y: 0 });
   const startPos   = useRef({ x: 0, y: 0 });
+  // Tracks whether the pointer moved enough to count as a drag vs. a click.
   const moved      = useRef(false);
 
-  // close popup on outside click
+  // Close the context menu when the user clicks anywhere outside this element.
   React.useEffect(() => {
     if (!showMenu) return;
     const handler = (e: MouseEvent) => {
@@ -74,6 +137,7 @@ export const DraggableDecoration: React.FC<DraggableDecoProps> = ({
     return () => window.removeEventListener('mousedown', handler, true);
   }, [showMenu]);
 
+  /** Initiates a drag by attaching temporary global listeners for mousemove and mouseup. */
   const onMouseDown = (e: React.MouseEvent) => {
     if (e.button !== 0) return;
     e.stopPropagation();
@@ -101,12 +165,14 @@ export const DraggableDecoration: React.FC<DraggableDecoProps> = ({
     window.addEventListener('mouseup', onUp);
   };
 
+  /** Toggles the context menu on right-click. */
   const onContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setShowMenu(v => !v);
   };
 
+  /** Fires an z-index change and briefly flashes the button to give visual feedback. */
   const handleZ = (delta: number) => {
     onZChange(id, delta);
     setFlash(delta > 0 ? 'up' : 'down');
@@ -177,6 +243,7 @@ const HOUSE_PIX: SparsePixels = [
   [2,12,'#A09060'],[3,12,'#A09060'],[4,12,'#A09060'],[5,12,'#A09060'],[6,12,'#A09060'],[7,12,'#A09060'],[8,12,'#A09060'],[9,12,'#A09060'],[10,12,'#A09060'],
 ];
 
+/** Pixel-art house sprite (13×13 grid, each pixel 8 CSS px). */
 export const HouseSprite: React.FC = () => (
   <PixelSprite cols={HOUSE_COLS} rows={HOUSE_ROWS} px={HOUSE_PX} pixels={HOUSE_PIX} />
 );
@@ -192,6 +259,7 @@ const BED_PIX: SparsePixels = [
   [0,4,'#6B4820'],[1,4,'#5C3D11'],[2,4,'#6B4820'],[3,4,'#5C3D11'],[4,4,'#6B4820'],[5,4,'#5C3D11'],[6,4,'#6B4820'],[7,4,'#5C3D11'],[8,4,'#6B4820'],[9,4,'#5C3D11'],
 ];
 
+/** Pixel-art garden bed sprite (10×5 grid, each pixel 9 CSS px). */
 export const BedSprite: React.FC = () => (
   <PixelSprite cols={BED_COLS} rows={BED_ROWS} px={BED_PX} pixels={BED_PIX} />
 );
@@ -212,13 +280,20 @@ const POST_PIX: SparsePixels = [
   [0,9,'#8B6914'],[1,9,'#A07828'],[2,9,'#8B6914'],
 ];
 
+// Layout constants for a fence section: 6 evenly spaced posts with 2 horizontal rails.
 const SECTION_POSTS = 6;
-const POST_STEP = 26;
+const POST_STEP = 26;          // distance in CSS px between post centres
 const SECTION_W = SECTION_POSTS * POST_STEP;
 const SECTION_H = POST_ROWS * POST_PX;
 
+/**
+ * Pixel-art fence section sprite.
+ * Renders 6 wooden posts positioned absolutely with two horizontal rail divs
+ * overlaid at fixed row heights to connect them.
+ */
 export const FenceSectionSprite: React.FC = () => (
   <div style={{ position: 'relative', width: SECTION_W, height: SECTION_H }}>
+    {/* Two horizontal rails at row 3 and row 7 of the post grid. */}
     {[POST_PX * 3, POST_PX * 7].map(top => (
       <div key={top} style={{
         position: 'absolute', left: 0, width: SECTION_W,
