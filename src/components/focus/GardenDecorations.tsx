@@ -33,15 +33,14 @@ export type DecoPositions = Record<DecorationId, DecoPos>;
 
 /**
  * Initial positions for all decorations when the user opens the garden for the first time.
- * The house sits top-right; beds and fence form a row along the bottom of the canvas.
+ * Plants occupy the left side (x: 0–440); all decorations start on the right (x: 480+).
  */
 export const DECO_DEFAULT: DecoPositions = {
-  house:  { x: 680, y: 12 },
-  bed1:   { x: 20,  y: 285 }, bed2: { x: 140, y: 285 }, bed3: { x: 260, y: 285 },
-  bed4:   { x: 20,  y: 348 }, bed5: { x: 140, y: 348 },
-  fence1: { x: 0,   y: 368 }, fence2: { x: 156, y: 368 },
-  fence3: { x: 312, y: 368 }, fence4: { x: 468, y: 368 },
-  fence5: { x: 624, y: 368 },
+  house:  { x: 720, y: 10 },
+  bed1:   { x: 490, y: 200 }, bed2: { x: 600, y: 200 }, bed3: { x: 710, y: 200 },
+  bed4:   { x: 490, y: 260 }, bed5: { x: 600, y: 260 },
+  fence1: { x: 480, y: 352 }, fence2: { x: 636, y: 352 }, fence3: { x: 792, y: 352 },
+  fence4: { x: 480, y: 390 }, fence5: { x: 636, y: 390 },
 };
 
 // ─── pixel sprite ─────────────────────────────────────────────────────────────

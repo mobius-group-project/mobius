@@ -22,13 +22,13 @@ import './styles/FocusTimer.css';
 // ─── localStorage keys ────────────────────────────────────────────────────────
 
 /** Stores the pixel positions of draggable decorations as Record<DecorationId, {x,y}>. */
-const DECO_POS_KEY     = 'mobius.gardenDecorations.v1';
+const DECO_POS_KEY     = 'mobius.gardenDecorations.v2';
 /** Stores the set of decoration IDs the user has removed as DecorationId[]. */
-const DECO_DELETED_KEY = 'mobius.gardenDecorationsDeleted.v1';
+const DECO_DELETED_KEY = 'mobius.gardenDecorationsDeleted.v2';
 /** Stores the z-index of each decoration as Record<DecorationId, number>. */
-const DECO_ZINDEX_KEY  = 'mobius.gardenDecorationsZ.v1';
+const DECO_ZINDEX_KEY  = 'mobius.gardenDecorationsZ.v2';
 /** Stores the pixel positions of garden plants as Record<plantId, {x,y}>. */
-const GARDEN_POS_KEY = 'mobius.gardenPositions.v1';
+const GARDEN_POS_KEY = 'mobius.gardenPositions.v2';
 
 // ─── decoration defaults ──────────────────────────────────────────────────────
 
