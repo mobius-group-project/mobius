@@ -1,7 +1,23 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useFocusTimer } from '../../hooks/useFocusTimer';
 import { focusPlantService, type IFocusPlant } from '../../services/focusPlantService';
+import {
+  DraggableDecoration, HouseSprite, BedSprite, FenceSectionSprite,
+  DECO_DEFAULT, type DecoPositions, type DecorationId,
+} from './GardenDecorations';
 import './styles/FocusTimer.css';
+
+const DECO_POS_KEY     = 'mobius.gardenDecorations.v1';
+const DECO_DELETED_KEY = 'mobius.gardenDecorationsDeleted.v1';
+
+const loadDecoPositions = (): DecoPositions => {
+  try { return { ...DECO_DEFAULT, ...JSON.parse(localStorage.getItem(DECO_POS_KEY) || '{}') }; }
+  catch { return { ...DECO_DEFAULT }; }
+};
+const loadDeletedDecos = (): Set<DecorationId> => {
+  try { return new Set(JSON.parse(localStorage.getItem(DECO_DELETED_KEY) || '[]')); }
+  catch { return new Set(); }
+};
 
 const GARDEN_POS_KEY = 'mobius.gardenPositions.v1';
 
@@ -422,6 +438,25 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ compact = false }) => {
   const [customInput, setCustomInput] = useState('');
   const [garden, setGarden] = useState<IFocusPlant[]>([]);
   const [gardenPositions, setGardenPositions] = useState<Record<number, { x: number; y: number }>>(loadGardenPositions);
+  const [decoPositions, setDecoPositions] = useState<DecoPositions>(loadDecoPositions);
+  const [deletedDecos, setDeletedDecos]   = useState<Set<DecorationId>>(loadDeletedDecos);
+
+  const onDecoMove = (id: DecorationId, x: number, y: number) => {
+    setDecoPositions(prev => {
+      const updated = { ...prev, [id]: { x, y } };
+      localStorage.setItem(DECO_POS_KEY, JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const onDecoDelete = (id: DecorationId) => {
+    setDeletedDecos(prev => {
+      const next = new Set(prev);
+      next.add(id);
+      localStorage.setItem(DECO_DELETED_KEY, JSON.stringify([...next]));
+      return next;
+    });
+  };
   const [topPlantId, setTopPlantId] = useState<number | null>(null);
   const [focusedGardenPlant, setFocusedGardenPlant] = useState<IFocusPlant | null>(null);
   const [justFinished, setJustFinished] = useState(false);
@@ -656,6 +691,26 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ compact = false }) => {
         <div className="ft-garden">
           <h3 className="ft-garden__title">Garden ({garden.length})</h3>
           <div className="ft-garden__grid" onClick={() => setFocusedGardenPlant(null)}>
+            {/* decorations — beds + house behind plants */}
+            {(['house', 'bed1', 'bed2', 'bed3', 'bed4', 'bed5'] as DecorationId[])
+              .filter(id => !deletedDecos.has(id))
+              .map(id => (
+                <DraggableDecoration key={id} id={id} initialPos={decoPositions[id]}
+                  zIndex={0} onDragEnd={onDecoMove} onDelete={onDecoDelete}>
+                  {id === 'house' ? <HouseSprite /> : <BedSprite />}
+                </DraggableDecoration>
+              ))}
+
+            {/* fence sections — in front of plants */}
+            {(['fence1', 'fence2', 'fence3', 'fence4', 'fence5'] as DecorationId[])
+              .filter(id => !deletedDecos.has(id))
+              .map(id => (
+                <DraggableDecoration key={id} id={id} initialPos={decoPositions[id]}
+                  zIndex={15} onDragEnd={onDecoMove} onDelete={onDecoDelete}>
+                  <FenceSectionSprite />
+                </DraggableDecoration>
+              ))}
+
             {garden.map((p, i) => (
               <div key={p.id} style={{ zIndex: topPlantId === p.id ? 10 : 1, position: 'absolute', left: 0, top: 0 }}>
                 <DraggableGardenPlant
