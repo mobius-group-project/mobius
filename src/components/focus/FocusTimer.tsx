@@ -435,11 +435,9 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ compact = false }) => {
 
           <div className="ft-time ft-time--compact">{formatTime(remainingSeconds)}</div>
 
-          {!isIdle && (
-            <div className="ft-progress-track">
-              <div className="ft-progress-fill" style={{ width: `${progress * 100}%` }} />
-            </div>
-          )}
+          <div className="ft-progress-track" style={{ visibility: isIdle ? 'hidden' : 'visible' }}>
+            <div className="ft-progress-fill" style={{ width: `${progress * 100}%` }} />
+          </div>
 
           <div className="ft-controls">
             {isIdle && (
