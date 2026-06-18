@@ -115,12 +115,12 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({
       {duplicateConfirmation && (
         <ConfirmDialog
           isOpen={true}
-          title="Sesja już istnieje"
-          message={`Masz już sesję o nazwie "${duplicateConfirmation.existingSession.activityName}" (${formatDurationDetailed(duplicateConfirmation.existingSession.durationSeconds)}). Czy chcesz kontynuować istniejącą, czy stworzyć nową?`}
+          title="Session already exists"
+          message={`You already have a session named "${duplicateConfirmation.existingSession.activityName}" (${formatDurationDetailed(duplicateConfirmation.existingSession.durationSeconds)}). Continue the existing one or create a new one?`}
           onConfirm={confirmDuplicateCreate}
           onCancel={cancelDuplicateCreate}
-          confirmText="Stwórz nową"
-          cancelText="Kontynuuj istniejącą"
+          confirmText="Create new"
+          cancelText="Continue existing"
         />
       )}
 
@@ -128,7 +128,7 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({
       <div className="tracker-header">
         <div className="tracker-header-right">
           <div className="today-stats">
-            Dzisiaj: <strong>
+            Today: <strong>
               {totalHours > 0 ? `${totalHours}h ` : ''}
               {totalMinutes}m
             </strong>
@@ -136,10 +136,10 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({
           <button 
             className="stats-nav-btn"
             onClick={() => navigate('/stats')}
-            title="Zobacz statystyki"
+            title="View statistics"
           >
             <BarChart2 size={18} />
-            <span>Statystyki</span>
+            <span>Statistics</span>
           </button>
         </div>
       </div>
@@ -148,7 +148,7 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({
       <div className="tracker-input-section">
         {preselectedTask ? (
           <div className="preselected-task">
-            <span className="task-badge">📌 Zadanie:</span>
+            <span className="task-badge">📌 Task:</span>
             <span className="task-title">{preselectedTask.title}</span>
             <button 
               className="clear-task-btn"
@@ -161,7 +161,7 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({
           <input
             type="text"
             className="activity-input"
-            placeholder="Co teraz robisz?"
+            placeholder="What are you working on?"
             value={activityInput}
             onChange={(e) => setActivityInput(e.target.value)}
             disabled={state === 'running'}
@@ -176,7 +176,7 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({
             <span className="pulse-dot"></span>
             <span className="activity-name">
               {currentSession.activityName}
-              {currentSession.isTask && <span className="task-tag">(zadanie)</span>}
+              {currentSession.isTask && <span className="task-tag">(task)</span>}
             </span>
           </div>
         </div>
@@ -191,12 +191,12 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({
       <div className="tracker-controls">
         {state === 'idle' ? (
           <button className="btn btn-start" onClick={handleStart}>
-            Rozpocznij
+            Start
           </button>
         ) : (
           <>
             <button className="btn btn-stop" onClick={handleStop}>
-              Zatrzymaj
+              Stop
             </button>
             <button className="btn btn-reset" onClick={resetTracking}>
               Reset
@@ -208,7 +208,7 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({
       {/* Recent sessions */}
       {sessions.length > 0 ? (
         <div className="recent-sessions">
-          <h3>Ostatnie sesje</h3>
+          <h3>Recent sessions</h3>
           <div className="sessions-list">
             {sessions.map((session) => (
               <div key={session.id} className="session-item">
@@ -227,7 +227,7 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({
                   ) : (
                     <span 
                       className="session-name" 
-                      title={`${session.activityName} (kliknij dwukrotnie aby edytować)`}
+                      title={`${session.activityName} (double-click to edit)`}
                       onDoubleClick={() => handleDoubleClick(session)}
                     >
                       {session.activityName}
@@ -246,7 +246,7 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({
                     className="continue-session-btn"
                     onClick={() => continueSession(session)}
                     disabled={state === 'running'}
-                    title={`Kontynuuj (${formatDurationDetailed(session.durationSeconds)})`}
+                    title={`Continue (${formatDurationDetailed(session.durationSeconds)})`}
                   >
                     ▶
                   </button>
@@ -254,7 +254,7 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({
                     className="delete-session-btn"
                     onClick={() => setDeleteConfirmId(session.id)}
                     disabled={state === 'running' && currentSession?.id === session.id}
-                    title="Usuń sesję"
+                    title="Delete session"
                   >
                     ✕
                   </button>
@@ -265,7 +265,7 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({
         </div>
       ) : (
         <div className="empty-sessions">
-          ✨ Brak zapisanych sesji. Rozpocznij pierwszą aktywność!
+          ✨ No saved sessions. Start your first activity!
         </div>
       )}
 
@@ -273,12 +273,12 @@ const ActivityTracker: React.FC<ActivityTrackerProps> = ({
       {deleteConfirmId && (
         <ConfirmDialog
           isOpen={true}
-          title="Usuń sesję"
-          message="Czy na pewno chcesz usunąć tę sesję? Tej operacji nie można cofnąć."
+          title="Delete session"
+          message="Are you sure you want to delete this session? This action cannot be undone."
           onConfirm={handleDeleteConfirm}
           onCancel={() => setDeleteConfirmId(null)}
-          confirmText="Usuń"
-          cancelText="Anuluj"
+          confirmText="Delete"
+          cancelText="Cancel"
         />
       )}
     </div>
