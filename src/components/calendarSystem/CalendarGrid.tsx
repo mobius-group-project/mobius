@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Calendar, Flag } from "lucide-react";
+import { Calendar, Flag, MapPin } from "lucide-react";
 import { calendarService, type CalendarEvent } from "../../services/calendarService";
 import { taskService, type ITask } from "../../services/taskService";
 import "./CalendarGrid.css";
@@ -9,6 +9,7 @@ interface CalendarGridProps {
   dayOffset?: number;
   view?: 'day' | 'week';
   compactHeader?: boolean;
+  externalActiveColors?: Set<string>;
 }
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -50,7 +51,7 @@ interface GhostEvent {
   title: string;
 }
 
-const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset, dayOffset = 0, view = 'week', compactHeader = false }) => {
+const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset, dayOffset = 0, view = 'week', compactHeader = false, externalActiveColors }) => {
   const today = new Date();
   const todayIndex = (today.getDay() + 6) % 7;
   const isCurrentWeek = weekOffset === 0 && view === 'week';
@@ -79,6 +80,16 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset, dayOffset = 0, 
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [ghostEvent, setGhostEvent] = useState<GhostEvent | null>(null);
   const isDragging = useRef(false);
+
+  const [activeColors, setActiveColors] = useState<Set<string>>(new Set());
+
+  const toggleColor = (color: string) => {
+    setActiveColors(prev => {
+      const next = new Set(prev);
+      if (next.has(color)) next.delete(color); else next.add(color);
+      return next;
+    });
+  };
 
   const [taskPreview, setTaskPreview] = useState<{ task: ITask; x: number; y: number } | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; event: CalendarEvent } | null>(null);
@@ -376,10 +387,16 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset, dayOffset = 0, 
     }
   };
 
+  const effectiveColors = externalActiveColors ?? activeColors;
+
   const getEventsForCell = (date: Date, slot: string) => {
     const dateStr = formatDate(date);
     const slotHour = slot.split(":")[0];
-    return events.filter(ev => ev.date === dateStr && ev.startTime.split(":")[0] === slotHour);
+    return events.filter(ev =>
+      ev.date === dateStr &&
+      ev.startTime.split(":")[0] === slotHour &&
+      (effectiveColors.size === 0 || effectiveColors.has(ev.color))
+    );
   };
 
   const isRecurringCopy = (eventId: number, originalDate: string, currentDate: string) =>
@@ -397,6 +414,20 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset, dayOffset = 0, 
   const { colWidth, colLeft } = getColumnLayout();
 
   return (
+    <div className="calendar-grid-wrapper">
+      {!compactHeader && (
+        <div className="calendar-color-filter">
+          {colorOptions.map(color => (
+            <button
+              key={color.value}
+              className={`color-filter-dot${activeColors.has(color.value) ? ' active' : ''}`}
+              style={{ backgroundColor: color.value }}
+              title={color.label}
+              onClick={() => toggleColor(color.value)}
+            />
+          ))}
+        </div>
+      )}
     <div className="calendar-grid">
       <div className="calendar-header" style={{ gridTemplateColumns: `80px repeat(${weekDates.length}, 1fr)` }}>
         <div className="calendar-header-empty" />
@@ -544,7 +575,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset, dayOffset = 0, 
                           <div className="calendar-event-title">
                             {ev.title}{isRecurring && ' 🔄'}
                           </div>
-                          {ev.location && <div className="calendar-event-location">📍 {ev.location}</div>}
+                          {ev.location && <div className="calendar-event-location"><MapPin size={10} strokeWidth={2.5} />{ev.location}</div>}
                         </div>
                       );
                     })}
@@ -680,6 +711,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset, dayOffset = 0, 
           </div>
         </>
       )}
+    </div>
     </div>
   );
 };
