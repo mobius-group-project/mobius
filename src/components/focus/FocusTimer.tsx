@@ -87,7 +87,7 @@ interface PlantDef {
 
 const PLANTS: Record<PlantType, PlantDef> = {
   flower: {
-    label: 'Tulipan', cols: 11, rows: 13,
+    label: 'Tulip', cols: 11, rows: 13,
     pixels: [
       // stem
       [5,12,'#388e3c'],[5,11,'#388e3c'],[5,10,'#388e3c'],[5,9,'#388e3c'],
@@ -114,7 +114,7 @@ const PLANTS: Record<PlantType, PlantDef> = {
     ],
   },
   cactus: {
-    label: 'Kaktus', cols: 11, rows: 11,
+    label: 'Cactus', cols: 11, rows: 11,
     pixels: [
       // ground
       [3,10,'#5d4037'],[4,10,'#5d4037'],[5,10,'#5d4037'],[6,10,'#5d4037'],[7,10,'#5d4037'],
@@ -137,7 +137,7 @@ const PLANTS: Record<PlantType, PlantDef> = {
     ],
   },
   mushroom: {
-    label: 'Grzyb', cols: 11, rows: 13,
+    label: 'Mushroom', cols: 11, rows: 13,
     pixels: [
       [4,12,'#795548'],[5,12,'#795548'],[6,12,'#795548'],
       [4,11,'#795548'],[5,11,'#795548'],[6,11,'#795548'],
@@ -154,7 +154,7 @@ const PLANTS: Record<PlantType, PlantDef> = {
     ],
   },
   krzak: {
-    label: 'Krzak', cols: 11, rows: 10,
+    label: 'Bush', cols: 11, rows: 10,
     pixels: [
       [3,9,'#5d4037'],[4,9,'#5d4037'],[5,9,'#5d4037'],[6,9,'#5d4037'],[7,9,'#5d4037'],
       [3,7,'#2e7d32'],[4,7,'#2e7d32'],[5,7,'#2e7d32'],[6,7,'#2e7d32'],[7,7,'#2e7d32'],
@@ -168,7 +168,7 @@ const PLANTS: Record<PlantType, PlantDef> = {
     ],
   },
   lotos: {
-    label: 'Lotos', cols: 11, rows: 10,
+    label: 'Lotus', cols: 11, rows: 10,
     pixels: [
       // lily pad
       [3,9,'#1b5e20'],[4,9,'#1b5e20'],[5,9,'#1b5e20'],[6,9,'#1b5e20'],[7,9,'#1b5e20'],
@@ -216,7 +216,7 @@ const PLANTS: Record<PlantType, PlantDef> = {
     ],
   },
   rumianek: {
-    label: 'Rumianek', cols: 11, rows: 13,
+    label: 'Chamomile', cols: 11, rows: 13,
     pixels: [
       [5,12,'#388e3c'],[5,11,'#388e3c'],[5,10,'#388e3c'],[5,9,'#388e3c'],[5,8,'#388e3c'],
       [3,10,'#4caf50'],[4,10,'#4caf50'],
@@ -236,7 +236,7 @@ const PLANTS: Record<PlantType, PlantDef> = {
     ],
   },
   sunflower: {
-    label: 'Słonecznik', cols: 11, rows: 13,
+    label: 'Sunflower', cols: 11, rows: 13,
     pixels: [
       // stem + leaves
       [5,12,'#388e3c'],[5,11,'#388e3c'],[5,10,'#388e3c'],[5,9,'#388e3c'],
@@ -478,12 +478,12 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ compact = false }) => {
   };
 
   const getGrowthMessage = (p: number): string => {
-    if (p < 0.15) return '🌱 Sadzimy nasionko...';
-    if (p < 0.35) return '💧 Podlewamy roślinę...';
-    if (p < 0.55) return '☀️ Roślina pije słońce...';
-    if (p < 0.75) return '🌿 Widzimy pierwsze listki!';
-    if (p < 0.95) return '🌸 Już prawie gotowe...';
-    return '✨ Ostatnie chwile!';
+    if (p < 0.15) return '🌱 Planting a seed...';
+    if (p < 0.35) return '💧 Watering the plant...';
+    if (p < 0.55) return '☀️ Soaking up the sun...';
+    if (p < 0.75) return '🌿 First leaves appearing!';
+    if (p < 0.95) return '🌸 Almost there...';
+    return '✨ Final moments!';
   };
 
   const isIdle     = state === 'idle';
@@ -497,7 +497,7 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ compact = false }) => {
         <div className="ft-compact-main">
           <div className="ft-badge-slot">
             {isFinished && justFinished && <div className="ft-badge ft-badge--success">🌱 Zasadzono!</div>}
-            {isPaused && <div className="ft-badge ft-badge--paused">⏸ Pauza</div>}
+            {isPaused && <div className="ft-badge ft-badge--paused">⏸ Paused</div>}
             {isRunning && <div className="ft-badge ft-badge--running">{getGrowthMessage(progress)}</div>}
           </div>
 
@@ -529,14 +529,14 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ compact = false }) => {
                 </div>
               </>
             )}
-            {isRunning && <button className="ft-btn" onClick={pause}>Pauza</button>}
+            {isRunning && <button className="ft-btn" onClick={pause}>Pause</button>}
             {isPaused && (
               <>
-                <button className="ft-btn ft-btn--primary" onClick={resume}>Wznów</button>
-                <button className="ft-btn ft-btn--ghost" onClick={reset}>Porzuć</button>
+                <button className="ft-btn ft-btn--primary" onClick={resume}>Resume</button>
+                <button className="ft-btn ft-btn--ghost" onClick={reset}>Abandon</button>
               </>
             )}
-            {isFinished && <button className="ft-btn ft-btn--primary" onClick={reset}>Nowa sesja</button>}
+            {isFinished && <button className="ft-btn ft-btn--primary" onClick={reset}>New session</button>}
           </div>
         </div>
 
@@ -565,7 +565,7 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ compact = false }) => {
 
           {/* LEFT: plant picker grid */}
         <div className="ft-sidebar">
-          <p className="ft-sidebar__label">Roślina</p>
+          <p className="ft-sidebar__label">Plant</p>
           <div className="ft-picker">
             {(Object.keys(PLANTS) as PlantType[]).map(type => (
               <button
@@ -618,7 +618,7 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ compact = false }) => {
           {/* status badge / growth message */}
           <div className="ft-badge-slot">
             {isFinished && justFinished && <div className="ft-badge ft-badge--success">🌱 Zasadzono!</div>}
-            {isPaused   && <div className="ft-badge ft-badge--paused">⏸ Pauza</div>}
+            {isPaused   && <div className="ft-badge ft-badge--paused">⏸ Paused</div>}
             {isRunning  && <div className="ft-badge ft-badge--running">{getGrowthMessage(progress)}</div>}
           </div>
 
@@ -640,13 +640,13 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ compact = false }) => {
           )}
 
           <div className="ft-controls">
-            {isIdle     && <button className="ft-btn ft-btn--primary" onClick={() => handleStart(selectedMinutes)}>Rozpocznij</button>}
-            {isRunning  && <button className="ft-btn" onClick={pause}>Pauza</button>}
+            {isIdle     && <button className="ft-btn ft-btn--primary" onClick={() => handleStart(selectedMinutes)}>Start</button>}
+            {isRunning  && <button className="ft-btn" onClick={pause}>Pause</button>}
             {isPaused   && <>
-              <button className="ft-btn ft-btn--primary" onClick={resume}>Wznów</button>
-              <button className="ft-btn ft-btn--ghost" onClick={reset}>Porzuć</button>
+              <button className="ft-btn ft-btn--primary" onClick={resume}>Resume</button>
+              <button className="ft-btn ft-btn--ghost" onClick={reset}>Abandon</button>
             </>}
-            {isFinished && <button className="ft-btn ft-btn--primary" onClick={reset}>Nowa sesja</button>}
+            {isFinished && <button className="ft-btn ft-btn--primary" onClick={reset}>New session</button>}
           </div>
         </div>
       </div>
@@ -654,7 +654,7 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ compact = false }) => {
       {/* ── garden (full width below) ─────────────────────────────── */}
       {garden.length > 0 && (
         <div className="ft-garden">
-          <h3 className="ft-garden__title">Ogród ({garden.length})</h3>
+          <h3 className="ft-garden__title">Garden ({garden.length})</h3>
           <div className="ft-garden__grid" onClick={() => setFocusedGardenPlant(null)}>
             {garden.map((p, i) => (
               <div key={p.id} style={{ zIndex: topPlantId === p.id ? 10 : 1, position: 'absolute', left: 0, top: 0 }}>
@@ -700,7 +700,7 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ compact = false }) => {
                       setFocusedGardenPlant(null);
                     }}
                   >
-                    Usuń z ogrodu
+                    Remove from garden
                   </button>
                 </div>
               );
