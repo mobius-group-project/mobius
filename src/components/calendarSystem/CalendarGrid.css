@@ -384,8 +384,11 @@
 .year-view {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 24px 32px;
-  overflow-y: auto;
+  grid-template-rows: repeat(3, 1fr);
+  gap: 12px 24px;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
   padding: 4px 8px;
   font-family: var(--font-main);
 }
