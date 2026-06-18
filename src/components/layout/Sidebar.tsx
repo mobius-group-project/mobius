@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Home, Timer, BarChart2, ListTodo, Clock, Calendar } from 'lucide-react';
+import { Home, Timer, BarChart2, ListTodo, Clock, Calendar, X } from 'lucide-react';
 import './styles/Sidebar.css';
 
 interface NavItem {
@@ -36,34 +36,47 @@ const NAV_ITEMS: NavItem[] = [
     icon: <BarChart2 size={18} />
   },
   {
-  path: '/calendar',
-  label: 'Calendar',
-  icon: <Calendar size={18} />
-},
-
+    path: '/calendar',
+    label: 'Calendar',
+    icon: <Calendar size={18} />
+  },
 ];
 
-const Sidebar: React.FC = () => {
-  return (
-    <aside className="sidebar">
-      <div className="sidebar__logo">Mobius</div>
+interface SidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
 
-      <nav className="sidebar__nav">
-        {NAV_ITEMS.map((item) => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            end={item.path === '/'}
-            className={({ isActive }) =>
-              'sidebar__link' + (isActive ? ' sidebar__link--active' : '')
-            }
-          >
-            <span className="sidebar__icon">{item.icon}</span>
-            <span className="sidebar__label">{item.label}</span>
-          </NavLink>
-        ))}
-      </nav>
-    </aside>
+const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
+  return (
+    <>
+      {isOpen && <div className="sidebar__backdrop" onClick={onClose} />}
+      <aside className={'sidebar' + (isOpen ? ' sidebar--open' : '')}>
+        <div className="sidebar__header">
+          <div className="sidebar__logo">Mobius</div>
+          <button className="sidebar__close" onClick={onClose} aria-label="Close menu">
+            <X size={18} />
+          </button>
+        </div>
+
+        <nav className="sidebar__nav">
+          {NAV_ITEMS.map((item) => (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              end={item.path === '/'}
+              className={({ isActive }) =>
+                'sidebar__link' + (isActive ? ' sidebar__link--active' : '')
+              }
+              onClick={onClose}
+            >
+              <span className="sidebar__icon">{item.icon}</span>
+              <span className="sidebar__label">{item.label}</span>
+            </NavLink>
+          ))}
+        </nav>
+      </aside>
+    </>
   );
 };
 
