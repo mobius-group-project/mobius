@@ -3,15 +3,26 @@ import { Calendar, Flag, Clock } from 'lucide-react';
 import type { ITask } from './TaskItem';
 import './styles/EditTaskForm.css';
 
+/**
+ * Props for the {@link EditTaskForm} component.
+ */
 interface EditTaskFormProps {
+  /** The task to edit. */
   task: ITask;
+  /** Called with the updated task when the user saves. */
   onSave: (updatedTask: ITask) => void;
+  /** Called when the user cancels editing. */
   onCancel: () => void;
 }
 
+/**
+ * Inline form for editing an existing task's title, description, deadline, and priority.
+ * Pre-fills inputs from the provided `task` prop.
+ */
 const EditTaskForm: React.FC<EditTaskFormProps> = ({ task, onSave, onCancel }) => {
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description || '');
+  /** Splits "YYYY-MM-DD HH:MM" into { date, hour, minute }. */
   const parseDeadline = (deadline: string) => {
     if (!deadline || deadline === 'No deadline') return { date: '', hour: '', minute: '' };
     const [date, time] = deadline.split(' ');
@@ -24,6 +35,7 @@ const EditTaskForm: React.FC<EditTaskFormProps> = ({ task, onSave, onCancel }) =
   const [deadlineMinute, setDeadlineMinute] = useState(parsed.minute);
   const [priority, setPriority] = useState<'High' | 'Medium' | 'Low' | null>(task.priority || null);
 
+  /** Validates and submits the edited task. */
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
@@ -45,6 +57,7 @@ const EditTaskForm: React.FC<EditTaskFormProps> = ({ task, onSave, onCancel }) =
     onSave(updatedTask);
   };
 
+  /** Toggles a priority value on/off. */
   const handlePriorityClick = (value: 'High' | 'Medium' | 'Low') => {
     if (priority === value) {
       setPriority(null);
@@ -53,12 +66,14 @@ const EditTaskForm: React.FC<EditTaskFormProps> = ({ task, onSave, onCancel }) =
     }
   };
 
+  /** Formats "YYYY-MM-DD" to "DD.MM". */
   const formatDate = (dateString: string) => {
     if (!dateString) return 'Date';
     const [_year, month, day] = dateString.split('-');
     return `${day}.${month}`;
   };
 
+  /** Sets minutes to "00" when an hour is entered without minutes. */
   const handleHourChange = (val: string) => {
     setDeadlineHour(val);
     if (val && !deadlineMinute) setDeadlineMinute('00');

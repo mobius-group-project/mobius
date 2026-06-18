@@ -18,6 +18,7 @@ const MONTH_NAMES = [
   'July','August','September','October','November','December'
 ];
 
+/** Maps a priority label to a hex colour for the month/year view dots. */
 const priorityColor = (priority: string) => {
   switch (priority) {
     case 'High': return '#FF6B6B';
@@ -27,17 +28,25 @@ const priorityColor = (priority: string) => {
   }
 };
 
+/** Calculates the number of calendar days between two dates (ignoring time). */
 function daysBetween(a: Date, b: Date) {
   const ms = new Date(a.getFullYear(), a.getMonth(), a.getDate()).getTime()
            - new Date(b.getFullYear(), b.getMonth(), b.getDate()).getTime();
   return Math.round(ms / 86400000);
 }
 
+/** Props for the {@link MonthView} component. */
 interface MonthViewProps {
+  /** Number of months offset from the current month (0 = this month). */
   monthOffset: number;
+  /** Called when a day cell is clicked; receives the day offset from today. */
   onDayClick: (dayOffset: number) => void;
 }
 
+/**
+ * Renders a full month grid with task-deadline priority dots.
+ * Clicking a day switches the main calendar to day view at that date.
+ */
 const MonthView: React.FC<MonthViewProps> = ({ monthOffset, onDayClick }) => {
   const today = new Date();
   const current = new Date(today.getFullYear(), today.getMonth() + monthOffset, 1);
@@ -59,12 +68,14 @@ const MonthView: React.FC<MonthViewProps> = ({ monthOffset, onDayClick }) => {
   const remaining = 42 - cells.length;
   for (let d = 1; d <= remaining; d++) cells.push({ day: d, type: 'next' });
 
+  /** Returns true if the cell represents today's date. */
   const isToday = (cell: typeof cells[0]) =>
     cell.type === 'current' &&
     year === today.getFullYear() &&
     month === today.getMonth() &&
     cell.day === today.getDate();
 
+  /** Returns up to three priority dots for a cell based on incomplete tasks with deadlines. */
   const getDotsForCell = (cell: typeof cells[0]) => {
     if (cell.type !== 'current') return [];
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(cell.day).padStart(2, '0')}`;
@@ -73,6 +84,7 @@ const MonthView: React.FC<MonthViewProps> = ({ monthOffset, onDayClick }) => {
     return priorities.map(p => ({ priority: p }));
   };
 
+  /** Navigates to day view at the clicked cell's date. */
   const handleClick = (cell: typeof cells[0]) => {
     let date: Date;
     if (cell.type === 'prev') date = new Date(year, month - 1, cell.day);
@@ -111,12 +123,20 @@ const MonthView: React.FC<MonthViewProps> = ({ monthOffset, onDayClick }) => {
   );
 };
 
+/** Props for the {@link MiniMonth} component. */
 interface MiniMonthProps {
+  /** Full year (e.g. 2026). */
   year: number;
+  /** Month index (0 = January). */
   month: number;
+  /** Called when a day cell is clicked. */
   onDayClick: (dayOffset: number) => void;
 }
 
+/**
+ * Small month calendar used inside the year view.
+ * Shows day numbers in a compact grid with click-to-navigate.
+ */
 const MiniMonth: React.FC<MiniMonthProps> = ({ year, month, onDayClick }) => {
   const today = new Date();
   const firstDow = (new Date(year, month, 1).getDay() + 6) % 7;
@@ -164,11 +184,15 @@ const MiniMonth: React.FC<MiniMonthProps> = ({ year, month, onDayClick }) => {
   );
 };
 
+/** Props for the {@link YearView} component. */
 interface YearViewProps {
+  /** Number of years offset from the current year. */
   yearOffset: number;
+  /** Called when a day cell is clicked inside any mini month. */
   onDayClick: (dayOffset: number) => void;
 }
 
+/** Renders all 12 months of a year as {@link MiniMonth} grids. */
 const YearView: React.FC<YearViewProps> = ({ yearOffset, onDayClick }) => {
   const year = new Date().getFullYear() + yearOffset;
   return (
@@ -180,10 +204,22 @@ const YearView: React.FC<YearViewProps> = ({ yearOffset, onDayClick }) => {
   );
 };
 
+/**
+ * Top-level calendar page component.
+ *
+ * Supports four views:
+ * - **Day** — single-day grid via {@link CalendarGrid}
+ * - **Week** — seven-day grid via {@link CalendarGrid}
+ * - **Month** — {@link MonthView} with task deadline dots
+ * - **Year** — {@link YearView} with twelve mini month calendars
+ *
+ * Navigation buttons allow stepping forward/backward and a "Today" reset.
+ */
 const CalendarPage: React.FC = () => {
   const [view, setView] = useState<CalendarView>('week');
   const [offset, setOffset] = useState(0);
 
+  /** Returns a human-readable header string for the current view and offset. */
   const getDisplayDate = () => {
     const d = new Date();
     if (view === 'day') {
@@ -202,6 +238,7 @@ const CalendarPage: React.FC = () => {
     return d.getFullYear().toString();
   };
 
+  /** Switches to day view at the given day offset (used by month/year clicks). */
   const goToDay = (dayOffset: number) => {
     setView('day');
     setOffset(dayOffset);

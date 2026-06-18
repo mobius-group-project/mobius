@@ -1,23 +1,47 @@
 import { getDb } from './db';
 
+/**
+ * Represents a calendar event stored in the database, including scheduling info,
+ * recurrence rules, location, and an optional link to a task.
+ */
 export interface CalendarEvent {
+  /** Unique event identifier. */
   id: number;
+  /** If this is a recurring copy, the original event's ID. */
   originalEventId?: number;
+  /** Event display title. */
   title: string;
+  /** Event date in "YYYY-MM-DD" format. */
   date: string;
+  /** Start time in "HH:MM" format. */
   startTime: string;
+  /** End time in "HH:MM" format. */
   endTime: string;
+  /** Hex colour for display. */
   color: string;
+  /** Optional location string. */
   location?: string;
+  /** Optional description. */
   description?: string;
+  /** Whether the event spans the entire day. */
   isAllDay?: boolean;
+  /** Recurrence pattern: none, daily, weekly, or monthly. */
   recurrence?: 'none' | 'daily' | 'weekly' | 'monthly';
+  /** Number of recurring instances (for "After N times" end). */
   recurrenceCount?: number;
+  /** Date after which recurrence stops (for "By date" end). */
   recurrenceEndDate?: string;
+  /** Minutes before the event to trigger a reminder. */
   reminderMinutes?: number;
+  /** Optional ID of the linked task. */
   taskId?: string;
 }
 
+/**
+ * Maps a raw database row to the {@link CalendarEvent} interface.
+ * @param e - Raw row from the `calendar_events` table.
+ * @returns Normalised calendar event object.
+ */
 function mapEvent(e: any): CalendarEvent {
   return {
     id: e.id,
@@ -37,7 +61,13 @@ function mapEvent(e: any): CalendarEvent {
   };
 }
 
+/** Service for CRUD operations on calendar events via the local SQLite database. */
 export const calendarService = {
+  /**
+   * Fetches all calendar events ordered by date and start time.
+   * Recurring events are expanded into individual copies.
+   * @returns Promise resolving to an array of calendar events.
+   */
   async getEvents(): Promise<CalendarEvent[]> {
     const db = await getDb();
     const rows = await db.select<any[]>('SELECT * FROM calendar_events ORDER BY date, start_time');
@@ -52,6 +82,11 @@ export const calendarService = {
     return result;
   },
 
+  /**
+   * Creates a new calendar event in the database.
+   * @param event - Event data (without the `id` field).
+   * @returns Promise resolving to the saved event with its generated ID.
+   */
   async createEvent(event: Omit<CalendarEvent, 'id'>): Promise<CalendarEvent> {
     const db = await getDb();
     const result = await db.execute(
@@ -69,6 +104,12 @@ export const calendarService = {
     return mapEvent(rows[0]);
   },
 
+  /**
+   * Updates an existing calendar event by ID.
+   * @param id    - The event ID to update.
+   * @param event - New event data (all fields except `id`).
+   * @returns Promise resolving to the updated event.
+   */
   async updateEvent(id: number, event: Omit<CalendarEvent, 'id'>): Promise<CalendarEvent> {
     const db = await getDb();
     await db.execute(
@@ -86,12 +127,26 @@ export const calendarService = {
     return mapEvent(rows[0]);
   },
 
+  /**
+   * Deletes a calendar event by ID.
+   * @param id - The event ID to delete.
+   */
   async deleteEvent(id: number): Promise<void> {
     const db = await getDb();
     await db.execute('DELETE FROM calendar_events WHERE id = ?', [id]);
   },
 };
 
+/**
+ * Expands a single recurring event into multiple {@link CalendarEvent} copies
+ * by advancing the date according to the recurrence rule.
+ *
+ * Stops when `recurrenceCount` copies are generated or the `recurrenceEndDate` is exceeded.
+ * Generated copies receive a compound ID derived from the original ID and their date.
+ *
+ * @param event - The base recurring event.
+ * @returns Array of expanded event copies (excluding the original).
+ */
 function expandRecurringEvent(event: CalendarEvent): CalendarEvent[] {
   const expanded: CalendarEvent[] = [];
   const startDate = new Date(event.date);

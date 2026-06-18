@@ -7,17 +7,29 @@ import { type ITask } from '../../services/taskService';
 import { type useActivityTracker } from '../../hooks/useActivityTracker';
 export type { ITask } from '../../services/taskService';
 
+/**
+ * Props for the {@link TaskItem} component.
+ */
 interface Props {
+  /** The task to render. */
   task: ITask;
+  /** Called when the checkbox is toggled. */
   onToggle: () => void;
+  /** Called when the task is deleted (after confirmation). */
   onDelete: (id: string) => void;
+  /** Called when the task is saved via the inline edit form. */
   onUpdateTask: (task: ITask) => void | Promise<void>;
+  /** Called when a comment is added to the task. */
   onAddComment: (taskId: string, comment: string) => void | Promise<void>;
+  /** Called when a comment is deleted. */
   onDeleteComment: (taskId: string, commentId: number) => void | Promise<void>;
+  /** Props forwarded from dnd-kit `listeners` for drag-and-drop. */
   dragHandleProps?: any;
+  /** The activity tracker hook return value for starting/stopping per-task timers. */
   activityTracker: ReturnType<typeof useActivityTracker>;
 }
 
+/** Formats a number of seconds into HH:MM:SS. */
 const formatTime = (seconds: number) => {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
@@ -25,6 +37,10 @@ const formatTime = (seconds: number) => {
   return [h, m, s].map(v => v < 10 ? '0' + v : v).join(':');
 };
 
+/**
+ * Renders a single task row with checkbox, title, description, deadline, priority,
+ * time tracking controls, comments section, and inline editing.
+ */
 const TaskItem: React.FC<Props> = ({ task, onToggle, onDelete, onUpdateTask, onAddComment, onDeleteComment, dragHandleProps, activityTracker }) => {
   const [showConfirm, setShowConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -43,6 +59,7 @@ const TaskItem: React.FC<Props> = ({ task, onToggle, onDelete, onUpdateTask, onA
 
   const priorityClass = task.priority ? `priority-${task.priority.toLowerCase()}` : '';
 
+  /** Starts or stops the activity tracker for this task. */
   const handleTimerToggle = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (isThisTaskRunning) {
@@ -55,26 +72,31 @@ const TaskItem: React.FC<Props> = ({ task, onToggle, onDelete, onUpdateTask, onA
     }
   };
 
+  /** Toggles the task completion state; stops the timer if it was running. */
   const handleToggle = () => {
     if (isThisTaskRunning) stopTracking();
     onToggle();
   };
 
+  /** Shows the delete confirmation dialog. */
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
     setShowConfirm(true);
   };
 
+  /** Switches the task row to the inline edit form. */
   const handleEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsEditing(true);
   };
 
+  /** Opens the comments section. */
   const handleComment = (e: React.MouseEvent) => {
     e.stopPropagation();
     setShowComments(true);
   };
 
+  /** Confirms deletion; applies a brief delay for the exit animation. */
   const handleConfirmDelete = () => {
     setIsDeleting(true);
     setTimeout(() => {
@@ -83,6 +105,7 @@ const TaskItem: React.FC<Props> = ({ task, onToggle, onDelete, onUpdateTask, onA
     }, 300);
   };
 
+  /** Submits the comment input if non-empty. */
   const handleAddComment = () => {
     const normalized = newComment.trim();
     if (!normalized) return;
@@ -90,6 +113,7 @@ const TaskItem: React.FC<Props> = ({ task, onToggle, onDelete, onUpdateTask, onA
     setNewComment('');
   };
 
+  /** Delegates comment deletion to the parent handler. */
   const handleDeleteComment = (commentId: number) => {
     void onDeleteComment(task.id, commentId);
   };
