@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Calendar, Flag } from "lucide-react";
+import { Calendar, Flag, MapPin } from "lucide-react";
 import { calendarService, type CalendarEvent } from "../../services/calendarService";
 import { taskService, type ITask } from "../../services/taskService";
 import "./CalendarGrid.css";
@@ -570,7 +570,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset, dayOffset = 0, 
                           <div className="calendar-event-title">
                             {ev.title}{isRecurring && ' 🔄'}
                           </div>
-                          {ev.location && <div className="calendar-event-location">📍 {ev.location}</div>}
+                          {ev.location && <div className="calendar-event-location"><MapPin size={10} strokeWidth={2.5} />{ev.location}</div>}
                         </div>
                       );
                     })}

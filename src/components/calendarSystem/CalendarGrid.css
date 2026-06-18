@@ -571,7 +571,11 @@
 }
 
 .calendar-event-location {
-  font-size: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  font-size: 9px;
   opacity: 0.8;
   white-space: nowrap;
   overflow: hidden;
