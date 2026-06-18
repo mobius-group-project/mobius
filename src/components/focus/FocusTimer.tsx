@@ -3,6 +3,77 @@ import { useFocusTimer } from '../../hooks/useFocusTimer';
 import { focusPlantService, type IFocusPlant } from '../../services/focusPlantService';
 import './styles/FocusTimer.css';
 
+const GARDEN_POS_KEY = 'mobius.gardenPositions.v1';
+
+const loadGardenPositions = (): Record<number, { x: number; y: number }> => {
+  try { return JSON.parse(localStorage.getItem(GARDEN_POS_KEY) || '{}'); } catch { return {}; }
+};
+
+const defaultPos = (index: number) => ({
+  x: (index % 4) * 120,
+  y: Math.floor(index / 4) * 130,
+});
+
+interface DraggableGardenPlantProps {
+  plant: IFocusPlant;
+  index: number;
+  initialPos: { x: number; y: number };
+  onDragEnd: (id: number, x: number, y: number) => void;
+  onPickUp: () => void;
+  onRightClick: (e: React.MouseEvent) => void;
+}
+
+const DraggableGardenPlant: React.FC<DraggableGardenPlantProps> = ({
+  plant, initialPos, onDragEnd, onPickUp, onRightClick,
+}) => {
+  const [pos, setPos] = useState(initialPos);
+  const startMouse = useRef({ x: 0, y: 0 });
+  const startPos = useRef({ x: 0, y: 0 });
+
+  const onMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    onPickUp();
+    startMouse.current = { x: e.clientX, y: e.clientY };
+    startPos.current = pos;
+
+    const onMove = (ev: MouseEvent) => {
+      setPos({
+        x: startPos.current.x + ev.clientX - startMouse.current.x,
+        y: startPos.current.y + ev.clientY - startMouse.current.y,
+      });
+    };
+
+    const onUp = (ev: MouseEvent) => {
+      const finalX = startPos.current.x + ev.clientX - startMouse.current.x;
+      const finalY = startPos.current.y + ev.clientY - startMouse.current.y;
+      setPos({ x: finalX, y: finalY });
+      onDragEnd(plant.id, finalX, finalY);
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  };
+
+  return (
+    <div
+      onMouseDown={onMouseDown}
+      onContextMenu={onRightClick}
+      style={{
+        position: 'absolute',
+        left: pos.x,
+        top: pos.y,
+        cursor: 'grab',
+        userSelect: 'none',
+        touchAction: 'none',
+      }}
+    >
+      <GardenPlant type={plant.plant_type as PlantType} plantedAt={plant.planted_at} />
+    </div>
+  );
+};
+
 // ─── plant data ───────────────────────────────────────────────────────────────
 
 export type PlantType = 'flower' | 'cactus' | 'mushroom' | 'krzak' | 'lotos' | 'bonsai' | 'rumianek' | 'sakura' | 'sunflower';
@@ -284,9 +355,8 @@ export const PixelPlant: React.FC<PixelPlantProps> = ({
 
 // ─── GardenPlant — mini version for the garden ───────────────────────────────
 
-const GardenPlant: React.FC<{ type: PlantType; plantedAt: string }> = ({ type, plantedAt }) => {
+const GardenPlant: React.FC<{ type: PlantType; plantedAt: string }> = ({ type }) => {
   const plant = PLANTS[type];
-  const date = new Date(plantedAt).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
 
   const grid: Record<string, string> = {};
   plant.pixels.forEach(([c, r, color]) => { grid[`${r},${c}`] = color; });
@@ -332,7 +402,6 @@ const GardenPlant: React.FC<{ type: PlantType; plantedAt: string }> = ({ type, p
           {gardenCells}
         </div>
       </div>
-      <span className="ft-garden-plant__date">{date}</span>
     </div>
   );
 };
@@ -352,6 +421,9 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ compact = false }) => {
   const [selectedMinutes, setSelectedMinutes] = useState(25);
   const [customInput, setCustomInput] = useState('');
   const [garden, setGarden] = useState<IFocusPlant[]>([]);
+  const [gardenPositions, setGardenPositions] = useState<Record<number, { x: number; y: number }>>(loadGardenPositions);
+  const [topPlantId, setTopPlantId] = useState<number | null>(null);
+  const [focusedGardenPlant, setFocusedGardenPlant] = useState<IFocusPlant | null>(null);
   const [justFinished, setJustFinished] = useState(false);
   const plantSavedRef = useRef(false);
 
@@ -583,10 +655,56 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ compact = false }) => {
       {garden.length > 0 && (
         <div className="ft-garden">
           <h3 className="ft-garden__title">Ogród ({garden.length})</h3>
-          <div className="ft-garden__grid">
-            {garden.map(p => (
-              <GardenPlant key={p.id} type={p.plant_type as PlantType} plantedAt={p.planted_at} />
+          <div className="ft-garden__grid" onClick={() => setFocusedGardenPlant(null)}>
+            {garden.map((p, i) => (
+              <div key={p.id} style={{ zIndex: topPlantId === p.id ? 10 : 1, position: 'absolute', left: 0, top: 0 }}>
+                <DraggableGardenPlant
+                  plant={p}
+                  index={i}
+                  initialPos={gardenPositions[p.id] ?? defaultPos(i)}
+                  onDragEnd={(id, x, y) => {
+                    setGardenPositions(prev => {
+                      const updated = { ...prev, [id]: { x, y } };
+                      localStorage.setItem(GARDEN_POS_KEY, JSON.stringify(updated));
+                      return updated;
+                    });
+                  }}
+                  onPickUp={() => setTopPlantId(p.id)}
+                  onRightClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setFocusedGardenPlant(prev => prev?.id === p.id ? null : p);
+                  }}
+                />
+              </div>
             ))}
+
+            {focusedGardenPlant && (() => {
+              const pos = gardenPositions[focusedGardenPlant.id] ?? defaultPos(garden.findIndex(p => p.id === focusedGardenPlant.id));
+              const mins = Math.round(focusedGardenPlant.session_duration / 60);
+              const date = new Date(focusedGardenPlant.planted_at).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', year: 'numeric' });
+              return (
+                <div
+                  className="ft-plant-popup"
+                  style={{ left: pos.x + 60, top: pos.y - 10 }}
+                  onClick={e => e.stopPropagation()}
+                >
+                  <div className="ft-plant-popup__name">{PLANTS[focusedGardenPlant.plant_type as PlantType]?.label ?? focusedGardenPlant.plant_type}</div>
+                  <div className="ft-plant-popup__info">{date}</div>
+                  <div className="ft-plant-popup__info">{mins} min sesja</div>
+                  <button
+                    className="ft-plant-popup__delete"
+                    onClick={async () => {
+                      await focusPlantService.deletePlant(focusedGardenPlant.id);
+                      setGarden(prev => prev.filter(p => p.id !== focusedGardenPlant.id));
+                      setFocusedGardenPlant(null);
+                    }}
+                  >
+                    Usuń z ogrodu
+                  </button>
+                </div>
+              );
+            })()}
           </div>
         </div>
       )}

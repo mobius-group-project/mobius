@@ -298,22 +298,16 @@
 }
 
 .ft-garden__grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
+  position: relative;
+  min-height: 300px;
 }
 
 .ft-garden-plant {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: space-between;
   gap: 6px;
-  padding: 10px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  transition: border-color 0.15s;
+  padding: 6px;
 }
 
 .ft-garden-plant__thumb {
@@ -325,8 +319,45 @@
   overflow: hidden;
 }
 
-.ft-garden-plant:hover {
-  border-color: rgba(255, 255, 255, 0.15);
+.ft-plant-popup {
+  position: absolute;
+  z-index: 50;
+  background: var(--color-card-background);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 140px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.ft-plant-popup__name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.ft-plant-popup__info {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.ft-plant-popup__delete {
+  margin-top: 4px;
+  background: rgba(255, 71, 71, 0.12);
+  border: 1px solid rgba(255, 71, 71, 0.3);
+  border-radius: 8px;
+  color: #ff6b6b;
+  font-size: 12px;
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.ft-plant-popup__delete:hover {
+  background: rgba(255, 71, 71, 0.25);
 }
 
 .ft-garden-plant__date {
