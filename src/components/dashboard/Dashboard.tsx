@@ -1,3 +1,14 @@
+/**
+ * Main dashboard screen, composed of four cards in a CSS grid:
+ *   - Task list (with priority filters and drag-to-reorder)
+ *   - Weekly calendar (CalendarGrid + three MiniMonthCalendar previews)
+ *   - Focus timer (FocusTimer in compact mode)
+ *   - Notes (rich-text notes with formatting toolbar)
+ *
+ * All sub-components that are only used here (MiniMonthCalendar, CalendarCard, NotesCard)
+ * are defined in this file rather than split into separate files, since they have no
+ * other consumers.
+ */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import TaskForm from '../taskSystem/AddTaskForm';
 import { Flag, Calendar } from 'lucide-react';
@@ -9,15 +20,27 @@ import { type useActivityTracker } from '../../hooks/useActivityTracker';
 import CalendarGrid from '../calendarSystem/CalendarGrid';
 import './Dashboard.css';
 
+/** Props passed down from the root App component. */
 interface DashboardProps {
+  /** Full task list — filtering is done locally inside Dashboard. */
   tasks: ITask[];
+  /** Toggles the done state of a task by ID. */
   onToggleTask: (id: string) => void;
+  /** Permanently deletes a task by ID. */
   onDelete: (id: string) => void;
+  /** Replaces the task list with a reordered version after drag-and-drop. */
   onReorderTasks: (tasks: ITask[]) => void;
+  /** Creates a new task with the given fields. */
   onAddTask: (title: string, deadline: string, description?: string, priority?: 'High' | 'Medium' | 'Low') => void;
+  /** Activity tracker instance from the parent — passed through but not used directly in this component. */
   activityTracker: ReturnType<typeof useActivityTracker>;
 }
 
+/**
+ * Root dashboard component.
+ * Renders a 2×2 grid of cards and manages local UI state for task filtering,
+ * calendar colour filtering, and the inline task creation form.
+ */
 const Dashboard: React.FC<DashboardProps> = ({
   tasks,
   onToggleTask,
@@ -26,15 +49,29 @@ const Dashboard: React.FC<DashboardProps> = ({
   onAddTask,
   activityTracker,
 }) => {
+  /**
+   * Active priority filters for the task list. Up to 2 priorities can be active at once.
+   * An empty array means "show all".
+   */
   const [priorityFilters, setPriorityFilters] = useState<('High' | 'Medium' | 'Low')[]>([]);
+  /** Set of event colours currently shown in the calendar. Empty = show all colours. */
   const [calActiveColors, setCalActiveColors] = useState<Set<string>>(new Set());
+
+  /** Toggles a calendar event colour on/off in the filter set. */
   const toggleCalColor = (color: string) => setCalActiveColors(prev => {
     const next = new Set(prev);
     if (next.has(color)) next.delete(color); else next.add(color);
     return next;
   });
+
+  /** Controls whether the inline task creation form is visible. */
   const [isAdding, setIsAdding] = useState(false);
 
+  /**
+   * Toggles a priority filter on or off.
+   * A maximum of 2 priorities can be active simultaneously to avoid an empty list
+   * when the user selects conflicting combinations.
+   */
   const handlePriorityFilter = (priority: 'High' | 'Medium' | 'Low') => {
     setPriorityFilters(prev => {
       if (prev.includes(priority)) {
@@ -48,10 +85,12 @@ const Dashboard: React.FC<DashboardProps> = ({
     });
   };
 
+  /** Stores the source index in the drag payload so handleDrop knows where to move from. */
   const handleDragStart = (e: React.DragEvent, index: number) => {
     e.dataTransfer.setData('text/plain', index.toString());
   };
 
+  /** Reorders the task list by moving the dragged item to the drop target's position. */
   const handleDrop = (e: React.DragEvent, toIndex: number) => {
     e.preventDefault();
     const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
@@ -62,10 +101,12 @@ const Dashboard: React.FC<DashboardProps> = ({
     onReorderTasks(reordered);
   };
 
+  /** Required to allow drop events to fire on drag targets. */
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
   };
 
+  /** Tasks after applying the active priority filters. */
   const filteredTasks = priorityFilters.length === 0
     ? tasks
     : tasks.filter(task => priorityFilters.includes(task.priority));
@@ -177,7 +218,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                       opacity: task.isDone ? 0.5 : 1,
                     }}
                   >
-                    {/* Circular priority checkbox */}
+                    {/* Circular priority checkbox — colour matches the task's priority level. */}
                     <div
                       onClick={() => onToggleTask(task.id)}
                       style={{
@@ -196,7 +237,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                       )}
                     </div>
 
-                    {/* Task info */}
+                    {/* Task title + deadline + priority flag */}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{
                         fontSize: '13px', fontWeight: 500,
@@ -261,21 +302,36 @@ const Dashboard: React.FC<DashboardProps> = ({
   );
 };
 
-// Mini Month Calendar Component
+// ─── MiniMonthCalendar ────────────────────────────────────────────────────────
+
+/** Size of each day cell in CSS px. */
 const MINI_CELL = 15;
+/** Gap between cells in CSS px. */
 const MINI_GAP = 2;
 
+/**
+ * Compact read-only month calendar showing a single month.
+ * Always renders 42 cells (6 rows × 7 columns) so the grid height is fixed
+ * regardless of how many days the month has. Cells outside the current month
+ * are shown in a dimmed colour.
+ *
+ * @param year - Full 4-digit year.
+ * @param month - Zero-based month index (0 = January).
+ */
 const MiniMonthCalendar: React.FC<{ year: number; month: number }> = ({ year, month }) => {
   const today = new Date();
   const monthName = new Date(year, month, 1).toLocaleString('en-US', { month: 'long' });
+  // (getDay() + 6) % 7 converts Sunday-first (JS default) to Monday-first week layout.
   const firstDow = (new Date(year, month, 1).getDay() + 6) % 7;
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const prevMonthDays = new Date(year, month, 0).getDate();
 
   type Cell = { day: number; current: boolean };
   const cells: Cell[] = [];
+  // Fill leading cells with the tail of the previous month.
   for (let i = firstDow - 1; i >= 0; i--) cells.push({ day: prevMonthDays - i, current: false });
   for (let d = 1; d <= daysInMonth; d++) cells.push({ day: d, current: true });
+  // Fill trailing cells with the start of the next month to reach 42 total.
   const remaining = 42 - cells.length;
   for (let d = 1; d <= remaining; d++) cells.push({ day: d, current: false });
 
@@ -310,22 +366,34 @@ const MiniMonthCalendar: React.FC<{ year: number; month: number }> = ({ year, mo
   );
 };
 
-// Calendar Card Component
+// ─── CalendarCard ─────────────────────────────────────────────────────────────
+
+/** First visible hour in the weekly calendar grid (inclusive). */
 const HOUR_START = 8;
+/** Last visible hour in the weekly calendar grid (exclusive). */
 const HOUR_END = 20;
 
+/** Predefined colours the user can assign to calendar events. */
 const CALENDAR_COLOR_OPTIONS = [
   "#A7C7E7", "#FFB3BA", "#B5EAD7", "#FFDAC1", "#E2F0CB", "#C7CEE6",
 ];
 
+/**
+ * Weekly calendar card showing events for the current week in a time-grid layout.
+ * Hours are displayed from HOUR_START to HOUR_END; events are matched by date and
+ * the first two characters of their start time (e.g. "09" matches "09:30").
+ * Colour filter buttons in the header let the user show/hide events by colour.
+ */
 const CalendarCard: React.FC = () => {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
+  /** Set of colours currently shown. Empty = all colours visible. */
   const [activeColors, setActiveColors] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     calendarService.getEvents().then(setEvents).catch(() => {});
   }, []);
 
+  /** Toggles a colour on/off in the active filter set. */
   const toggleColor = (color: string) => {
     setActiveColors(prev => {
       const next = new Set(prev);
@@ -337,6 +405,7 @@ const CalendarCard: React.FC = () => {
   const today = new Date();
   const todayStr = today.toISOString().split('T')[0];
 
+  /** Array of 7 day descriptors for the current week, starting on Monday. */
   const weekDays = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(today);
     d.setDate(today.getDate() - ((today.getDay() + 6) % 7) + i);
@@ -351,6 +420,10 @@ const CalendarCard: React.FC = () => {
     `${String(i + HOUR_START).padStart(2, '0')}:00`
   );
 
+  /**
+   * Returns events for a specific date and hour slot.
+   * Matches by hour prefix so e.g. "09:00" catches an event starting at "09:30".
+   */
   const getEventsForCell = (dateStr: string, hour: string) =>
     events.filter(ev =>
       ev.date === dateStr &&
@@ -358,6 +431,7 @@ const CalendarCard: React.FC = () => {
       (activeColors.size === 0 || activeColors.has(ev.color))
     );
 
+  /** CSS grid-template-columns: fixed 44px time label column + 7 equal day columns. */
   const COL = '44px ' + Array(7).fill('1fr').join(' ');
 
   return (
@@ -387,7 +461,7 @@ const CalendarCard: React.FC = () => {
         </div>
       </div>
 
-      {/* Header */}
+      {/* Day headers */}
       <div style={{ display: 'grid', gridTemplateColumns: COL, flexShrink: 0, borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.02)' }}>
         <div />
         {weekDays.map((d, i) => {
@@ -407,7 +481,7 @@ const CalendarCard: React.FC = () => {
         })}
       </div>
 
-      {/* Body */}
+      {/* Scrollable time-grid body */}
       <div style={{ overflowY: 'auto', flex: 1, minHeight: 0 }}>
         <div style={{ display: 'grid', gridTemplateColumns: COL }}>
           {hours.map(hour => (
@@ -445,18 +519,31 @@ const CalendarCard: React.FC = () => {
   );
 };
 
-// Notes Card Component
+// ─── NotesCard ────────────────────────────────────────────────────────────────
+
+/**
+ * Notes panel with a list of saved notes and an inline rich-text editor.
+ * The editor uses a contentEditable div with document.execCommand for formatting
+ * (bold, italic, underline, strikethrough) and a custom checkbox insertion.
+ * Ctrl/Cmd+Enter saves the note without clicking the Save button.
+ */
 const NotesCard: React.FC = () => {
   const { notes, loading, addNote, deleteNote } = useNotes();
   const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState('');
   const editorRef = useRef<HTMLDivElement>(null);
 
+  /** Executes a document.execCommand formatting command and returns focus to the editor. */
   const exec = (cmd: string, val?: string) => {
     document.execCommand(cmd, false, val);
     editorRef.current?.focus();
   };
 
+  /**
+   * Inserts a non-editable checkbox at the current cursor position in the editor.
+   * A zero-width space is inserted after the checkbox so the cursor has a text node to land in,
+   * otherwise browsers may collapse the selection into the non-editable element.
+   */
   const insertCheckbox = () => {
     if (!editorRef.current) return;
     editorRef.current.focus();
@@ -480,6 +567,7 @@ const NotesCard: React.FC = () => {
     wrapper.appendChild(cb);
     range.insertNode(wrapper);
 
+    // Place cursor after the checkbox using a zero-width space text node.
     const afterWrapper = document.createRange();
     afterWrapper.setStartAfter(wrapper);
     afterWrapper.collapse(true);
@@ -491,6 +579,7 @@ const NotesCard: React.FC = () => {
     sel.addRange(afterWrapper);
   };
 
+  /** Saves the current editor content as a new note and resets the form. */
   const handleSave = async () => {
     const content = editorRef.current?.innerHTML || '';
     if (!title.trim() && !content.trim()) return;
@@ -500,6 +589,7 @@ const NotesCard: React.FC = () => {
     setShowForm(false);
   };
 
+  /** Reusable formatting toolbar button that prevents default mousedown to keep editor focus. */
   const ToolBtn: React.FC<{ onClick: () => void; label: React.ReactNode }> = ({ onClick, label }) => (
     <button
       onMouseDown={e => { e.preventDefault(); onClick(); }}
