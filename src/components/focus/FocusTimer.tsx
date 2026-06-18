@@ -337,6 +337,7 @@ const GardenPlant: React.FC<{ type: PlantType; plantedAt: string }> = ({ type, p
   );
 };
 
+
 // ─── main component ───────────────────────────────────────────────────────────
 
 interface FocusTimerProps {
@@ -354,9 +355,17 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ compact = false }) => {
   const [justFinished, setJustFinished] = useState(false);
   const plantSavedRef = useRef(false);
 
-  const { state, remainingSeconds, totalSeconds, progress, start, pause, resume, reset } =
+  const { state, remainingSeconds, totalSeconds, progress, sessionId, start, pause, resume, reset } =
     useFocusTimer(selectedMinutes, {
       onFinish: () => {
+        // onFinish fires exactly once per session (deduped in useFocusTimer)
+        if (!plantSavedRef.current) {
+          plantSavedRef.current = true;
+          focusPlantService
+            .plantSeed(selectedPlant, totalSeconds)
+            .then(plant => setGarden(prev => [plant, ...prev]))
+            .catch(console.error);
+        }
         setJustFinished(true);
       },
     });
@@ -366,20 +375,16 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ compact = false }) => {
     localStorage.setItem('mobius.focusPlantType.v1', selectedPlant);
   }, [selectedPlant]);
 
-  // save plant when finished
   useEffect(() => {
-    if (state === 'finished' && !plantSavedRef.current) {
-      plantSavedRef.current = true;
-      focusPlantService
-        .plantSeed(selectedPlant, totalSeconds)
-        .then(plant => setGarden(prev => [plant, ...prev]))
-        .catch(console.error);
-    }
     if (state === 'idle') {
       plantSavedRef.current = false;
       setJustFinished(false);
     }
-  }, [state, selectedPlant, totalSeconds]);
+  }, [state]);
+
+  const handleStart = (minutes: number) => {
+    start(minutes);
+  };
 
   // load garden on mount
   useEffect(() => {
@@ -439,7 +444,7 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ compact = false }) => {
           <div className="ft-controls">
             {isIdle && (
               <>
-                <button className="ft-btn ft-btn--primary ft-btn--icon" onClick={() => start(selectedMinutes)}>▶</button>
+                <button className="ft-btn ft-btn--primary ft-btn--icon" onClick={() => handleStart(selectedMinutes)}>▶</button>
                 <div className="ft-custom-input-wrap">
                   <input
                     type="number"
@@ -565,7 +570,7 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ compact = false }) => {
           )}
 
           <div className="ft-controls">
-            {isIdle     && <button className="ft-btn ft-btn--primary" onClick={() => start(selectedMinutes)}>Rozpocznij</button>}
+            {isIdle     && <button className="ft-btn ft-btn--primary" onClick={() => handleStart(selectedMinutes)}>Rozpocznij</button>}
             {isRunning  && <button className="ft-btn" onClick={pause}>Pauza</button>}
             {isPaused   && <>
               <button className="ft-btn ft-btn--primary" onClick={resume}>Wznów</button>
