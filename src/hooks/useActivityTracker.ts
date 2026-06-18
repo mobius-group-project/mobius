@@ -127,7 +127,7 @@ export const useActivityTracker = (): UseActivityTrackerReturn => {
       }
     } catch (error) {
       console.error('Failed to load sessions from DB:', error);
-      addToast('error', 'Nie udało się załadować sesji z bazy danych');
+      addToast('error', 'Failed to load sessions from the database');
     }
   }, [addToast]);
 
@@ -226,10 +226,10 @@ export const useActivityTracker = (): UseActivityTrackerReturn => {
       setSeconds(0);
       setState('running');
       lastSavedSeconds.current = 0;
-      addToast('success', `▶️ Rozpoczęto: ${activityName}`);
+      addToast('success', `▶️ Started: ${activityName}`);
     } catch (error) {
       console.error('Failed to start session:', error);
-      addToast('error', 'Nie udało się rozpocząć sesji');
+      addToast('error', 'Failed to start session');
     }
   }, [addToast]);
 
@@ -239,7 +239,7 @@ export const useActivityTracker = (): UseActivityTrackerReturn => {
     taskId?: string
   ) => {
     if (!activityName.trim()) {
-      addToast('warning', '✏️ Wpisz nazwę aktywności przed rozpoczęciem!');
+      addToast('warning', '✏️ Enter an activity name before starting!');
       return;
     }
     await executeStartTracking(activityName.trim(), isTask, taskId);
@@ -290,10 +290,10 @@ export const useActivityTracker = (): UseActivityTrackerReturn => {
         setSeconds(0);
         setState('idle');
         lastSavedSeconds.current = 0;
-        addToast('success', '⏹️ Sesja zakończona i zapisana');
+        addToast('success', '⏹️ Session ended and saved');
       } catch (error) {
         console.error('Failed to stop session:', error);
-        addToast('error', 'Nie udało się zakończyć sesji');
+        addToast('error', 'Failed to stop session');
       }
     } else if (state === 'running') {
       setCurrentSession(null);
@@ -318,7 +318,7 @@ export const useActivityTracker = (): UseActivityTrackerReturn => {
 
   const renameSession = useCallback(async (sessionId: string, newName: string) => {
     if (!newName.trim()) {
-      addToast('warning', '✏️ Nazwa nie może być pusta!');
+      addToast('warning', '✏️ Name cannot be empty!');
       return;
     }
     const trimmedName = newName.trim();
@@ -326,7 +326,7 @@ export const useActivityTracker = (): UseActivityTrackerReturn => {
       s => s.id !== sessionId && s.activityName.toLowerCase() === trimmedName.toLowerCase()
     );
     if (duplicate) {
-      addToast('warning', `⚠️ Sesja o nazwie "${trimmedName}" już istnieje!`);
+      addToast('warning', `⚠️ A session named "${trimmedName}" already exists!`);
       return;
     }
     try {
@@ -337,10 +337,10 @@ export const useActivityTracker = (): UseActivityTrackerReturn => {
       if (currentSession?.id === sessionId) {
         setCurrentSession(prev => prev ? { ...prev, activityName: trimmedName } : null);
       }
-      addToast('success', `✅ Zmieniono nazwę na "${trimmedName}"`);
+      addToast('success', `✅ Renamed to "${trimmedName}"`);
     } catch (error) {
       console.error('Failed to rename session:', error);
-      addToast('error', 'Nie udało się zmienić nazwy sesji');
+      addToast('error', 'Failed to rename session');
     }
   }, [sessions, currentSession, addToast]);
 
@@ -357,16 +357,16 @@ export const useActivityTracker = (): UseActivityTrackerReturn => {
       setState('idle');
       lastSavedSeconds.current = 0;
       setSessions(prev => prev.filter(s => s.id !== sessionId));
-      addToast('success', '🗑️ Sesja usunięta');
+      addToast('success', '🗑️ Session deleted');
       return;
     }
     try {
       await activityTrackerService.deleteSession(sessionId);
       setSessions(prev => prev.filter(s => s.id !== sessionId));
-      addToast('success', '🗑️ Sesja usunięta');
+      addToast('success', '🗑️ Session deleted');
     } catch (error) {
       console.error('Failed to delete session:', error);
-      addToast('error', 'Nie udało się usunąć sesji');
+      addToast('error', 'Failed to delete session');
     }
   }, [currentSession, addToast]);
 

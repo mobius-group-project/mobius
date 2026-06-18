@@ -32,7 +32,7 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     path: '/stats',
-    label: 'Statystyki',
+    label: 'Statistics',
     icon: <BarChart2 size={18} />
   },
   {
