@@ -210,10 +210,13 @@ const CalendarPage: React.FC = () => {
   return (
     <div className="route-view" style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 64px)" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px", flexShrink: 0 }}>
-        <div className="calendar-nav">
-          <button className="calendar-nav-btn" onClick={() => setOffset(o => o - 1)}>←</button>
-          <button className="calendar-nav-btn is-active" onClick={() => setOffset(0)}>Today</button>
-          <button className="calendar-nav-btn" onClick={() => setOffset(o => o + 1)}>→</button>
+        <div style={{ display: "flex", alignItems: "center" }}>
+          {(view === 'day' || view === 'week') && <div style={{ width: 40, flexShrink: 0 }} />}
+          <div className="calendar-nav">
+            <button className="calendar-nav-btn" onClick={() => setOffset(o => o - 1)}>←</button>
+            <button className="calendar-nav-btn is-active" onClick={() => setOffset(0)}>Today</button>
+            <button className="calendar-nav-btn" onClick={() => setOffset(o => o + 1)}>→</button>
+          </div>
         </div>
 
         <span style={{ fontSize: "18px", fontWeight: 700, color: "rgba(255,255,255,0.9)" }}>

@@ -80,6 +80,16 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset, dayOffset = 0, 
   const [ghostEvent, setGhostEvent] = useState<GhostEvent | null>(null);
   const isDragging = useRef(false);
 
+  const [activeColors, setActiveColors] = useState<Set<string>>(new Set());
+
+  const toggleColor = (color: string) => {
+    setActiveColors(prev => {
+      const next = new Set(prev);
+      if (next.has(color)) next.delete(color); else next.add(color);
+      return next;
+    });
+  };
+
   const [taskPreview, setTaskPreview] = useState<{ task: ITask; x: number; y: number } | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; event: CalendarEvent } | null>(null);
   const [editingEventId, setEditingEventId] = useState<number | null>(null);
@@ -379,7 +389,11 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset, dayOffset = 0, 
   const getEventsForCell = (date: Date, slot: string) => {
     const dateStr = formatDate(date);
     const slotHour = slot.split(":")[0];
-    return events.filter(ev => ev.date === dateStr && ev.startTime.split(":")[0] === slotHour);
+    return events.filter(ev =>
+      ev.date === dateStr &&
+      ev.startTime.split(":")[0] === slotHour &&
+      (activeColors.size === 0 || activeColors.has(ev.color))
+    );
   };
 
   const isRecurringCopy = (eventId: number, originalDate: string, currentDate: string) =>
@@ -397,6 +411,18 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset, dayOffset = 0, 
   const { colWidth, colLeft } = getColumnLayout();
 
   return (
+    <div className="calendar-grid-wrapper">
+      <div className="calendar-color-filter">
+        {colorOptions.map(color => (
+          <button
+            key={color.value}
+            className={`color-filter-dot${activeColors.has(color.value) ? ' active' : ''}`}
+            style={{ backgroundColor: color.value }}
+            title={color.label}
+            onClick={() => toggleColor(color.value)}
+          />
+        ))}
+      </div>
     <div className="calendar-grid">
       <div className="calendar-header" style={{ gridTemplateColumns: `80px repeat(${weekDates.length}, 1fr)` }}>
         <div className="calendar-header-empty" />
@@ -680,6 +706,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ weekOffset, dayOffset = 0, 
           </div>
         </>
       )}
+    </div>
     </div>
   );
 };
