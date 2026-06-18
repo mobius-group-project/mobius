@@ -17,7 +17,6 @@ import { calendarService, type CalendarEvent } from '../../services/calendarServ
 import FocusTimer from '../focus/FocusTimer';
 import { useNotes } from '../../hooks/useNotes';
 import { type useActivityTracker } from '../../hooks/useActivityTracker';
-import CalendarGrid from '../calendarSystem/CalendarGrid';
 import './Dashboard.css';
 
 /** Props passed down from the root App component. */
@@ -54,15 +53,6 @@ const Dashboard: React.FC<DashboardProps> = ({
    * An empty array means "show all".
    */
   const [priorityFilters, setPriorityFilters] = useState<('High' | 'Medium' | 'Low')[]>([]);
-  /** Set of event colours currently shown in the calendar. Empty = show all colours. */
-  const [calActiveColors, setCalActiveColors] = useState<Set<string>>(new Set());
-
-  /** Toggles a calendar event colour on/off in the filter set. */
-  const toggleCalColor = (color: string) => setCalActiveColors(prev => {
-    const next = new Set(prev);
-    if (next.has(color)) next.delete(color); else next.add(color);
-    return next;
-  });
 
   /** Controls whether the inline task creation form is visible. */
   const [isAdding, setIsAdding] = useState(false);
@@ -266,21 +256,7 @@ const Dashboard: React.FC<DashboardProps> = ({
 
         {/* Weekly Calendar */}
         <div className="dashboard-card calendar-card">
-          <div className="calendar-month-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span>{new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' })}</span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              {CALENDAR_COLOR_OPTIONS.map(color => (
-                <button key={color} onClick={() => toggleCalColor(color)} style={{
-                  width: 12, height: 12, borderRadius: '50%', background: color, padding: 0, cursor: 'pointer',
-                  border: calActiveColors.has(color) ? '2px solid rgba(255,255,255,0.85)' : '2px solid transparent',
-                  opacity: calActiveColors.has(color) ? 1 : 0.45,
-                  transition: 'opacity 0.15s, border-color 0.15s, transform 0.12s',
-                  transform: calActiveColors.has(color) ? 'scale(1.2)' : 'scale(1)',
-                }} />
-              ))}
-            </div>
-          </div>
-          <CalendarGrid weekOffset={0} compactHeader externalActiveColors={calActiveColors} />
+          <CalendarCard />
           <div style={{ display: 'flex', padding: '8px 0', flexShrink: 0, justifyContent: 'space-between' }}>
             <MiniMonthCalendar year={new Date(new Date().getFullYear(), new Date().getMonth() - 1).getFullYear()} month={(new Date().getMonth() + 11) % 12} />
             <MiniMonthCalendar year={new Date().getFullYear()} month={new Date().getMonth()} />
@@ -369,9 +345,9 @@ const MiniMonthCalendar: React.FC<{ year: number; month: number }> = ({ year, mo
 // ─── CalendarCard ─────────────────────────────────────────────────────────────
 
 /** First visible hour in the weekly calendar grid (inclusive). */
-const HOUR_START = 8;
+const HOUR_START = 0;
 /** Last visible hour in the weekly calendar grid (exclusive). */
-const HOUR_END = 20;
+const HOUR_END = 24;
 
 /** Predefined colours the user can assign to calendar events. */
 const CALENDAR_COLOR_OPTIONS = [
@@ -482,7 +458,7 @@ const CalendarCard: React.FC = () => {
       </div>
 
       {/* Scrollable time-grid body */}
-      <div style={{ overflowY: 'auto', flex: 1, minHeight: 0 }}>
+      <div className="calendar-scroll" style={{ overflowY: 'auto', flex: 1, minHeight: 0, maxHeight: 360 }}>
         <div style={{ display: 'grid', gridTemplateColumns: COL }}>
           {hours.map(hour => (
             <React.Fragment key={hour}>

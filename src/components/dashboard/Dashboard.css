@@ -90,37 +90,29 @@
   flex-direction: column;
   border-left: none;
   border-right: none;
-}
-
-.calendar-card .calendar-grid {
-  flex: 1 !important;
-  height: auto !important;
   min-height: 0;
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-/*
- * These overrides force the CalendarGrid's internal sub-grid to use a 44px fixed time-label
- * column followed by 7 equal day columns, matching the column layout used by CalendarCard.
- * The !important is necessary because CalendarGrid sets these via inline styles.
- */
-.calendar-card .calendar-header {
-  padding-top: 6px;
-  grid-template-columns: 44px repeat(7, 1fr) !important;
+.calendar-card .calendar-scroll::-webkit-scrollbar {
+  width: 5px;
 }
 
-.calendar-card .calendar-row {
-  grid-template-columns: 44px repeat(7, 1fr) !important;
+.calendar-card .calendar-scroll::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-.calendar-card .calendar-time-label {
-  font-size: 9px;
-  padding-right: 6px;
+.calendar-card .calendar-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 3px;
 }
 
-.calendar-card .current-time-line {
-  left: 34px;
+.calendar-card .calendar-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.calendar-card .calendar-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
 }
 
 .calendar-month-label {
