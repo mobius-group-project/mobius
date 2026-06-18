@@ -1,3 +1,21 @@
+/**
+ * Root application component.
+ *
+ * Route map:
+ *   /          → Dashboard (task list, calendar, focus timer, notes)
+ *   /tasks     → Full task list with comments and time tracking
+ *   /focus     → Full-screen focus timer with garden
+ *   /tracker   → Activity tracker
+ *   /stats     → Statistics page
+ *   /calendar  → Calendar page
+ *
+ * useTasks and useActivityTracker are initialised once here at the root level
+ * so their state survives route changes. Both hooks are passed as props to avoid
+ * re-fetching data or losing the active timer when navigating between pages.
+ *
+ * Each route is wrapped in a thin page component (DashboardPage, TasksPage, etc.)
+ * to keep prop drilling scoped per route and make the Routes block readable.
+ */
 import React, { useState } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Sidebar from './components/layout/Sidebar';
@@ -10,6 +28,7 @@ import CalendarPage from './components/calendarSystem/CalendarPage';
 import StatsPage from './components/stats/StatsPage';
 import Dashboard from './components/dashboard/Dashboard';
 
+/** Route wrapper for `/` — passes shared task and tracker state into the Dashboard. */
 const DashboardPage: React.FC<{
   tasks: ReturnType<typeof useTasks>['tasks'];
   onToggleTask: ReturnType<typeof useTasks>['toggleTask'];
@@ -30,6 +49,10 @@ const DashboardPage: React.FC<{
   );
 };
 
+/**
+ * Route wrapper for `/tasks`.
+ * Shows a loading spinner while tasks are being fetched and an inline error banner on failure.
+ */
 const TasksPage: React.FC<{
   tasks: ReturnType<typeof useTasks>['tasks'];
   loading: boolean;
@@ -71,6 +94,7 @@ const TasksPage: React.FC<{
   );
 };
 
+/** Route wrapper for `/focus` — renders FocusTimer in full-screen (non-compact) mode. */
 const FocusPage: React.FC = () => {
   return (
     <div className="route-view">
@@ -79,12 +103,14 @@ const FocusPage: React.FC = () => {
   );
 };
 
+/** Route wrapper for `/stats`. Named StatsPageRoute to avoid collision with the imported StatsPage component. */
 const StatsPageRoute: React.FC = () => (
   <div className="route-view">
     <StatsPage />
   </div>
 );
 
+/** Route wrapper for `/tracker` — passes the shared tracker instance so the session survives navigation. */
 const TrackerPage: React.FC<{ activityTracker: ReturnType<typeof useActivityTracker> }> = ({ activityTracker }) => {
   return (
     <div className="route-view">
@@ -93,6 +119,10 @@ const TrackerPage: React.FC<{ activityTracker: ReturnType<typeof useActivityTrac
   );
 };
 
+/**
+ * Root component. Initialises shared hooks and renders the shell layout:
+ * a fixed hamburger button, a slide-in Sidebar, and the route outlet.
+ */
 function App() {
   const tracker = useActivityTracker();
   const { tasks, loading, error, toggleTask, addTask, deleteTask, updateTask, reorderTasks, addComment, deleteComment } = useTasks();

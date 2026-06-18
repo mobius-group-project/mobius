@@ -1,3 +1,16 @@
+/**
+ * Global base styles and CSS reset.
+ *
+ * This file sets typography, colour-scheme, and element resets that apply across
+ * the entire app. App-specific design tokens (--color-background, --color-primary,
+ * etc.) are defined separately in styles/variables.css — the variables here are
+ * inherited from the Vite starter template and serve as a fallback base layer.
+ *
+ * `.route-view` applies a subtle fade-in animation to every page on navigation.
+ * `min-height: 100svh` on #root uses the small viewport height unit so the layout
+ * is not obscured by the browser's collapsible address bar on mobile.
+ */
+
 :root {
   --text: #6b6375;
   --text-h: #08060d;

@@ -1,3 +1,9 @@
+/**
+ * Global App-level utility classes.
+ * Component-specific styles live in their own CSS files alongside each component.
+ */
+
+/** Centres content both horizontally and vertically inside a flex container. */
 .app-center {
   flex: 1 1 auto;
   display: flex;
