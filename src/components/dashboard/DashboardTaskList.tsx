@@ -35,9 +35,9 @@ const DashboardTaskList: React.FC<DashboardTaskListProps> = ({
   onToggleTask,
   onAddTask,
   onDelete,
-  onAddComment,
-  onDeleteComment,
-  activityTracker,
+  onAddComment: _onAddComment,
+  onDeleteComment: _onDeleteComment,
+  activityTracker: _activityTracker,
 }) => {
   /** Controls whether the inline task creation form is visible. */
   const [showAddForm, setShowAddForm] = useState(false);

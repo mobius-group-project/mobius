@@ -9,14 +9,14 @@
  * are defined in this file rather than split into separate files, since they have no
  * other consumers.
  */
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useRef } from 'react';
 import TaskForm from '../taskSystem/AddTaskForm';
 import { Flag, Calendar } from 'lucide-react';
 import type { ITask } from '../../services/taskService';
-import { calendarService, type CalendarEvent } from '../../services/calendarService';
 import FocusTimer from '../focus/FocusTimer';
 import { useNotes } from '../../hooks/useNotes';
 import { type useActivityTracker } from '../../hooks/useActivityTracker';
+import CalendarGrid from '../calendarSystem/CalendarGrid';
 import './Dashboard.css';
 
 /** Props passed down from the root App component. */
@@ -43,16 +43,25 @@ interface DashboardProps {
 const Dashboard: React.FC<DashboardProps> = ({
   tasks,
   onToggleTask,
-  onDelete,
+  onDelete: _onDelete,
   onReorderTasks,
   onAddTask,
-  activityTracker,
+  activityTracker: _activityTracker,
 }) => {
   /**
    * Active priority filters for the task list. Up to 2 priorities can be active at once.
    * An empty array means "show all".
    */
   const [priorityFilters, setPriorityFilters] = useState<('High' | 'Medium' | 'Low')[]>([]);
+  /** Set of event colours currently shown in the calendar. Empty = show all colours. */
+  const [calActiveColors, setCalActiveColors] = useState<Set<string>>(new Set());
+
+  /** Toggles a calendar event colour on/off in the filter set. */
+  const toggleCalColor = (color: string) => setCalActiveColors(prev => {
+    const next = new Set(prev);
+    if (next.has(color)) next.delete(color); else next.add(color);
+    return next;
+  });
 
   /** Controls whether the inline task creation form is visible. */
   const [isAdding, setIsAdding] = useState(false);
@@ -256,7 +265,21 @@ const Dashboard: React.FC<DashboardProps> = ({
 
         {/* Weekly Calendar */}
         <div className="dashboard-card calendar-card">
-          <CalendarCard />
+          <div className="calendar-month-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span>{new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' })}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              {CALENDAR_COLOR_OPTIONS.map(color => (
+                <button key={color} onClick={() => toggleCalColor(color)} style={{
+                  width: 12, height: 12, borderRadius: '50%', background: color, padding: 0, cursor: 'pointer',
+                  border: calActiveColors.has(color) ? '2px solid rgba(255,255,255,0.85)' : '2px solid transparent',
+                  opacity: calActiveColors.has(color) ? 1 : 0.45,
+                  transition: 'opacity 0.15s, border-color 0.15s, transform 0.12s',
+                  transform: calActiveColors.has(color) ? 'scale(1.2)' : 'scale(1)',
+                }} />
+              ))}
+            </div>
+          </div>
+          <CalendarGrid weekOffset={0} compactHeader externalActiveColors={calActiveColors} />
           <div style={{ display: 'flex', padding: '8px 0', flexShrink: 0, justifyContent: 'space-between' }}>
             <MiniMonthCalendar year={new Date(new Date().getFullYear(), new Date().getMonth() - 1).getFullYear()} month={(new Date().getMonth() + 11) % 12} />
             <MiniMonthCalendar year={new Date().getFullYear()} month={new Date().getMonth()} />
@@ -277,6 +300,11 @@ const Dashboard: React.FC<DashboardProps> = ({
     </div>
   );
 };
+
+/** Predefined colours the user can assign to calendar events. */
+const CALENDAR_COLOR_OPTIONS = [
+  "#A7C7E7", "#FFB3BA", "#B5EAD7", "#FFDAC1", "#E2F0CB", "#C7CEE6",
+];
 
 // ─── MiniMonthCalendar ────────────────────────────────────────────────────────
 
@@ -337,159 +365,6 @@ const MiniMonthCalendar: React.FC<{ year: number; month: number }> = ({ year, mo
             fontWeight: cell.current && isToday(cell.day) ? 700 : 400,
           }}>{cell.day}</div>
         ))}
-      </div>
-    </div>
-  );
-};
-
-// ─── CalendarCard ─────────────────────────────────────────────────────────────
-
-/** First visible hour in the weekly calendar grid (inclusive). */
-const HOUR_START = 0;
-/** Last visible hour in the weekly calendar grid (exclusive). */
-const HOUR_END = 24;
-
-/** Predefined colours the user can assign to calendar events. */
-const CALENDAR_COLOR_OPTIONS = [
-  "#A7C7E7", "#FFB3BA", "#B5EAD7", "#FFDAC1", "#E2F0CB", "#C7CEE6",
-];
-
-/**
- * Weekly calendar card showing events for the current week in a time-grid layout.
- * Hours are displayed from HOUR_START to HOUR_END; events are matched by date and
- * the first two characters of their start time (e.g. "09" matches "09:30").
- * Colour filter buttons in the header let the user show/hide events by colour.
- */
-const CalendarCard: React.FC = () => {
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
-  /** Set of colours currently shown. Empty = all colours visible. */
-  const [activeColors, setActiveColors] = useState<Set<string>>(new Set());
-
-  useEffect(() => {
-    calendarService.getEvents().then(setEvents).catch(() => {});
-  }, []);
-
-  /** Toggles a colour on/off in the active filter set. */
-  const toggleColor = (color: string) => {
-    setActiveColors(prev => {
-      const next = new Set(prev);
-      if (next.has(color)) next.delete(color); else next.add(color);
-      return next;
-    });
-  };
-
-  const today = new Date();
-  const todayStr = today.toISOString().split('T')[0];
-
-  /** Array of 7 day descriptors for the current week, starting on Monday. */
-  const weekDays = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(today);
-    d.setDate(today.getDate() - ((today.getDay() + 6) % 7) + i);
-    return {
-      letter: ['M','T','W','T','F','S','S'][i],
-      date: d.getDate(),
-      dateStr: d.toISOString().split('T')[0],
-    };
-  });
-
-  const hours = Array.from({ length: HOUR_END - HOUR_START }, (_, i) =>
-    `${String(i + HOUR_START).padStart(2, '0')}:00`
-  );
-
-  /**
-   * Returns events for a specific date and hour slot.
-   * Matches by hour prefix so e.g. "09:00" catches an event starting at "09:30".
-   */
-  const getEventsForCell = (dateStr: string, hour: string) =>
-    events.filter(ev =>
-      ev.date === dateStr &&
-      ev.startTime?.startsWith(hour.substring(0, 2)) &&
-      (activeColors.size === 0 || activeColors.has(ev.color))
-    );
-
-  /** CSS grid-template-columns: fixed 44px time label column + 7 equal day columns. */
-  const COL = '44px ' + Array(7).fill('1fr').join(' ');
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', fontFamily: 'var(--font-main)' }}>
-      {/* Month label + colour filters */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 12px 6px', flexShrink: 0 }}>
-        <span style={{ fontSize: '13px', fontWeight: 700, color: 'rgba(255,255,255,0.7)' }}>
-          {today.toLocaleString('en-US', { month: 'long', year: 'numeric' })}
-        </span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          {CALENDAR_COLOR_OPTIONS.map(color => (
-            <button
-              key={color}
-              onClick={() => toggleColor(color)}
-              style={{
-                width: 12, height: 12,
-                borderRadius: '50%',
-                background: color,
-                border: activeColors.has(color) ? '2px solid rgba(255,255,255,0.85)' : '2px solid transparent',
-                padding: 0, cursor: 'pointer',
-                opacity: activeColors.has(color) ? 1 : 0.45,
-                transition: 'opacity 0.15s, border-color 0.15s, transform 0.12s',
-                transform: activeColors.has(color) ? 'scale(1.2)' : 'scale(1)',
-              }}
-            />
-          ))}
-        </div>
-      </div>
-
-      {/* Day headers */}
-      <div style={{ display: 'grid', gridTemplateColumns: COL, flexShrink: 0, borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.02)' }}>
-        <div />
-        {weekDays.map((d, i) => {
-          const isToday = d.dateStr === todayStr;
-          return (
-            <div key={i} style={{ textAlign: 'center', padding: '6px 2px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-              <span style={{ fontSize: '10px', fontWeight: 600, color: isToday ? 'var(--color-primary)' : 'rgba(255,255,255,0.4)' }}>{d.letter}</span>
-              <span style={{
-                fontSize: '13px', fontWeight: 700,
-                color: isToday ? '#000' : 'rgba(255,255,255,0.85)',
-                background: isToday ? 'var(--color-primary)' : 'transparent',
-                borderRadius: '50%', width: '22px', height: '22px',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>{d.date}</span>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Scrollable time-grid body */}
-      <div className="calendar-scroll" style={{ overflowY: 'auto', flex: 1, minHeight: 0, maxHeight: 360 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: COL }}>
-          {hours.map(hour => (
-            <React.Fragment key={hour}>
-              <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.3)', textAlign: 'right', padding: '4px 6px 0', borderRight: '1px solid rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                {hour}
-              </div>
-              {weekDays.map((d, di) => {
-                const cellEvents = getEventsForCell(d.dateStr, hour);
-                const isToday = d.dateStr === todayStr;
-                return (
-                  <div key={di} style={{
-                    height: '36px', position: 'relative',
-                    borderRight: di < 6 ? '1px solid rgba(255,255,255,0.04)' : 'none',
-                    borderBottom: '1px solid rgba(255,255,255,0.04)',
-                    background: isToday ? 'rgba(255,255,255,0.02)' : 'transparent',
-                  }}>
-                    {cellEvents.map(ev => (
-                      <div key={ev.id} title={ev.title} style={{
-                        position: 'absolute', inset: '2px',
-                        background: ev.color || '#a7c7e7',
-                        borderRadius: '3px', padding: '1px 4px',
-                        fontSize: '9px', fontWeight: 600, color: '#1a1a1a',
-                        overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis',
-                      }}>{ev.title}</div>
-                    ))}
-                  </div>
-                );
-              })}
-            </React.Fragment>
-          ))}
-        </div>
       </div>
     </div>
   );

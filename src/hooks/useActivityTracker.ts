@@ -231,25 +231,6 @@ export const useActivityTracker = (): UseActivityTrackerReturn => {
   }, [sessions]);
 
   /**
-   * Returns a name that doesn't collide with existing session names.
-   * Appends "(1)", "(2)" etc. until a unique name is found.
-   */
-  const getUniqueActivityName = useCallback((
-    baseName: string,
-    existingSessions: ActivitySession[],
-  ): string => {
-    const existingNames = existingSessions.map(s => s.activityName.toLowerCase());
-    if (!existingNames.includes(baseName.toLowerCase())) return baseName;
-    let counter = 1;
-    let newName = `${baseName}(${counter})`;
-    while (existingNames.includes(newName.toLowerCase())) {
-      counter++;
-      newName = `${baseName}(${counter})`;
-    }
-    return newName;
-  }, []);
-
-  /**
    * Internal start implementation. Always closes any orphaned active session in the DB
    * before inserting the new one, so we can never end up with two active sessions.
    */

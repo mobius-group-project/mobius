@@ -587,7 +587,7 @@ const FocusTimer: React.FC<FocusTimerProps> = ({ compact = false }) => {
   /** Guards against saving the same plant twice if onFinish fires unexpectedly more than once. */
   const plantSavedRef = useRef(false);
 
-  const { state, remainingSeconds, totalSeconds, progress, sessionId, start, pause, resume, reset } =
+  const { state, remainingSeconds, totalSeconds, progress, start, pause, resume, reset } =
     useFocusTimer(selectedMinutes, {
       onFinish: () => {
         // onFinish fires exactly once per session (deduped in useFocusTimer).
